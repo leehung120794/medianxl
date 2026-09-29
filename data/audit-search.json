@@ -1,0 +1,832 @@
+{
+  "total": 1214,
+  "byType": [
+    {
+      "type_code": "CYCLE",
+      "n": 32
+    },
+    {
+      "type_code": "RELIC",
+      "n": 203
+    },
+    {
+      "type_code": "RW",
+      "n": 231
+    },
+    {
+      "type_code": "SET",
+      "n": 239
+    },
+    {
+      "type_code": "SLEEP",
+      "n": 1
+    },
+    {
+      "type_code": "SU",
+      "n": 418
+    },
+    {
+      "type_code": "TROPHY",
+      "n": 19
+    },
+    {
+      "type_code": "TU",
+      "n": 34
+    },
+    {
+      "type_code": "UMO",
+      "n": 37
+    }
+  ],
+  "emptyIndex": 0,
+  "suspiciousCount": 80,
+  "suspicious": [
+    {
+      "id": 49430,
+      "type_code": "RELIC",
+      "name": "+(21 to 25)% Bonus to Poison Skill Duration",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(21 to 25)% Bonus to Poison Skill Duration\nAngel of Death Cooldown Reduced by 1 seconds\n+(21 to 28) to Angel of Death",
+      "search_text": "+ 21 to 25 % bonus to poison skill duration relic relics relic required level 75 + 21 to 25 % bonus to poison skill duration angel of death cooldown reduced by 1 seconds + 21 to 28 to angel of death"
+    },
+    {
+      "id": 49432,
+      "type_code": "RELIC",
+      "name": "-(3 to 6)% to Enemy Fire Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(3 to 6)% to Enemy Fire Resistance\n+(8 to 14) to Apocalypse\n+(101 to 150) to Mana",
+      "search_text": "- 3 to 6 % to enemy fire resistance relic relics relic required level 75 - 3 to 6 % to enemy fire resistance + 8 to 14 to apocalypse + 101 to 150 to mana"
+    },
+    {
+      "id": 49437,
+      "type_code": "RELIC",
+      "name": "+(11 to 20) Spell Focus",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 20) Spell Focus\n-(4 to 6)% to Enemy Cold Resistance\n+(6 to 12) to Avalanche",
+      "search_text": "+ 11 to 20 spell focus relic relics relic required level 75 + 11 to 20 spell focus - 4 to 6 % to enemy cold resistance + 6 to 12 to avalanche"
+    },
+    {
+      "id": 49441,
+      "type_code": "RELIC",
+      "name": "-(4 to 10)% to Enemy Poison Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(4 to 10)% to Enemy Poison Resistance\n+(25 to 38) to Black Lotus Strike\nPoison Resist +35%",
+      "search_text": "- 4 to 10 % to enemy poison resistance relic relics relic required level 75 - 4 to 10 % to enemy poison resistance + 25 to 38 to black lotus strike poison resist +35%"
+    },
+    {
+      "id": 49444,
+      "type_code": "RELIC",
+      "name": "+(2 to 7) to Blood Fury",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(2 to 7) to Blood Fury\n+(33 to 66) to Life\n+(21 to 30) Life after each Kill",
+      "search_text": "+ 2 to 7 to blood fury relic relics relic required level 75 + 2 to 7 to blood fury + 33 to 66 to life + 21 to 30 life after each kill"
+    },
+    {
+      "id": 49449,
+      "type_code": "RELIC",
+      "name": "+(5 to 10) to Minimum Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(5 to 10) to Minimum Damage\n+(31 to 42) to Broadside\n(2 to 4)% Deadly Strike",
+      "search_text": "+ 5 to 10 to minimum damage relic relics relic required level 75 + 5 to 10 to minimum damage + 31 to 42 to broadside 2 to 4 % deadly strike"
+    },
+    {
+      "id": 49452,
+      "type_code": "RELIC",
+      "name": "+(15 to 26) to Champions of the Sun",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(15 to 26) to Champions of the Sun\n+(11 to 15)% to Summoned Minion Damage\nElemental Resists +(10 to 15)%",
+      "search_text": "+ 15 to 26 to champions of the sun relic relics relic required level 75 + 15 to 26 to champions of the sun + 11 to 15 % to summoned minion damage elemental resists + 10 to 15 %"
+    },
+    {
+      "id": 49453,
+      "type_code": "RELIC",
+      "name": "+(6 to 15) to Charged Strike",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(6 to 15) to Charged Strike\n+40 Life on Melee Attack\n+40 Mana on Melee Attack",
+      "search_text": "+ 6 to 15 to charged strike relic relics relic required level 75 + 6 to 15 to charged strike +40 life on melee attack +40 mana on melee attack"
+    },
+    {
+      "id": 49455,
+      "type_code": "RELIC",
+      "name": "+(7 to 15) to Churel",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(7 to 15) to Churel\nSlows Attacker by 10%\nCold Absorb (2 to 3)%",
+      "search_text": "+ 7 to 15 to churel relic relics relic required level 75 + 7 to 15 to churel slows attacker by 10% cold absorb 2 to 3 %"
+    },
+    {
+      "id": 49456,
+      "type_code": "RELIC",
+      "name": "(11 to 15)% Block Speed",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(11 to 15)% Block Speed\n(11 to 15)% Hit Recovery\n+(4 to 8) to Colosseum",
+      "search_text": "11 to 15 % block speed relic relics relic required level 75 11 to 15 % block speed 11 to 15 % hit recovery + 4 to 8 to colosseum"
+    },
+    {
+      "id": 49461,
+      "type_code": "RELIC",
+      "name": "-(7 to 10)% to Enemy Cold Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(7 to 10)% to Enemy Cold Resistance\n+(9 to 17) to Deathgaze\nMaximum Cold Resist +1%",
+      "search_text": "- 7 to 10 % to enemy cold resistance relic relics relic required level 75 - 7 to 10 % to enemy cold resistance + 9 to 17 to deathgaze maximum cold resist +1%"
+    },
+    {
+      "id": 49463,
+      "type_code": "RELIC",
+      "name": "+(31 to 40)% Damage to Demons",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(31 to 40)% Damage to Demons\n+(4 to 7) to Demonic Speed\n+(51 to 100) Life after each Demon Kill",
+      "search_text": "+ 31 to 40 % damage to demons relic relics relic required level 75 + 31 to 40 % damage to demons + 4 to 7 to demonic speed + 51 to 100 life after each demon kill"
+    },
+    {
+      "id": 49464,
+      "type_code": "RELIC",
+      "name": "+(5 to 10)% to Poison Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(5 to 10)% to Poison Spell Damage\n+(15 to 24) to Devouring Cloud\nPoison Resist +30%",
+      "search_text": "+ 5 to 10 % to poison spell damage relic relics relic required level 75 + 5 to 10 % to poison spell damage + 15 to 24 to devouring cloud poison resist +30%"
+    },
+    {
+      "id": 49469,
+      "type_code": "RELIC",
+      "name": "+(9 to 16) to Divine Judgment",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(9 to 16) to Divine Judgment\n+(21 to 25) to Strength\n(2 to 4)% to Strength",
+      "search_text": "+ 9 to 16 to divine judgment relic relics relic required level 75 + 9 to 16 to divine judgment + 21 to 25 to strength 2 to 4 % to strength"
+    },
+    {
+      "id": 49471,
+      "type_code": "RELIC",
+      "name": "+(5 to 10) to Maximum Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(5 to 10) to Maximum Damage\n+(16 to 23) to Earthquake\nPhysical Resist 2%",
+      "search_text": "+ 5 to 10 to maximum damage relic relics relic required level 75 + 5 to 10 to maximum damage + 16 to 23 to earthquake physical resist 2%"
+    },
+    {
+      "id": 49474,
+      "type_code": "RELIC",
+      "name": "+(2 to 5) to Elemental Totem",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(2 to 5) to Elemental Totem\nElemental Resists +5%\n+(2 to 4)% to Experience Gained",
+      "search_text": "+ 2 to 5 to elemental totem relic relics relic required level 75 + 2 to 5 to elemental totem elemental resists +5% + 2 to 4 % to experience gained"
+    },
+    {
+      "id": 49476,
+      "type_code": "RELIC",
+      "name": "+(11 to 15)% Bonus to Poison Skill Duration",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 15)% Bonus to Poison Skill Duration\n+10% to Poison Spell Damage\n+(18 to 31) to Emerald Prison",
+      "search_text": "+ 11 to 15 % bonus to poison skill duration relic relics relic required level 75 + 11 to 15 % bonus to poison skill duration +10% to poison spell damage + 18 to 31 to emerald prison"
+    },
+    {
+      "id": 49478,
+      "type_code": "RELIC",
+      "name": "+(12 to 21) to Exorcism",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(12 to 21) to Exorcism\nWeapon Physical Damage +(11 to 20)%\nSlow Target (8 to 10)%",
+      "search_text": "+ 12 to 21 to exorcism relic relics relic required level 75 + 12 to 21 to exorcism weapon physical damage + 11 to 20 % slow target 8 to 10 %"
+    },
+    {
+      "id": 49484,
+      "type_code": "RELIC",
+      "name": "+(31 to 40) Spell Focus",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(31 to 40) Spell Focus\n+10 to Flamestrike\n+(16 to 25) to Flamestrike\nMaximum Fire Resist +1%",
+      "search_text": "+ 31 to 40 spell focus relic relics relic required level 75 + 31 to 40 spell focus +10 to flamestrike + 16 to 25 to flamestrike maximum fire resist +1%"
+    },
+    {
+      "id": 49489,
+      "type_code": "RELIC",
+      "name": "+(3 to 5) to Frigid Domain",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(3 to 5) to Frigid Domain\nCold Resist +20%",
+      "search_text": "+ 3 to 5 to frigid domain relic relics relic required level 75 + 3 to 5 to frigid domain cold resist +20%"
+    },
+    {
+      "id": 49492,
+      "type_code": "RELIC",
+      "name": "-(3 to 6)% to Enemy Cold Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(3 to 6)% to Enemy Cold Resistance\n+(15 to 22) to Frozen Orb\n+20 Mana after each Kill",
+      "search_text": "- 3 to 6 % to enemy cold resistance relic relics relic required level 75 - 3 to 6 % to enemy cold resistance + 15 to 22 to frozen orb +20 mana after each kill"
+    },
+    {
+      "id": 49494,
+      "type_code": "RELIC",
+      "name": "+(4 to 12) to Fusillade",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(4 to 12) to Fusillade\n10% to Dexterity",
+      "search_text": "+ 4 to 12 to fusillade relic relics relic required level 75 + 4 to 12 to fusillade 10% to dexterity"
+    },
+    {
+      "id": 49495,
+      "type_code": "RELIC",
+      "name": "+(8 to 10)% to Poison Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(8 to 10)% to Poison Spell Damage\n+(11 to 20) to Gamma Field\nPoison Length Reduction (11 to 20)%\n(10 to 15)% Magic Find",
+      "search_text": "+ 8 to 10 % to poison spell damage relic relics relic required level 75 + 8 to 10 % to poison spell damage + 11 to 20 to gamma field poison length reduction 11 to 20 % 10 to 15 % magic find"
+    },
+    {
+      "id": 49501,
+      "type_code": "RELIC",
+      "name": "+(1 to 5) to Habeas Corpus",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 90\n+(1 to 5) to Habeas Corpus\n+(10 to 16)% to Summoned Minion Life\n+(5 to 10)% to Summoned Minion Resistances",
+      "search_text": "+ 1 to 5 to habeas corpus relic relics relic required level 90 + 1 to 5 to habeas corpus + 10 to 16 % to summoned minion life + 5 to 10 % to summoned minion resistances"
+    },
+    {
+      "id": 49504,
+      "type_code": "RELIC",
+      "name": "+(18 to 28) to Hammertime",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(18 to 28) to Hammertime\n(6 to 10)% Potion Effectiveness\nMaximum Life +(1 to 2)%\nMaximum Mana +(1 to 2)%",
+      "search_text": "+ 18 to 28 to hammertime relic relics relic required level 75 + 18 to 28 to hammertime 6 to 10 % potion effectiveness maximum life + 1 to 2 % maximum mana + 1 to 2 %"
+    },
+    {
+      "id": 49505,
+      "type_code": "RELIC",
+      "name": "+(11 to 17) to Harvest",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 17) to Harvest\n+80 Life Regenerated per Second\nMaximum Poison Resist +(1 to 2)%",
+      "search_text": "+ 11 to 17 to harvest relic relics relic required level 75 + 11 to 17 to harvest +80 life regenerated per second maximum poison resist + 1 to 2 %"
+    },
+    {
+      "id": 49509,
+      "type_code": "RELIC",
+      "name": "+(11 to 21) to Hive",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 21) to Hive\nMaximum Poison Resist +(1 to 2)%\n+10 to Frozen Heart while Carrying Periodic Relics\n(Hive - Nova Charge - Path of Flames)",
+      "search_text": "+ 11 to 21 to hive relic relics relic required level 75 + 11 to 21 to hive maximum poison resist + 1 to 2 % +10 to frozen heart while carrying periodic relics hive - nova charge - path of flames"
+    },
+    {
+      "id": 49511,
+      "type_code": "RELIC",
+      "name": "-(4 to 7)% to Enemy Poison Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(4 to 7)% to Enemy Poison Resistance\n+(16 to 27) to Hyena Strike\n+10 Maximum Stamina",
+      "search_text": "- 4 to 7 % to enemy poison resistance relic relics relic required level 75 - 4 to 7 % to enemy poison resistance + 16 to 27 to hyena strike +10 maximum stamina"
+    },
+    {
+      "id": 49512,
+      "type_code": "RELIC",
+      "name": "+(8 to 15) to Ice Bolt Nova",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(8 to 15) to Ice Bolt Nova\nMaximum Cold Resist +1%\nCold Resist +30%\nCannot Be Frozen",
+      "search_text": "+ 8 to 15 to ice bolt nova relic relics relic required level 75 + 8 to 15 to ice bolt nova maximum cold resist +1% cold resist +30% cannot be frozen"
+    },
+    {
+      "id": 49516,
+      "type_code": "RELIC",
+      "name": "Marked for Death Duration Increased by 0.2 Seconds",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\nMarked for Death Duration Increased by 0.2 Seconds\n+(2 to 7) to Impale\n(2 to 3)% Deadly Strike",
+      "search_text": "marked for death duration increased by 0 2 seconds relic relics relic required level 75 marked for death duration increased by 0 2 seconds + 2 to 7 to impale 2 to 3 % deadly strike"
+    },
+    {
+      "id": 49517,
+      "type_code": "RELIC",
+      "name": "+(15 to 20)% Bonus to Poison Skill Duration",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(15 to 20)% Bonus to Poison Skill Duration\n+(14 to 23) to Infected Roots\nPoison Length Reduction (21 to 25)%",
+      "search_text": "+ 15 to 20 % bonus to poison skill duration relic relics relic required level 75 + 15 to 20 % bonus to poison skill duration + 14 to 23 to infected roots poison length reduction 21 to 25 %"
+    },
+    {
+      "id": 49518,
+      "type_code": "RELIC",
+      "name": "+(11 to 21) to Iron Golem",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 21) to Iron Golem\n+100% to Summoned Minion Attack Rating\n(11 to 15)% Magic Find",
+      "search_text": "+ 11 to 21 to iron golem relic relics relic required level 75 + 11 to 21 to iron golem +100% to summoned minion attack rating 11 to 15 % magic find"
+    },
+    {
+      "id": 49525,
+      "type_code": "RELIC",
+      "name": "-(4 to 7)% to Enemy Lightning Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(4 to 7)% to Enemy Lightning Resistance\n+(14 to 24) to Lightning Wall\nLightning Absorb (2 to 3)%",
+      "search_text": "- 4 to 7 % to enemy lightning resistance relic relics relic required level 75 - 4 to 7 % to enemy lightning resistance + 14 to 24 to lightning wall lightning absorb 2 to 3 %"
+    },
+    {
+      "id": 49530,
+      "type_code": "RELIC",
+      "name": "+(5 to 12) to Mana Tide Totem",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(5 to 12) to Mana Tide Totem\n+100 to Mana\n+(16 to 25) Mana when Struck by an Enemy",
+      "search_text": "+ 5 to 12 to mana tide totem relic relics relic required level 75 + 5 to 12 to mana tide totem +100 to mana + 16 to 25 mana when struck by an enemy"
+    },
+    {
+      "id": 49534,
+      "type_code": "RELIC",
+      "name": "(8 to 13)% Innate Elemental Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(8 to 13)% Innate Elemental Damage\n+(14 to 25) to Mooncall\n+100 to Life",
+      "search_text": "8 to 13 % innate elemental damage relic relics relic required level 75 8 to 13 % innate elemental damage + 14 to 25 to mooncall +100 to life"
+    },
+    {
+      "id": 49538,
+      "type_code": "RELIC",
+      "name": "+(8 to 14) to Nova Charge",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(8 to 14) to Nova Charge\n+20 to Energy\n+10 to Frozen Heart while Carrying Periodic Relics\n(Hive - Nova Charge - Path of Flames)",
+      "search_text": "+ 8 to 14 to nova charge relic relics relic required level 75 + 8 to 14 to nova charge +20 to energy +10 to frozen heart while carrying periodic relics hive - nova charge - path of flames"
+    },
+    {
+      "id": 49539,
+      "type_code": "RELIC",
+      "name": "(2 to 4)% Mana stolen per Hit",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(2 to 4)% Mana stolen per Hit\n+(3 to 7) to OHMAN\n+1 Mana on Striking",
+      "search_text": "2 to 4 % mana stolen per hit relic relics relic required level 75 2 to 4 % mana stolen per hit + 3 to 7 to ohman +1 mana on striking"
+    },
+    {
+      "id": 49542,
+      "type_code": "RELIC",
+      "name": "+(5 to 13) to Overlord",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(5 to 13) to Overlord\n+20% to Summoned Minion Damage\nMaximum Life +(2 to 3)%",
+      "search_text": "+ 5 to 13 to overlord relic relics relic required level 75 + 5 to 13 to overlord +20% to summoned minion damage maximum life + 2 to 3 %"
+    },
+    {
+      "id": 49545,
+      "type_code": "RELIC",
+      "name": "+(6 to 13) to Path of Flames",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(6 to 13) to Path of Flames\nFire Resist +20%\n+10 to Frozen Heart while Carrying Periodic Relics\n(Hive - Nova Charge - Path of Flames)",
+      "search_text": "+ 6 to 13 to path of flames relic relics relic required level 75 + 6 to 13 to path of flames fire resist +20% +10 to frozen heart while carrying periodic relics hive - nova charge - path of flames"
+    },
+    {
+      "id": 49546,
+      "type_code": "RELIC",
+      "name": "(0 to 1)% Base Block Chance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(0 to 1)% Base Block Chance\n+(11 to 15) to Maximum Damage\n+(4 to 11) to Patriot Sentry",
+      "search_text": "0 to 1 % base block chance relic relics relic required level 75 0 to 1 % base block chance + 11 to 15 to maximum damage + 4 to 11 to patriot sentry"
+    },
+    {
+      "id": 49547,
+      "type_code": "RELIC",
+      "name": "-(3 to 7)% to Enemy Fire Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(3 to 7)% to Enemy Fire Resistance\n+(8 to 17) to Pentagram\nAttacker Takes Fire Damage of 250",
+      "search_text": "- 3 to 7 % to enemy fire resistance relic relics relic required level 75 - 3 to 7 % to enemy fire resistance + 8 to 17 to pentagram attacker takes fire damage of 250"
+    },
+    {
+      "id": 49550,
+      "type_code": "RELIC",
+      "name": "+(4 to 8)% to Fire Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(4 to 8)% to Fire Spell Damage\n+(11 to 16) to Phoenix Wave\nMaximum Fire Resist +(1 to 2)%",
+      "search_text": "+ 4 to 8 % to fire spell damage relic relics relic required level 75 + 4 to 8 % to fire spell damage + 11 to 16 to phoenix wave maximum fire resist + 1 to 2 %"
+    },
+    {
+      "id": 49551,
+      "type_code": "RELIC",
+      "name": "+(13 to 18)% Bonus Damage to Bloodlust",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(13 to 18)% Bonus Damage to Bloodlust\n(21 to 30)% Hit Recovery\n+(7 to 12) to Pounce",
+      "search_text": "+ 13 to 18 % bonus damage to bloodlust relic relics relic required level 75 + 13 to 18 % bonus damage to bloodlust 21 to 30 % hit recovery + 7 to 12 to pounce"
+    },
+    {
+      "id": 49552,
+      "type_code": "RELIC",
+      "name": "+(11 to 18) to Powder Keg",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 18) to Powder Keg\nFire Resist +(21 to 30)%\nPhysical Resist (2 to 3)%\nAttacker Takes Fire Damage of 200",
+      "search_text": "+ 11 to 18 to powder keg relic relics relic required level 75 + 11 to 18 to powder keg fire resist + 21 to 30 % physical resist 2 to 3 % attacker takes fire damage of 200"
+    },
+    {
+      "id": 49557,
+      "type_code": "RELIC",
+      "name": "+(11 to 20) to Queen of Blades",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 20) to Queen of Blades\n(2 to 4)% Chance of Crushing Blow",
+      "search_text": "+ 11 to 20 to queen of blades relic relics relic required level 75 + 11 to 20 to queen of blades 2 to 4 % chance of crushing blow"
+    },
+    {
+      "id": 49558,
+      "type_code": "RELIC",
+      "name": "(Druid Only)",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\n(Druid Only)\nRequired Level: 75\n+1 Target to Raid\n+(7 to 13) to Raid (Druid Only)\nWeapon Physical Damage +(21 to 35)%\n(21 to 35)% Bonus to Defense",
+      "search_text": "druid only relic relics relic druid only required level 75 +1 target to raid + 7 to 13 to raid druid only weapon physical damage + 21 to 35 % 21 to 35 % bonus to defense"
+    },
+    {
+      "id": 49559,
+      "type_code": "RELIC",
+      "name": "+(21 to 30) Spell Focus",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(21 to 30) Spell Focus\n+(4 to 9) to Rain of Fire (Druid Only)\n+(14 to 22) to Rain of Fire\nFire Absorb (2 to 3)%",
+      "search_text": "+ 21 to 30 spell focus relic relics relic required level 75 + 21 to 30 spell focus + 4 to 9 to rain of fire druid only + 14 to 22 to rain of fire fire absorb 2 to 3 %"
+    },
+    {
+      "id": 49561,
+      "type_code": "RELIC",
+      "name": "+(2 to 6) to Raven Heart",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(2 to 6) to Raven Heart\nCannot Be Frozen\n+50 Life when Struck by an Enemy",
+      "search_text": "+ 2 to 6 to raven heart relic relics relic required level 75 + 2 to 6 to raven heart cannot be frozen +50 life when struck by an enemy"
+    },
+    {
+      "id": 49565,
+      "type_code": "RELIC",
+      "name": "+(4 to 11) to Ring of Light",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(4 to 11) to Ring of Light\nFire Absorb (1 to 2)%\n+(2 to 5) to Light Radius",
+      "search_text": "+ 4 to 11 to ring of light relic relics relic required level 75 + 4 to 11 to ring of light fire absorb 1 to 2 % + 2 to 5 to light radius"
+    },
+    {
+      "id": 49566,
+      "type_code": "RELIC",
+      "name": "+(7 to 10)% to Physical/Magic Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(7 to 10)% to Physical/Magic Spell Damage\n+10 to Rising Dawn\nMagic Resist +(1 to 3)%",
+      "search_text": "+ 7 to 10 % to physical magic spell damage relic relics relic required level 75 + 7 to 10 % to physical magic spell damage +10 to rising dawn magic resist + 1 to 3 %"
+    },
+    {
+      "id": 49567,
+      "type_code": "RELIC",
+      "name": "+(4 to 12) to Sacrifices",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(4 to 12) to Sacrifices\n+(6 to 14) Life after each Kill\n4% Reanimate as: Random Monster",
+      "search_text": "+ 4 to 12 to sacrifices relic relics relic required level 75 + 4 to 12 to sacrifices + 6 to 14 life after each kill 4% reanimate as random monster"
+    },
+    {
+      "id": 49571,
+      "type_code": "RELIC",
+      "name": "-(2 to 5)% to Enemy Fire Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(2 to 5)% to Enemy Fire Resistance\n+(13 to 22) to Searing Orb\n+(2 to 5) to Light Radius",
+      "search_text": "- 2 to 5 % to enemy fire resistance relic relics relic required level 75 - 2 to 5 % to enemy fire resistance + 13 to 22 to searing orb + 2 to 5 to light radius"
+    },
+    {
+      "id": 49572,
+      "type_code": "RELIC",
+      "name": "+(30 to 40)% Damage to Demons",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(30 to 40)% Damage to Demons\n+(4 to 7) to Serafiend Prison\nSlow Target 5%",
+      "search_text": "+ 30 to 40 % damage to demons relic relics relic required level 75 + 30 to 40 % damage to demons + 4 to 7 to serafiend prison slow target 5%"
+    },
+    {
+      "id": 49575,
+      "type_code": "RELIC",
+      "name": "+(2 to 7) to Shower of Rocks",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(2 to 7) to Shower of Rocks\nWeapon Physical Damage +(70 to 90)%\nPhysical Resist (1 to 2)%",
+      "search_text": "+ 2 to 7 to shower of rocks relic relics relic required level 75 + 2 to 7 to shower of rocks weapon physical damage + 70 to 90 % physical resist 1 to 2 %"
+    },
+    {
+      "id": 49576,
+      "type_code": "RELIC",
+      "name": "(Assassin Only)",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\n(Assassin Only)\nRequired Level: 75\nAdds 15-25 Damage\n+(8 to 14) to Shunpo\n(0 to 2)% Deadly Strike",
+      "search_text": "assassin only relic relics relic assassin only required level 75 adds 15-25 damage + 8 to 14 to shunpo 0 to 2 % deadly strike"
+    },
+    {
+      "id": 49577,
+      "type_code": "RELIC",
+      "name": "+1% Physical/Magic Spell Damage per 5 Cognition",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+1% Physical/Magic Spell Damage per 5 Cognition\n+(18 to 26) to Shuriken Flurry\nPhysical Damage Taken Reduced by (21 to 30)",
+      "search_text": "+1% physical magic spell damage per 5 cognition relic relics relic required level 75 +1% physical magic spell damage per 5 cognition + 18 to 26 to shuriken flurry physical damage taken reduced by 21 to 30"
+    },
+    {
+      "id": 49578,
+      "type_code": "RELIC",
+      "name": "+(9 to 14) to Singularity",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(9 to 14) to Singularity\nMagic Absorb (1 to 3)%\n+(16 to 30) Life after each Kill",
+      "search_text": "+ 9 to 14 to singularity relic relics relic required level 75 + 9 to 14 to singularity magic absorb 1 to 3 % + 16 to 30 life after each kill"
+    },
+    {
+      "id": 49594,
+      "type_code": "RELIC",
+      "name": "+(6 to 10)% Bonus Elemental Damage to Mark of the Wild",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(6 to 10)% Bonus Elemental Damage to Mark of the Wild\n+(6 to 12) to Stormclash\nLightning Absorb (1 to 2)%",
+      "search_text": "+ 6 to 10 % bonus elemental damage to mark of the wild relic relics relic required level 75 + 6 to 10 % bonus elemental damage to mark of the wild + 6 to 12 to stormclash lightning absorb 1 to 2 %"
+    },
+    {
+      "id": 49596,
+      "type_code": "RELIC",
+      "name": "+(9 to 16) to Summon Frostwalker",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(9 to 16) to Summon Frostwalker\nMaximum Cold Resist +1%\nGain\nExodia\nwhile Carrying All Summon Trio Relics\n(Summon Frostwalker - Summon Glowing Fungus - Summon Sinner)\nExodia\nSummon One Extra Minion With Each Cast\n+100% to Summoned Minion Damage\n+100% to Summoned Minion Attack Rating\n+666 to Life",
+      "search_text": "+ 9 to 16 to summon frostwalker relic relics relic required level 75 + 9 to 16 to summon frostwalker maximum cold resist +1% gain exodia while carrying all summon trio relics summon frostwalker - summon glowing fungus - summon sinner exodia summon one extra minion with each cast +100% to summoned minion damage +100% to summoned minion attack rating +666 to life"
+    },
+    {
+      "id": 49597,
+      "type_code": "RELIC",
+      "name": "+(9 to 16) to Summon Glowing Fungus",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(9 to 16) to Summon Glowing Fungus\nMaximum Lightning Resist +1%\nGain\nExodia\nwhile Carrying All Summon Trio Relics\n(Summon Frostwalker - Summon Glowing Fungus - Summon Sinner)\nExodia\nSummon One Extra Minion With Each Cast\n+100% to Summoned Minion Damage\n+100% to Summoned Minion Attack Rating\n+666 to Life",
+      "search_text": "+ 9 to 16 to summon glowing fungus relic relics relic required level 75 + 9 to 16 to summon glowing fungus maximum lightning resist +1% gain exodia while carrying all summon trio relics summon frostwalker - summon glowing fungus - summon sinner exodia summon one extra minion with each cast +100% to summoned minion damage +100% to summoned minion attack rating +666 to life"
+    },
+    {
+      "id": 49598,
+      "type_code": "RELIC",
+      "name": "+(9 to 16) to Summon Sinner",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(9 to 16) to Summon Sinner\nMaximum Fire Resist +1%\nGain\nExodia\nwhile Carrying All Summon Trio Relics\n(Summon Frostwalker - Summon Glowing Fungus - Summon Sinner)\nExodia\nSummon One Extra Minion With Each Cast\n+100% to Summoned Minion Damage\n+100% to Summoned Minion Attack Rating\n+666 to Life",
+      "search_text": "+ 9 to 16 to summon sinner relic relics relic required level 75 + 9 to 16 to summon sinner maximum fire resist +1% gain exodia while carrying all summon trio relics summon frostwalker - summon glowing fungus - summon sinner exodia summon one extra minion with each cast +100% to summoned minion damage +100% to summoned minion attack rating +666 to life"
+    },
+    {
+      "id": 49599,
+      "type_code": "RELIC",
+      "name": "+(6 to 10)% to Lightning Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(6 to 10)% to Lightning Spell Damage\n-(2 to 5)% to Enemy Lightning Resistance\n+(13 to 22) to Supernova",
+      "search_text": "+ 6 to 10 % to lightning spell damage relic relics relic required level 75 + 6 to 10 % to lightning spell damage - 2 to 5 % to enemy lightning resistance + 13 to 22 to supernova"
+    },
+    {
+      "id": 49601,
+      "type_code": "RELIC",
+      "name": "+(6 to 12) to Tantrum",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(6 to 12) to Tantrum\n+2000 Defense vs. Melee\n(3 to 5)% to Dexterity",
+      "search_text": "+ 6 to 12 to tantrum relic relics relic required level 75 + 6 to 12 to tantrum +2000 defense vs melee 3 to 5 % to dexterity"
+    },
+    {
+      "id": 49602,
+      "type_code": "RELIC",
+      "name": "(3 to 7)% Movement Speed",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(3 to 7)% Movement Speed\nTeleport Cooldown Reduced by 0.8 seconds\n+(6 to 14) to Teleport",
+      "search_text": "3 to 7 % movement speed relic relics relic required level 75 3 to 7 % movement speed teleport cooldown reduced by 0 8 seconds + 6 to 14 to teleport"
+    },
+    {
+      "id": 49604,
+      "type_code": "RELIC",
+      "name": "+(11 to 24) to Thunder Arena",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 24) to Thunder Arena\n+2000 Defense vs. Missile\n(31 to 50)% Bonus to Defense",
+      "search_text": "+ 11 to 24 to thunder arena relic relics relic required level 75 + 11 to 24 to thunder arena +2000 defense vs missile 31 to 50 % bonus to defense"
+    },
+    {
+      "id": 49608,
+      "type_code": "RELIC",
+      "name": "(3 to 4)% Skill Duration",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 90\n(3 to 4)% Skill Duration\n+(4 to 9) to Timefield\nSlow Target 5%",
+      "search_text": "3 to 4 % skill duration relic relics relic required level 90 3 to 4 % skill duration + 4 to 9 to timefield slow target 5%"
+    },
+    {
+      "id": 49609,
+      "type_code": "RELIC",
+      "name": "+(2 to 6) to Titan's Fortitude",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(2 to 6) to Titan's Fortitude\n+(101 to 500) Defense\n+5% to Experience Gained",
+      "search_text": "+ 2 to 6 to titan's fortitude relic relics relic required level 75 + 2 to 6 to titan's fortitude + 101 to 500 defense +5% to experience gained"
+    },
+    {
+      "id": 49610,
+      "type_code": "RELIC",
+      "name": "(6 to 9)% Innate Elemental Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n(6 to 9)% Innate Elemental Damage\n+(6 to 13) to Trinity Arrow\nFire Absorb 1%\nLightning Absorb 1%\nCold Absorb 1%",
+      "search_text": "6 to 9 % innate elemental damage relic relics relic required level 75 6 to 9 % innate elemental damage + 6 to 13 to trinity arrow fire absorb 1% lightning absorb 1% cold absorb 1%"
+    },
+    {
+      "id": 49611,
+      "type_code": "RELIC",
+      "name": "-(2 to 3)% to Enemy Fire Resistance",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n-(2 to 3)% to Enemy Fire Resistance\n-(2 to 3)% to Enemy Lightning Resistance\n-(2 to 3)% to Enemy Cold Resistance\n+(1 to 4) to Trinity Beam",
+      "search_text": "- 2 to 3 % to enemy fire resistance relic relics relic required level 75 - 2 to 3 % to enemy fire resistance - 2 to 3 % to enemy lightning resistance - 2 to 3 % to enemy cold resistance + 1 to 4 to trinity beam"
+    },
+    {
+      "id": 49616,
+      "type_code": "RELIC",
+      "name": "+(11 to 15)% Bonus to Poison Skill Duration",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(11 to 15)% Bonus to Poison Skill Duration\n-(4 to 6)% to Enemy Poison Resistance\n+(9 to 19) to Virulence",
+      "search_text": "+ 11 to 15 % bonus to poison skill duration relic relics relic required level 75 + 11 to 15 % bonus to poison skill duration - 4 to 6 % to enemy poison resistance + 9 to 19 to virulence"
+    },
+    {
+      "id": 49617,
+      "type_code": "RELIC",
+      "name": "+(15 to 26) to Void Archon",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(15 to 26) to Void Archon\n+(11 to 15)% to Summoned Minion Resistances\n(2 to 4)% to Vitality",
+      "search_text": "+ 15 to 26 to void archon relic relics relic required level 75 + 15 to 26 to void archon + 11 to 15 % to summoned minion resistances 2 to 4 % to vitality"
+    },
+    {
+      "id": 49620,
+      "type_code": "RELIC",
+      "name": "+(301 to 600) to Attack Rating",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(301 to 600) to Attack Rating\n+(5 to 9) to Whirlpool\n+(21 to 30) Mana on Melee Attack",
+      "search_text": "+ 301 to 600 to attack rating relic relics relic required level 75 + 301 to 600 to attack rating + 5 to 9 to whirlpool + 21 to 30 mana on melee attack"
+    },
+    {
+      "id": 49621,
+      "type_code": "RELIC",
+      "name": "+(8 to 14) to Whirlwind",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(8 to 14) to Whirlwind\n(2 to 4)% to All Attributes\nPoison Resist +25%",
+      "search_text": "+ 8 to 14 to whirlwind relic relics relic required level 75 + 8 to 14 to whirlwind 2 to 4 % to all attributes poison resist +25%"
+    },
+    {
+      "id": 49622,
+      "type_code": "RELIC",
+      "name": "+(21 to 40)% Damage to Undead",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(21 to 40)% Damage to Undead\n+(15 to 24) to Widowmaker\n(6 to 9)% to Strength",
+      "search_text": "+ 21 to 40 % damage to undead relic relics relic required level 75 + 21 to 40 % damage to undead + 15 to 24 to widowmaker 6 to 9 % to strength"
+    },
+    {
+      "id": 49623,
+      "type_code": "RELIC",
+      "name": "+(4 to 7)% to Cold Spell Damage",
+      "base_type": "Relic",
+      "source_slug": "relics",
+      "raw_text": "Relic\nRequired Level: 75\n+(4 to 7)% to Cold Spell Damage\n+(9 to 16) to Winter Avatar\nMaximum Cold Resist +1%",
+      "search_text": "+ 4 to 7 % to cold spell damage relic relics relic required level 75 + 4 to 7 % to cold spell damage + 9 to 16 to winter avatar maximum cold resist +1%"
+    },
+    {
+      "id": 49015,
+      "type_code": "RW",
+      "name": "Victory\n (Median XL - 6 years)",
+      "base_type": "Body Armors",
+      "source_slug": "runewords",
+      "raw_text": "'SolAmn'\nRequired Level: 33\nRunes: Sol Rune · Amn Rune\n4% Chance to cast level 11 Fortress on Melee Attack\n50% Bonus to Attack Rating\nWeapon Physical Damage +(10 to 15)%\n+(15 to 25) to all Attributes\n+(50 to 100) to Mana\nPoison Resist +25%\n(16 to 25)% Magic Find\n+2 to Light Radius",
+      "search_text": "victory median xl - 6 years body armors body armors 'solamn' 'solamn' required level 33 runes sol rune amn rune 4% chance to cast level 11 fortress on melee attack 50% bonus to attack rating weapon physical damage + 10 to 15 % + 15 to 25 to all attributes + 50 to 100 to mana poison resist +25% 16 to 25 % magic find +2 to light radius"
+    },
+    {
+      "id": 49019,
+      "type_code": "RW",
+      "name": "Eternal\n Median 2005-2026\n Thanks everyone!",
+      "base_type": "Body Armors",
+      "source_slug": "runewords",
+      "raw_text": "'TahaLewGhalFelQorKa'\nRequired Level: 110\nRunes: Taha Rune · Lew Rune · Ghal Rune · Fel Rune · Qor Rune · Ka Rune\n+4 to All Skills\n+(50 to 85) Spell Focus\n-(10 to 20)% to Enemy Elemental Resistances\n+1 to Disco Inferno\n(5 to 10)% Deadly Strike\n+(172 to 200)% Enhanced Defense\n10% to All Attributes\nMaximum Elemental Resists +1%\n+2 Life on Striking",
+      "search_text": "eternal median 2005-2026 thanks everyone body armors body armors 'tahalewghalfelqorka' 'tahalewghalfelqorka' required level 110 runes taha rune lew rune ghal rune fel rune qor rune ka rune +4 to all skills + 50 to 85 spell focus - 10 to 20 % to enemy elemental resistances +1 to disco inferno 5 to 10 % deadly strike + 172 to 200 % enhanced defense 10% to all attributes maximum elemental resists +1% +2 life on striking"
+    },
+    {
+      "id": 49024,
+      "type_code": "RW",
+      "name": "Ra",
+      "base_type": "Helms",
+      "source_slug": "runewords",
+      "raw_text": "'ShaelThul'\nRequired Level: 35\nRunes: Shael Rune · Thul Rune\nLiving Flame Gives +1% Fire Spell Damage per 8 Character Levels\n+1 to All Skills\n+10% Bonus to Poison Skill Duration\n35% Cast Speed\n-(7 to 10)% to Enemy Fire Resistance\n-(7 to 10)% to Enemy Poison Resistance\nAttacker Flees after Striking (11 to 15)%\nCold Resist +25%\nPoison Resist +25%\n(7 to 13)% Gold Find\n7% Magic Find",
+      "search_text": "ra helms helms 'shaelthul' 'shaelthul' required level 35 runes shael rune thul rune living flame gives +1% fire spell damage per 8 character levels +1 to all skills +10% bonus to poison skill duration 35% cast speed - 7 to 10 % to enemy fire resistance - 7 to 10 % to enemy poison resistance attacker flees after striking 11 to 15 % cold resist +25% poison resist +25% 7 to 13 % gold find 7% magic find"
+    },
+    {
+      "id": 48587,
+      "type_code": "SU",
+      "name": "Implement V.II",
+      "base_type": null,
+      "source_slug": "sacreduniques",
+      "raw_text": "Implement V.II\nOne-Hand Damage: 42 to 44\n(Assassin Only)\nRequired Level: 120\nRequired Dexterity: 400\nItem Level: 105\nDexterity Damage Bonus: (0.13 per Dexterity)%\n-25% to Enemy Elemental Resistances for Your Traps\n+5 to Assassin Skill Levels\n25% Block Speed\n15% Life stolen per Hit\nFire Absorb 1%\nLightning Absorb 1%\n+(300 to 400) Life on Melee Attack\nSocketed (3)",
+      "search_text": "implement v ii median xl - game guide - sacred uniques implement v ii one-hand damage 42 to 44 assassin only required level 120 required dexterity 400 item level 105 dexterity damage bonus 0 13 per dexterity % -25% to enemy elemental resistances for your traps +5 to assassin skill levels 25% block speed 15% life stolen per hit fire absorb 1% lightning absorb 1% + 300 to 400 life on melee attack socketed 3"
+    },
+    {
+      "id": 48616,
+      "type_code": "SU",
+      "name": "Mr. Painless",
+      "base_type": null,
+      "source_slug": "sacreduniques",
+      "raw_text": "Mr. Painless\nTwo-Hand Damage:\n(272 - 294) to (319 - 343)\n(Druid Only)\nRequired Level: 100\nRequired Strength: 725\nItem Level: 120\nStrength Damage Bonus: (0.16 per Strength)%\n+4 to Druid Skill Levels\n9% Chance to cast level 50 Punisher Bolt on Striking\n40% Attack Speed\nAdds 75-100 Damage\n+(144 to 171)% Enhanced Damage\n-(25 to 30)% to Enemy Poison Resistance\nSlow Target (21 to 25)%\n+100 to Dexterity\nPhysical Resist 10%\nSocketed (6)",
+      "search_text": "mr painless median xl - game guide - sacred uniques mr painless two-hand damage 272 - 294 to 319 - 343 druid only required level 100 required strength 725 item level 120 strength damage bonus 0 16 per strength % +4 to druid skill levels 9% chance to cast level 50 punisher bolt on striking 40% attack speed adds 75-100 damage + 144 to 171 % enhanced damage - 25 to 30 % to enemy poison resistance slow target 21 to 25 % +100 to dexterity physical resist 10% socketed 6"
+    }
+  ],
+  "duplicateNames": [
+    {
+      "normalized_name": "large cycle",
+      "n": 15,
+      "refs": "CYCLE:49409, CYCLE:49410, CYCLE:49411, CYCLE:49412, CYCLE:49413, CYCLE:49414, CYCLE:49415, CYCLE:49416, CYCLE:49417, CYCLE:49418, CYCLE:49419, CYCLE:49420, CYCLE:49421, CYCLE:49422, CYCLE:49423"
+    },
+    {
+      "normalized_name": "small cycle",
+      "n": 8,
+      "refs": "CYCLE:49393, CYCLE:49394, CYCLE:49395, CYCLE:49396, CYCLE:49397, CYCLE:49398, CYCLE:49399, CYCLE:49400"
+    },
+    {
+      "normalized_name": "medium cycle",
+      "n": 8,
+      "refs": "CYCLE:49401, CYCLE:49402, CYCLE:49403, CYCLE:49404, CYCLE:49405, CYCLE:49406, CYCLE:49407, CYCLE:49408"
+    },
+    {
+      "normalized_name": "eye of wisdom",
+      "n": 7,
+      "refs": "SET:49143, SET:49171, SET:49199, SET:49232, SET:49265, SET:49293, SET:49326"
+    },
+    {
+      "normalized_name": "imperfect sphere",
+      "n": 3,
+      "refs": "UMO:49364, UMO:49365, UMO:49366"
+    },
+    {
+      "normalized_name": "adds 50-100 magic damage",
+      "n": 3,
+      "refs": "RELIC:49442, RELIC:49458, RELIC:49626"
+    },
+    {
+      "normalized_name": "5% movement speed",
+      "n": 3,
+      "refs": "RELIC:49466, RELIC:49522, RELIC:49619"
+    },
+    {
+      "normalized_name": "mark of the angiris",
+      "n": 2,
+      "refs": "SU:48854, SU:48855"
+    },
+    {
+      "normalized_name": "bag of tricks",
+      "n": 2,
+      "refs": "SU:48880, SU:48883"
+    },
+    {
+      "normalized_name": "apple of discord",
+      "n": 2,
+      "refs": "UMO:49368, UMO:49369"
+    },
+    {
+      "normalized_name": "20% attack speed",
+      "n": 2,
+      "refs": "RELIC:49514, RELIC:49580"
+    },
+    {
+      "normalized_name": "+1 to all skills",
+      "n": 2,
+      "refs": "RELIC:49470, RELIC:49540"
+    },
+    {
+      "normalized_name": "+(11 to 15)% bonus to poison skill duration",
+      "n": 2,
+      "refs": "RELIC:49476, RELIC:49616"
+    }
+  ]
+}

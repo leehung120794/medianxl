@@ -1,0 +1,20 @@
+const assert = require('node:assert');
+const { searchItems, autocompleteItems } = require('../src/services/searchService');
+const { detailEmbeds, suggestionResponse } = require('../src/utils/embeds');
+const item = require('../src/commands/item');
+const status = require('../src/commands/status');
+const monitoring = require('../src/services/monitoringService');
+
+assert(item.data.options.some(option => option.name === 'query' && option.autocomplete === true), 'item query autocomplete missing');
+assert(status.data.name === 'status', 'status command missing');
+const results = searchItems({ query: 'fire', type: 'ALL', limit: 100 });
+assert(results.length > 25, 'fire should produce enough results to test pagination');
+const first = suggestionResponse(results, 'fire', 'test-user', 0);
+const second = suggestionResponse(results, 'fire', 'test-user', 1);
+assert(first.components.length === 2 && second.components.length === 2, 'pagination rows missing');
+assert(first.components[1].components.some(button => button.data.custom_id.endsWith(':1')), 'next page button missing');
+const itemSample = results[0];
+assert(detailEmbeds(itemSample)[0].data.fields.length >= 3, 'detail embed should have readable fields');
+assert(autocompleteItems({ query: 'raven', type: 'TU', limit: 25 }).length > 0, 'TU autocomplete failed');
+monitoring.writeEvent('page_monitor_test_passed', { resultCount: results.length });
+console.log(JSON.stringify({ ok: true, resultCount: results.length, pages: Math.ceil(results.length / 25) }));

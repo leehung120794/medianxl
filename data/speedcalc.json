@@ -1,0 +1,1904 @@
+{
+  "source": "https://dev.median-xl.com/speedcalc/",
+  "chars": [
+    {
+      "id": "Amazon",
+      "label": "Amazon",
+      "token": "AM"
+    },
+    {
+      "id": "Assassin",
+      "label": "Assassin",
+      "token": "AI"
+    },
+    {
+      "id": "Barbarian",
+      "label": "Barbarian",
+      "token": "BA"
+    },
+    {
+      "id": "Druid",
+      "label": "Druid",
+      "token": "DZ"
+    },
+    {
+      "id": "Necromancer",
+      "label": "Necromancer",
+      "token": "NE"
+    },
+    {
+      "id": "Paladin",
+      "label": "Paladin",
+      "token": "PA"
+    },
+    {
+      "id": "Sorceress",
+      "label": "Sorceress",
+      "token": "SO"
+    },
+    {
+      "id": "Werewolf",
+      "label": "Werewolf",
+      "token": "40"
+    },
+    {
+      "id": "Werebear",
+      "label": "Werebear",
+      "token": "TG"
+    },
+    {
+      "id": "Wereowl",
+      "label": "Wereowl",
+      "token": "OW"
+    },
+    {
+      "id": "Superbeast",
+      "label": "Superbeast",
+      "token": "~Z"
+    },
+    {
+      "id": "Deathlord",
+      "label": "Deathlord",
+      "token": "0N"
+    },
+    {
+      "id": "Treewarden",
+      "label": "Treewarden",
+      "token": "TH"
+    },
+    {
+      "id": "a1m",
+      "label": "Rogue",
+      "token": "RG"
+    },
+    {
+      "id": "a2m",
+      "label": "Town Guard",
+      "token": "GU"
+    },
+    {
+      "id": "a2m",
+      "label": "Shapeshifter",
+      "token": "GU"
+    },
+    {
+      "id": "a3m",
+      "label": "Iron Wolf",
+      "token": "IW"
+    },
+    {
+      "id": "a5m",
+      "label": "Son of Harrogath",
+      "token": "0A"
+    }
+  ],
+  "weapons": [
+    {
+      "label": "Short Sword",
+      "wsm": -20
+    },
+    {
+      "label": "Scimitar",
+      "wsm": -20
+    },
+    {
+      "label": "Saber",
+      "wsm": -20
+    },
+    {
+      "label": "Falchion",
+      "wsm": -20
+    },
+    {
+      "label": "Broad Sword",
+      "wsm": -10
+    },
+    {
+      "label": "Long Sword",
+      "wsm": -10
+    },
+    {
+      "label": "War Sword",
+      "wsm": -20
+    },
+    {
+      "label": "Crystal Sword",
+      "wsm": -15
+    },
+    {
+      "label": "Two-Handed Sword",
+      "wsm": 5
+    },
+    {
+      "label": "Claymore",
+      "wsm": 5
+    },
+    {
+      "label": "Giant Sword",
+      "wsm": 5
+    },
+    {
+      "label": "Bastard Sword",
+      "wsm": 5
+    },
+    {
+      "label": "Flamberge",
+      "wsm": 15
+    },
+    {
+      "label": "Great Sword",
+      "wsm": 15
+    },
+    {
+      "label": "Hand Axe",
+      "wsm": -10
+    },
+    {
+      "label": "Axe",
+      "wsm": 0
+    },
+    {
+      "label": "Double Axe",
+      "wsm": 0
+    },
+    {
+      "label": "Military Pick",
+      "wsm": 0
+    },
+    {
+      "label": "War Axe",
+      "wsm": 0
+    },
+    {
+      "label": "Large Axe",
+      "wsm": 15
+    },
+    {
+      "label": "Broad Axe",
+      "wsm": 15
+    },
+    {
+      "label": "Battle Axe",
+      "wsm": 15
+    },
+    {
+      "label": "Great Axe",
+      "wsm": 20
+    },
+    {
+      "label": "Giant Axe",
+      "wsm": 20
+    },
+    {
+      "label": "Club",
+      "wsm": 0
+    },
+    {
+      "label": "Spiked Club",
+      "wsm": 0
+    },
+    {
+      "label": "Mace",
+      "wsm": 5
+    },
+    {
+      "label": "Morning Star",
+      "wsm": 5
+    },
+    {
+      "label": "Flail",
+      "wsm": 10
+    },
+    {
+      "label": "War Hammer",
+      "wsm": 10
+    },
+    {
+      "label": "Maul",
+      "wsm": 22
+    },
+    {
+      "label": "Great Maul",
+      "wsm": 23
+    },
+    {
+      "label": "Scepter",
+      "wsm": -20
+    },
+    {
+      "label": "Grand Scepter",
+      "wsm": -20
+    },
+    {
+      "label": "War Scepter",
+      "wsm": -10
+    },
+    {
+      "label": "Javelin",
+      "wsm": 5
+    },
+    {
+      "label": "Pilum",
+      "wsm": 10
+    },
+    {
+      "label": "Short Spear",
+      "wsm": 5
+    },
+    {
+      "label": "Glaive",
+      "wsm": 15
+    },
+    {
+      "label": "Throwing Spear",
+      "wsm": 12
+    },
+    {
+      "label": "Spear",
+      "wsm": 5
+    },
+    {
+      "label": "Trident",
+      "wsm": 5
+    },
+    {
+      "label": "Brandinstock",
+      "wsm": 5
+    },
+    {
+      "label": "Spetum",
+      "wsm": 5
+    },
+    {
+      "label": "Pike",
+      "wsm": 15
+    },
+    {
+      "label": "Scythe",
+      "wsm": 5
+    },
+    {
+      "label": "Dagger",
+      "wsm": -15
+    },
+    {
+      "label": "Dirk",
+      "wsm": -15
+    },
+    {
+      "label": "Kriss",
+      "wsm": -15
+    },
+    {
+      "label": "Blade",
+      "wsm": -10
+    },
+    {
+      "label": "Kukri",
+      "wsm": 0
+    },
+    {
+      "label": "Throwing Knife",
+      "wsm": -20
+    },
+    {
+      "label": "Flying Knife",
+      "wsm": -20
+    },
+    {
+      "label": "Balanced Knife",
+      "wsm": -10
+    },
+    {
+      "label": "Throwing Axe",
+      "wsm": -20
+    },
+    {
+      "label": "Balanced Axe",
+      "wsm": -10
+    },
+    {
+      "label": "Short Staff",
+      "wsm": 10
+    },
+    {
+      "label": "Long Staff",
+      "wsm": 10
+    },
+    {
+      "label": "Gnarled Staff",
+      "wsm": 10
+    },
+    {
+      "label": "Battle Staff",
+      "wsm": 10
+    },
+    {
+      "label": "War Staff",
+      "wsm": 20
+    },
+    {
+      "label": "Short Bow",
+      "wsm": 5
+    },
+    {
+      "label": "Hunter's Bow",
+      "wsm": 5
+    },
+    {
+      "label": "Long Bow",
+      "wsm": 15
+    },
+    {
+      "label": "Composite Bow",
+      "wsm": 5
+    },
+    {
+      "label": "Short Battle Bow",
+      "wsm": 5
+    },
+    {
+      "label": "Long Battle Bow",
+      "wsm": 15
+    },
+    {
+      "label": "Short War Bow",
+      "wsm": 5
+    },
+    {
+      "label": "Long War Bow",
+      "wsm": 15
+    },
+    {
+      "label": "Maiden Bow",
+      "wsm": 20
+    },
+    {
+      "label": "Light Crossbow",
+      "wsm": 12
+    },
+    {
+      "label": "Crossbow",
+      "wsm": 10
+    },
+    {
+      "label": "Heavy Crossbow",
+      "wsm": 17
+    },
+    {
+      "label": "Repeating Crossbow",
+      "wsm": 8
+    },
+    {
+      "label": "Stag Bow",
+      "wsm": 10
+    },
+    {
+      "label": "Reflex Bow",
+      "wsm": 10
+    },
+    {
+      "label": "Maiden Spear",
+      "wsm": 10
+    },
+    {
+      "label": "Maiden Pike",
+      "wsm": 20
+    },
+    {
+      "label": "Maiden Javelin",
+      "wsm": 13
+    },
+    {
+      "label": "Katar",
+      "wsm": -20
+    },
+    {
+      "label": "Wrist Blade",
+      "wsm": -20
+    },
+    {
+      "label": "Hatchet Hands",
+      "wsm": -20
+    },
+    {
+      "label": "Cestus",
+      "wsm": -20
+    },
+    {
+      "label": "Claws",
+      "wsm": -15
+    },
+    {
+      "label": "Blade Talons",
+      "wsm": -15
+    },
+    {
+      "label": "Scissors Katar",
+      "wsm": -15
+    },
+    {
+      "label": "Halberd",
+      "wsm": 0
+    },
+    {
+      "label": "Naginata",
+      "wsm": 5
+    },
+    {
+      "label": "Spatha",
+      "wsm": -15
+    },
+    {
+      "label": "Backsword",
+      "wsm": -15
+    },
+    {
+      "label": "Ida",
+      "wsm": -5
+    },
+    {
+      "label": "Bronze Sword",
+      "wsm": -5
+    },
+    {
+      "label": "Kriegsmesser",
+      "wsm": -5
+    },
+    {
+      "label": "Mammen Axe",
+      "wsm": -5
+    },
+    {
+      "label": "Hammerhead Axe",
+      "wsm": 5
+    },
+    {
+      "label": "Ono",
+      "wsm": 15
+    },
+    {
+      "label": "Valaska",
+      "wsm": 25
+    },
+    {
+      "label": "Labrys",
+      "wsm": 25
+    },
+    {
+      "label": "Compound Bow",
+      "wsm": 0
+    },
+    {
+      "label": "Serpent Bow",
+      "wsm": 15
+    },
+    {
+      "label": "Maple Bow",
+      "wsm": 10
+    },
+    {
+      "label": "Viper Bow",
+      "wsm": 8
+    },
+    {
+      "label": "Recurve Bow",
+      "wsm": 20
+    },
+    {
+      "label": "Flamen Staff",
+      "wsm": 20
+    },
+    {
+      "label": "Raptor Scythe",
+      "wsm": 10
+    },
+    {
+      "label": "Bonesplitter",
+      "wsm": 20
+    },
+    {
+      "label": "Marrow Staff",
+      "wsm": 20
+    },
+    {
+      "label": "Hexblade",
+      "wsm": -20
+    },
+    {
+      "label": "Spirit Edge",
+      "wsm": -15
+    },
+    {
+      "label": "Needle Crossbow",
+      "wsm": 8
+    },
+    {
+      "label": "Dart Thrower",
+      "wsm": 12
+    },
+    {
+      "label": "Stinger Crossbow",
+      "wsm": 14
+    },
+    {
+      "label": "Trebuchet",
+      "wsm": 16
+    },
+    {
+      "label": "Wand",
+      "wsm": -20
+    },
+    {
+      "label": "Yew Wand",
+      "wsm": -20
+    },
+    {
+      "label": "Bone Wand",
+      "wsm": -20
+    },
+    {
+      "label": "Grim Wand",
+      "wsm": -10
+    },
+    {
+      "label": "Bonebreaker",
+      "wsm": 10
+    },
+    {
+      "label": "Angel Star",
+      "wsm": 10
+    },
+    {
+      "label": "Goedendag",
+      "wsm": 10
+    },
+    {
+      "label": "Hand of God",
+      "wsm": 24
+    },
+    {
+      "label": "Holy Lance",
+      "wsm": 10
+    },
+    {
+      "label": "Tepoztopilli",
+      "wsm": 20
+    },
+    {
+      "label": "Eagle Orb",
+      "wsm": -25
+    },
+    {
+      "label": "Sacred Globe",
+      "wsm": -25
+    },
+    {
+      "label": "Smoked Sphere",
+      "wsm": -25
+    },
+    {
+      "label": "Clasped Orb",
+      "wsm": -25
+    },
+    {
+      "label": "Dragon Stone",
+      "wsm": -20
+    },
+    {
+      "label": "Warp Blade",
+      "wsm": -10
+    }
+  ],
+  "animations": {
+    "0AA11HS": {
+      "frames": 17,
+      "speed": 256
+    },
+    "0AA12HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "0AA21HS": {
+      "frames": 17,
+      "speed": 256
+    },
+    "0AA22HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "0AGH1HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "0AGH2HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "0NA1HTH": {
+      "frames": 16,
+      "speed": 340
+    },
+    "0NBLHTH": {
+      "frames": 6,
+      "speed": 288
+    },
+    "0NGHHTH": {
+      "frames": 6,
+      "speed": 286
+    },
+    "40A1HTH": {
+      "frames": 13,
+      "speed": 318
+    },
+    "40A2HTH": {
+      "frames": 13,
+      "speed": 318
+    },
+    "40BLHTH": {
+      "frames": 5,
+      "speed": 318
+    },
+    "40GHHTH": {
+      "frames": 4,
+      "speed": 256
+    },
+    "40NUHTH": {
+      "frames": 9,
+      "speed": 144
+    },
+    "40SCHTH": {
+      "frames": 11,
+      "speed": 168
+    },
+    "AIA11HS": {
+      "frames": 15,
+      "speed": 320
+    },
+    "AIA11HT": {
+      "frames": 15,
+      "speed": 320
+    },
+    "AIA12HS": {
+      "frames": 23,
+      "speed": 380
+    },
+    "AIA12HT": {
+      "frames": 23,
+      "speed": 380
+    },
+    "AIA1BOW": {
+      "frames": 16,
+      "speed": 284
+    },
+    "AIA1HT1": {
+      "frames": 11,
+      "speed": 320
+    },
+    "AIA1HT2": {
+      "frames": 11,
+      "speed": 320
+    },
+    "AIA1HTH": {
+      "frames": 11,
+      "speed": 290
+    },
+    "AIA1STF": {
+      "frames": 19,
+      "speed": 372
+    },
+    "AIA1XBW": {
+      "frames": 21,
+      "speed": 350
+    },
+    "AIA21HS": {
+      "frames": 15,
+      "speed": 320
+    },
+    "AIA21HT": {
+      "frames": 15,
+      "speed": 320
+    },
+    "AIA22HS": {
+      "frames": 23,
+      "speed": 380
+    },
+    "AIA22HT": {
+      "frames": 23,
+      "speed": 380
+    },
+    "AIA2HT1": {
+      "frames": 12,
+      "speed": 320
+    },
+    "AIA2HT2": {
+      "frames": 12,
+      "speed": 320
+    },
+    "AIA2HTH": {
+      "frames": 12,
+      "speed": 256
+    },
+    "AIA2STF": {
+      "frames": 19,
+      "speed": 372
+    },
+    "AIBL1HS": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AIBL1HT": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AIBLHT1": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AIBLHT2": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AIBLHTH": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AIGH1HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGH1HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGH2HS": {
+      "frames": 5,
+      "speed": 384
+    },
+    "AIGH2HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHBOW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHHT1": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHHT2": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHHTH": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHSTF": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AIGHXBW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "AISC1HS": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISC1HT": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISC2HS": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISC2HT": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISCBOW": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISCHT1": {
+      "frames": 17,
+      "speed": 374
+    },
+    "AISCHT2": {
+      "frames": 17,
+      "speed": 374
+    },
+    "AISCHTH": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AISCSTF": {
+      "frames": 17,
+      "speed": 316
+    },
+    "AISCXBW": {
+      "frames": 17,
+      "speed": 288
+    },
+    "AITH1HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "AITH1HT": {
+      "frames": 16,
+      "speed": 338
+    },
+    "AMA11HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "AMA11HT": {
+      "frames": 15,
+      "speed": 288
+    },
+    "AMA12HS": {
+      "frames": 20,
+      "speed": 310
+    },
+    "AMA12HT": {
+      "frames": 18,
+      "speed": 296
+    },
+    "AMA1BOW": {
+      "frames": 14,
+      "speed": 256
+    },
+    "AMA1HTH": {
+      "frames": 13,
+      "speed": 256
+    },
+    "AMA1STF": {
+      "frames": 20,
+      "speed": 345
+    },
+    "AMA1XBW": {
+      "frames": 20,
+      "speed": 368
+    },
+    "AMA21HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "AMA21HT": {
+      "frames": 15,
+      "speed": 256
+    },
+    "AMA22HS": {
+      "frames": 20,
+      "speed": 310
+    },
+    "AMA22HT": {
+      "frames": 18,
+      "speed": 296
+    },
+    "AMA2HTH": {
+      "frames": 13,
+      "speed": 256
+    },
+    "AMA2STF": {
+      "frames": 20,
+      "speed": 345
+    },
+    "AMBL1HS": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AMBL1HT": {
+      "frames": 3,
+      "speed": 190
+    },
+    "AMBLHTH": {
+      "frames": 3,
+      "speed": 128
+    },
+    "AMGH1HS": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGH1HT": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGH2HS": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGH2HT": {
+      "frames": 6,
+      "speed": 320
+    },
+    "AMGHBOW": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGHHTH": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGHSTF": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMGHXBW": {
+      "frames": 6,
+      "speed": 256
+    },
+    "AMSC1HS": {
+      "frames": 20,
+      "speed": 435
+    },
+    "AMSC1HT": {
+      "frames": 20,
+      "speed": 372
+    },
+    "AMSC2HS": {
+      "frames": 20,
+      "speed": 340
+    },
+    "AMSC2HT": {
+      "frames": 20,
+      "speed": 400
+    },
+    "AMSCBOW": {
+      "frames": 20,
+      "speed": 360
+    },
+    "AMSCHTH": {
+      "frames": 20,
+      "speed": 320
+    },
+    "AMSCSTF": {
+      "frames": 20,
+      "speed": 412
+    },
+    "AMSCXBW": {
+      "frames": 20,
+      "speed": 360
+    },
+    "AMTH1HS": {
+      "frames": 16,
+      "speed": 256
+    },
+    "AMTH1HT": {
+      "frames": 16,
+      "speed": 312
+    },
+    "AMTHHTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "BAA11HS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA11HT": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA11JS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA11JT": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA11SS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA11ST": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA12HS": {
+      "frames": 18,
+      "speed": 384
+    },
+    "BAA12HT": {
+      "frames": 19,
+      "speed": 384
+    },
+    "BAA1BOW": {
+      "frames": 15,
+      "speed": 256
+    },
+    "BAA1HTH": {
+      "frames": 12,
+      "speed": 256
+    },
+    "BAA1STF": {
+      "frames": 19,
+      "speed": 384
+    },
+    "BAA1XBW": {
+      "frames": 20,
+      "speed": 328
+    },
+    "BAA21HS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA21HT": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA21JS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA21JT": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA21SS": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA21ST": {
+      "frames": 16,
+      "speed": 350
+    },
+    "BAA22HS": {
+      "frames": 18,
+      "speed": 350
+    },
+    "BAA22HT": {
+      "frames": 19,
+      "speed": 384
+    },
+    "BAA2STF": {
+      "frames": 19,
+      "speed": 384
+    },
+    "BABL1HS": {
+      "frames": 4,
+      "speed": 254
+    },
+    "BABL1HT": {
+      "frames": 4,
+      "speed": 254
+    },
+    "BABLHTH": {
+      "frames": 4,
+      "speed": 254
+    },
+    "BAGH1HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGH1HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGH1JS": {
+      "frames": 5,
+      "speed": 320
+    },
+    "BAGH1JT": {
+      "frames": 5,
+      "speed": 320
+    },
+    "BAGH1SS": {
+      "frames": 5,
+      "speed": 320
+    },
+    "BAGH1ST": {
+      "frames": 5,
+      "speed": 320
+    },
+    "BAGH2HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGH2HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGHBOW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGHHTH": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGHSTF": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BAGHXBW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "BASC1HS": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC1HT": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC1JS": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC1JT": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC1SS": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC1ST": {
+      "frames": 14,
+      "speed": 280
+    },
+    "BASC2HS": {
+      "frames": 14,
+      "speed": 224
+    },
+    "BASC2HT": {
+      "frames": 14,
+      "speed": 224
+    },
+    "BASCBOW": {
+      "frames": 14,
+      "speed": 224
+    },
+    "BASCHTH": {
+      "frames": 14,
+      "speed": 224
+    },
+    "BASCSTF": {
+      "frames": 14,
+      "speed": 240
+    },
+    "BASCXBW": {
+      "frames": 14,
+      "speed": 224
+    },
+    "BATH1HS": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATH1HT": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATH1JS": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATH1JT": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATH1SS": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATH1ST": {
+      "frames": 16,
+      "speed": 264
+    },
+    "BATHHTH": {
+      "frames": 16,
+      "speed": 264
+    },
+    "DZA11HS": {
+      "frames": 19,
+      "speed": 296
+    },
+    "DZA11HT": {
+      "frames": 19,
+      "speed": 320
+    },
+    "DZA12HS": {
+      "frames": 21,
+      "speed": 256
+    },
+    "DZA12HT": {
+      "frames": 23,
+      "speed": 288
+    },
+    "DZA1BOW": {
+      "frames": 16,
+      "speed": 336
+    },
+    "DZA1HTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "DZA1STF": {
+      "frames": 17,
+      "speed": 256
+    },
+    "DZA1XBW": {
+      "frames": 20,
+      "speed": 372
+    },
+    "DZA21HS": {
+      "frames": 19,
+      "speed": 296
+    },
+    "DZA21HT": {
+      "frames": 19,
+      "speed": 320
+    },
+    "DZA22HS": {
+      "frames": 21,
+      "speed": 256
+    },
+    "DZA22HT": {
+      "frames": 23,
+      "speed": 288
+    },
+    "DZA2STF": {
+      "frames": 17,
+      "speed": 256
+    },
+    "DZBL1HS": {
+      "frames": 6,
+      "speed": 286
+    },
+    "DZBL1HT": {
+      "frames": 6,
+      "speed": 286
+    },
+    "DZBLHTH": {
+      "frames": 6,
+      "speed": 286
+    },
+    "DZGH1HS": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZGH1HT": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZGH2HS": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZGH2HT": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZGHBOW": {
+      "frames": 7,
+      "speed": 320
+    },
+    "DZGHHTH": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZGHSTF": {
+      "frames": 7,
+      "speed": 320
+    },
+    "DZGHXBW": {
+      "frames": 7,
+      "speed": 256
+    },
+    "DZSC1HS": {
+      "frames": 15,
+      "speed": 292
+    },
+    "DZSC1HT": {
+      "frames": 15,
+      "speed": 256
+    },
+    "DZSC2HS": {
+      "frames": 15,
+      "speed": 256
+    },
+    "DZSC2HT": {
+      "frames": 15,
+      "speed": 256
+    },
+    "DZSCBOW": {
+      "frames": 15,
+      "speed": 288
+    },
+    "DZSCHTH": {
+      "frames": 15,
+      "speed": 256
+    },
+    "DZSCSTF": {
+      "frames": 15,
+      "speed": 322
+    },
+    "DZSCXBW": {
+      "frames": 15,
+      "speed": 288
+    },
+    "DZTH1HS": {
+      "frames": 18,
+      "speed": 294
+    },
+    "DZTH1HT": {
+      "frames": 18,
+      "speed": 294
+    },
+    "DZTHHTH": {
+      "frames": 18,
+      "speed": 294
+    },
+    "GUA1HTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "GUGHHTH": {
+      "frames": 8,
+      "speed": 256
+    },
+    "GUNUHTH": {
+      "frames": 8,
+      "speed": 96
+    },
+    "IWA11HS": {
+      "frames": 15,
+      "speed": 256
+    },
+    "IWGH1HS": {
+      "frames": 9,
+      "speed": 256
+    },
+    "IWSC1HS": {
+      "frames": 18,
+      "speed": 256
+    },
+    "NEA11HS": {
+      "frames": 19,
+      "speed": 350
+    },
+    "NEA11HT": {
+      "frames": 19,
+      "speed": 398
+    },
+    "NEA12HS": {
+      "frames": 23,
+      "speed": 430
+    },
+    "NEA12HT": {
+      "frames": 24,
+      "speed": 320
+    },
+    "NEA1BOW": {
+      "frames": 18,
+      "speed": 304
+    },
+    "NEA1HTH": {
+      "frames": 15,
+      "speed": 256
+    },
+    "NEA1STF": {
+      "frames": 20,
+      "speed": 425
+    },
+    "NEA1XBW": {
+      "frames": 20,
+      "speed": 366
+    },
+    "NEA21HS": {
+      "frames": 19,
+      "speed": 350
+    },
+    "NEA21HT": {
+      "frames": 19,
+      "speed": 288
+    },
+    "NEA22HS": {
+      "frames": 23,
+      "speed": 561
+    },
+    "NEA22HT": {
+      "frames": 24,
+      "speed": 320
+    },
+    "NEA2HTH": {
+      "frames": 15,
+      "speed": 256
+    },
+    "NEA2STF": {
+      "frames": 20,
+      "speed": 256
+    },
+    "NEBL1HS": {
+      "frames": 6,
+      "speed": 380
+    },
+    "NEBL1HT": {
+      "frames": 6,
+      "speed": 380
+    },
+    "NEBLHTH": {
+      "frames": 6,
+      "speed": 380
+    },
+    "NEGH1HS": {
+      "frames": 7,
+      "speed": 256
+    },
+    "NEGH1HT": {
+      "frames": 7,
+      "speed": 256
+    },
+    "NEGH2HS": {
+      "frames": 7,
+      "speed": 384
+    },
+    "NEGH2HT": {
+      "frames": 7,
+      "speed": 256
+    },
+    "NEGHBOW": {
+      "frames": 7,
+      "speed": 256
+    },
+    "NEGHHTH": {
+      "frames": 7,
+      "speed": 256
+    },
+    "NEGHSTF": {
+      "frames": 7,
+      "speed": 384
+    },
+    "NEGHXBW": {
+      "frames": 7,
+      "speed": 320
+    },
+    "NESC1HS": {
+      "frames": 16,
+      "speed": 335
+    },
+    "NESC1HT": {
+      "frames": 16,
+      "speed": 318
+    },
+    "NESC2HS": {
+      "frames": 16,
+      "speed": 335
+    },
+    "NESC2HT": {
+      "frames": 16,
+      "speed": 256
+    },
+    "NESCBOW": {
+      "frames": 16,
+      "speed": 256
+    },
+    "NESCHTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "NESCSTF": {
+      "frames": 16,
+      "speed": 344
+    },
+    "NESCXBW": {
+      "frames": 16,
+      "speed": 256
+    },
+    "NETH1HS": {
+      "frames": 20,
+      "speed": 296
+    },
+    "NETH1HT": {
+      "frames": 20,
+      "speed": 296
+    },
+    "NETHHTH": {
+      "frames": 20,
+      "speed": 296
+    },
+    "OWA1HTH": {
+      "frames": 13,
+      "speed": 238
+    },
+    "OWA2HTH": {
+      "frames": 16,
+      "speed": 240
+    },
+    "OWBLHTH": {
+      "frames": 9,
+      "speed": 464
+    },
+    "OWGHHTH": {
+      "frames": 8,
+      "speed": 340
+    },
+    "OWSCHTH": {
+      "frames": 11,
+      "speed": 210
+    },
+    "PAA11HS": {
+      "frames": 15,
+      "speed": 316
+    },
+    "PAA11HT": {
+      "frames": 17,
+      "speed": 358
+    },
+    "PAA12HS": {
+      "frames": 18,
+      "speed": 340
+    },
+    "PAA12HT": {
+      "frames": 20,
+      "speed": 420
+    },
+    "PAA1BOW": {
+      "frames": 16,
+      "speed": 296
+    },
+    "PAA1HTH": {
+      "frames": 14,
+      "speed": 256
+    },
+    "PAA1STF": {
+      "frames": 18,
+      "speed": 340
+    },
+    "PAA1XBW": {
+      "frames": 20,
+      "speed": 368
+    },
+    "PAA21HS": {
+      "frames": 15,
+      "speed": 316
+    },
+    "PAA21HT": {
+      "frames": 17,
+      "speed": 358
+    },
+    "PAA22HS": {
+      "frames": 19,
+      "speed": 256
+    },
+    "PAA22HT": {
+      "frames": 20,
+      "speed": 420
+    },
+    "PAA2HTH": {
+      "frames": 14,
+      "speed": 256
+    },
+    "PAA2STF": {
+      "frames": 18,
+      "speed": 332
+    },
+    "PABL1HS": {
+      "frames": 3,
+      "speed": 190
+    },
+    "PABL1HT": {
+      "frames": 3,
+      "speed": 190
+    },
+    "PABL2HS": {
+      "frames": 3,
+      "speed": 84
+    },
+    "PABL2HT": {
+      "frames": 3,
+      "speed": 128
+    },
+    "PABLHTH": {
+      "frames": 3,
+      "speed": 190
+    },
+    "PAGH1HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGH1HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGH2HS": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGH2HT": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGHBOW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGHHTH": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PAGHSTF": {
+      "frames": 5,
+      "speed": 192
+    },
+    "PAGHXBW": {
+      "frames": 5,
+      "speed": 256
+    },
+    "PASC1HS": {
+      "frames": 16,
+      "speed": 348
+    },
+    "PASC1HT": {
+      "frames": 16,
+      "speed": 348
+    },
+    "PASC2HS": {
+      "frames": 16,
+      "speed": 368
+    },
+    "PASC2HT": {
+      "frames": 16,
+      "speed": 368
+    },
+    "PASCBOW": {
+      "frames": 16,
+      "speed": 256
+    },
+    "PASCHTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "PASCSTF": {
+      "frames": 16,
+      "speed": 368
+    },
+    "PASCXBW": {
+      "frames": 16,
+      "speed": 256
+    },
+    "PATH1HS": {
+      "frames": 16,
+      "speed": 264
+    },
+    "PATH1HT": {
+      "frames": 16,
+      "speed": 264
+    },
+    "PATHHTH": {
+      "frames": 12,
+      "speed": 256
+    },
+    "RGA1HTH": {
+      "frames": 15,
+      "speed": 256
+    },
+    "RGGHHTH": {
+      "frames": 6,
+      "speed": 256
+    },
+    "SOA11HS": {
+      "frames": 20,
+      "speed": 448
+    },
+    "SOA11HT": {
+      "frames": 19,
+      "speed": 316
+    },
+    "SOA12HS": {
+      "frames": 24,
+      "speed": 360
+    },
+    "SOA12HT": {
+      "frames": 23,
+      "speed": 376
+    },
+    "SOA1BOW": {
+      "frames": 17,
+      "speed": 384
+    },
+    "SOA1HTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "SOA1STF": {
+      "frames": 18,
+      "speed": 338
+    },
+    "SOA1XBW": {
+      "frames": 20,
+      "speed": 384
+    },
+    "SOA21HS": {
+      "frames": 20,
+      "speed": 448
+    },
+    "SOA21HT": {
+      "frames": 19,
+      "speed": 316
+    },
+    "SOA22HS": {
+      "frames": 24,
+      "speed": 360
+    },
+    "SOA22HT": {
+      "frames": 23,
+      "speed": 376
+    },
+    "SOA2HTH": {
+      "frames": 16,
+      "speed": 256
+    },
+    "SOA2STF": {
+      "frames": 18,
+      "speed": 338
+    },
+    "SOBL1HS": {
+      "frames": 5,
+      "speed": 318
+    },
+    "SOBL1HT": {
+      "frames": 5,
+      "speed": 318
+    },
+    "SOBLHTH": {
+      "frames": 5,
+      "speed": 318
+    },
+    "SOGH1HS": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGH1HT": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGH2HS": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGH2HT": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGHBOW": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGHHTH": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOGHSTF": {
+      "frames": 8,
+      "speed": 448
+    },
+    "SOGHXBW": {
+      "frames": 8,
+      "speed": 384
+    },
+    "SOSC1HS": {
+      "frames": 14,
+      "speed": 305
+    },
+    "SOSC1HT": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOSC2HS": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOSC2HT": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOSCBOW": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOSCHTH": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOSCSTF": {
+      "frames": 14,
+      "speed": 344
+    },
+    "SOSCXBW": {
+      "frames": 14,
+      "speed": 256
+    },
+    "SOTH1HS": {
+      "frames": 20,
+      "speed": 328
+    },
+    "SOTH1HT": {
+      "frames": 20,
+      "speed": 328
+    },
+    "SOTHHTH": {
+      "frames": 20,
+      "speed": 328
+    },
+    "TGA1HTH": {
+      "frames": 12,
+      "speed": 253
+    },
+    "TGA2HTH": {
+      "frames": 12,
+      "speed": 253
+    },
+    "TGBLHTH": {
+      "frames": 5,
+      "speed": 220
+    },
+    "TGGHHTH": {
+      "frames": 5,
+      "speed": 256
+    },
+    "TGNUHTH": {
+      "frames": 7,
+      "speed": 136
+    },
+    "TGSCHTH": {
+      "frames": 10,
+      "speed": 230
+    },
+    "THA1HTH": {
+      "frames": 10,
+      "speed": 258
+    },
+    "THA2HTH": {
+      "frames": 16,
+      "speed": 312
+    },
+    "THGHHTH": {
+      "frames": 4,
+      "speed": 208
+    },
+    "~ZA1HTH": {
+      "frames": 15,
+      "speed": 376
+    },
+    "~ZA2HTH": {
+      "frames": 15,
+      "speed": 376
+    },
+    "~ZGHHTH": {
+      "frames": 15,
+      "speed": 716
+    },
+    "~ZSCHTH": {
+      "frames": 15,
+      "speed": 368
+    }
+  },
+  "extracted_at": "2026-09-05"
+}

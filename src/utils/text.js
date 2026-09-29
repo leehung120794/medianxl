@@ -1,0 +1,65 @@
+const DIACRITICS = /[\u0300-\u036f]/g;
+
+function normalizeSearch(value = '') {
+  return String(value).normalize('NFD').replace(DIACRITICS, '').toLowerCase()
+    .replace(/[^a-z0-9+%'-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Game answers must keep Vietnamese accents. Search remains accent-insensitive,
+// but accepting an unaccented answer changes the word in Vietnamese word games.
+function normalizeVietnamese(value = '') {
+  return String(value).normalize('NFC').toLocaleLowerCase('vi-VN')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function cleanText(value = '') {
+  return String(value).replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function splitLines(value = '') {
+  return cleanText(value).split(/\n+/).map(s => s.trim()).filter(Boolean);
+}
+
+function parseNumberAfter(label, text) {
+  const match = text.match(new RegExp(`${label}\\s*:?\\s*([0-9]+)`, 'i'));
+  return match ? Number(match[1]) : null;
+}
+
+function parseRequirements(lines) {
+  const text = lines.join('\n');
+  return {
+    requiredLevel: parseNumberAfter('Required Level', text),
+    requiredStrength: parseNumberAfter('Required Strength', text),
+    requiredDexterity: parseNumberAfter('Required Dexterity', text),
+    itemLevel: parseNumberAfter('Item Level', text),
+  };
+}
+
+function parseSockets(lines) {
+  const line = lines.find(x => /socketed/i.test(x));
+  const m = line?.match(/socketed\s*\((\d+)\)/i);
+  return m ? Number(m[1]) : null;
+}
+
+function parseLimit(lines) {
+  const line = lines.find(x => /limit per item/i.test(x));
+  const m = line?.match(/limit per item\s*:\s*(\d+)/i);
+  return m ? Number(m[1]) : null;
+}
+
+function sourceMeta(sourceSlug) {
+  const map = {
+    tiereduniques: { source_type: 'tiered_unique', type_code: 'TU', label: 'Tiered Unique' },
+    sacreduniques: { source_type: 'sacred_unique', type_code: 'SU', label: 'Sacred Unique' },
+    runewords: { source_type: 'runeword', type_code: 'RW', label: 'Runeword' },
+    sets: { source_type: 'set_piece', type_code: 'SET', label: 'Set' },
+    umos: { source_type: 'unique_mystic_orb', type_code: 'UMO', label: 'Unique Mystic Orb' },
+    cycles: { source_type: 'cycle', type_code: 'CYCLE', label: 'Cycle' },
+    relics: { source_type: 'relic', type_code: 'RELIC', label: 'Relic' },
+    trophies: { source_type: 'trophy', type_code: 'TROPHY', label: 'Trophy' },
+    nymyrs_light: { source_type: 'dungeon_reward', type_code: 'SLEEP', label: "Nymyr's Light Reward" },
+  };
+  return map[sourceSlug] || { source_type: 'unknown', type_code: 'ITEM', label: 'Item' };
+}
+
+module.exports = { normalizeSearch, normalizeVietnamese, cleanText, splitLines, parseRequirements, parseSockets, parseLimit, sourceMeta };
