@@ -1,153 +1,154 @@
 const crypto = require('node:crypto');
 const { db } = require('../db');
-const { getGameByChannel } = require('./gameChannelService');
+const { channelHasGame } = require('./gameChannelService');
 const games = require('./funGameService');
-const medianQuiz = require('./medianQuizService');
 const mines = require('./minesService');
-const { getCatalogItem, COLLECTIBLES, RARITY } = require('./itemCatalogService');
-const { consumeInventory, addInventory, getInventoryQuantity, equipOwnedCosmetic } = require('./shopService');
-const { getActiveEffect, addEffectCharge, consumeActiveEffect, insuredRefund } = require('./effectStateService');
-function activateEffect(guildId, userId, itemId, effectId, { expiresAt = null, charges = 1 } = {}) {
+const { getCatalogItem } = require('./itemCatalogService');
+const { consumeInventory, getInventoryQuantity, equipOwnedCosmetic } = require('./shopService');
+const { getActiveEffect, addEffectCharge, consumeActiveEffect, listActiveEffects, removeActiveEffect } = require('./effectStateService');
+const { formatCoins } = require('../utils/economy');
+const { resultBlock } = require('../utils/rewardText');
+
+const EFFECT_TTL = 7 * 86_400_000;
+const HARD_QUESTION_DIAMONDS = 10;
+const SHARED_GAME_EFFECTS = new Set([
+  'baucua_magnifier', 'baucua_small_lens', 'baucua_blank_insurance',
+  'taixiu_total_scope', 'taixiu_no_triple', 'taixiu_edge_insurance', 'dice_divine_eye',
+  'horse_second_insurance', 'horse_jackpot', 'horse_consolation',
+]);
+
+function activateEffect(guildId, userId, itemId, effectId, { expiresAt = Date.now() + EFFECT_TTL, metadata = {} } = {}) {
   return db.transaction(() => {
+    if (getActiveEffect(guildId, userId, effectId)) throw new Error('EFFECT_ALREADY_ACTIVE');
     consumeInventory(guildId, userId, itemId, 1);
-    return addEffectCharge(guildId, userId, effectId, { expiresAt, charges });
+    return addEffectCharge(guildId, userId, effectId, { expiresAt, charges: 1, metadata });
   })();
 }
 
-function rollCollectible(premium = false, minimumRarity = null, collectionPool = null) {
-  const roll = crypto.randomInt(10_000) / 10_000;
-  const rarity = premium
-    ? roll < 0.03 ? 'mythic' : roll < 0.18 ? 'legendary' : roll < 0.53 ? 'epic' : roll < 0.85 ? 'rare' : 'common'
-    : roll < 0.005 ? 'mythic' : roll < 0.04 ? 'legendary' : roll < 0.16 ? 'epic' : roll < 0.46 ? 'rare' : 'common';
-  const finalRarity = minimumRarity && RARITY[rarity] < RARITY[minimumRarity] ? minimumRarity : rarity;
-  const collectionItems = collectionPool ? COLLECTIBLES.filter(item => item.collection === collectionPool) : COLLECTIBLES;
-  const pool = collectionItems.filter(item => item.rarity === finalRarity);
-  const fallback = collectionItems.filter(item => RARITY[item.rarity] <= RARITY[finalRarity]);
-  const values = pool.length ? pool : fallback;
-  return values[crypto.randomInt(values.length)];
-}
-function openChest(guildId, userId, itemId, { forcedRewardId = null } = {}) {
-  return db.transaction(() => {
-    consumeInventory(guildId, userId, itemId, 1);
-    const chest = getCatalogItem(itemId);
-    const lucky = consumeActiveEffect(guildId, userId, 'chest_luck');
-    const minimumRarity = lucky ? 'epic' : chest?.minimumRarity || null;
-    let reward = forcedRewardId ? getCatalogItem(forcedRewardId) : rollCollectible(itemId === 'premium_chest', minimumRarity, chest?.collectionPool || null);
-    if (!reward || reward.type !== 'collectible') throw new Error('INVALID_CHEST_REWARD');
-    let duplicate = getInventoryQuantity(guildId, userId, reward.id) > 0;
-    let protectedDuplicate = false;
-    if (duplicate && getActiveEffect(guildId, userId, 'chest_duplicate_ward')) {
-      const meetsRarity = item => !minimumRarity || RARITY[item.rarity] >= RARITY[minimumRarity];
-      const missingInPool = COLLECTIBLES.filter(item => (!chest?.collectionPool || item.collection === chest.collectionPool)
-        && meetsRarity(item) && getInventoryQuantity(guildId, userId, item.id) < 1);
-      const missing = missingInPool.length ? missingInPool : COLLECTIBLES.filter(item => meetsRarity(item) && getInventoryQuantity(guildId, userId, item.id) < 1);
-      if (missing.length) {
-        consumeActiveEffect(guildId, userId, 'chest_duplicate_ward');
-        reward = missing[crypto.randomInt(missing.length)];
-        duplicate = false;
-        protectedDuplicate = true;
-      }
-    }
-    if (duplicate) {
-      const shards = { common: 10, rare: 25, epic: 60, legendary: 150, mythic: 350 }[reward.rarity];
-      addInventory(guildId, userId, 'soul_shard', shards);
-      return { reward, duplicate: true, shards, lucky, protectedDuplicate };
-    }
-    addInventory(guildId, userId, reward.id, 1);
-    return { reward, duplicate: false, shards: 0, lucky, protectedDuplicate };
-  })();
-}
-
-function useHint(guildId, channelId) {
-  const channel = getGameByChannel(guildId, channelId);
-  if (!channel || !['doanitem', 'vuatiengviet'].includes(channel.game)) throw new Error('WRONG_EFFECT_CHANNEL');
-  if (channel.game === 'doanitem') {
-    const session = medianQuiz.getMedianQuiz(guildId, 'doanitem');
-    if (!session) throw new Error('NO_ACTIVE_GAME');
-    const answer = String(session.question.answer);
-    return `🔎 Gợi ý thêm: đáp án có **${answer.length} ký tự**, bắt đầu bằng **${answer[0].toUpperCase()}**.`;
+function useMinesRadar(guildId, userId, channelId) {
+  const session = mines.getMinesByUser(guildId, userId);
+  if (!session || session.channel_id !== String(channelId)) throw new Error('NO_ACTIVE_MINES');
+  const state = JSON.parse(session.state_json);
+  if (state.blastShield && !state.shieldUsed) throw new Error('HIGHER_EFFECT_ACTIVE');
+  const centers = Array.from({ length: mines.CELL_COUNT }, (_, index) => index).filter(index => !state.opened.includes(index));
+  if (!centers.length) throw new Error('NO_RADAR_AREA');
+  const center = centers[crypto.randomInt(centers.length)]; const row = Math.floor(center / 5); const column = center % 5;
+  const cells = [];
+  for (let r = Math.max(0, row - 1); r <= Math.min(3, row + 1); r += 1) {
+    for (let c = Math.max(0, column - 1); c <= Math.min(4, column + 1); c += 1) cells.push(r * 5 + c);
   }
+  const mineCount = cells.filter(cell => state.mines.includes(cell)).length;
+  return `📡 Radar quét vùng quanh **ô ${center + 1}** (${cells.map(cell => cell + 1).join(', ')}) và phát hiện chính xác **${mineCount} mìn**.`;
+}
+
+function useMinesScanner(guildId, userId, channelId, effect) {
+  const session = mines.getMinesByUser(guildId, userId);
+  if (!session || session.channel_id !== String(channelId)) throw new Error('NO_ACTIVE_MINES');
+  const state = JSON.parse(session.state_json);
+  if (state.blastShield && !state.shieldUsed) throw new Error('HIGHER_EFFECT_ACTIVE');
+  const isRow = effect === 'mines_row_scanner'; const columns = 5; const rows = mines.CELL_COUNT / columns;
+  const lineCells = line => Array.from({ length: isRow ? columns : rows }, (_, index) => isRow ? line * columns + index : index * columns + line);
+  const candidates = Array.from({ length: isRow ? rows : columns }, (_, line) => line).filter(line => lineCells(line).some(cell => !state.opened.includes(cell)));
+  if (!candidates.length) throw new Error('NO_RADAR_AREA');
+  const line = candidates[crypto.randomInt(candidates.length)]; const cells = lineCells(line);
+  const mineCount = cells.filter(cell => state.mines.includes(cell)).length;
+  return `${isRow ? '↔️' : '↕️'} ${isRow ? 'Hàng' : 'Cột'} **${line + 1}** (ô ${cells.map(cell => cell + 1).join(', ')}) có chính xác **${mineCount} mìn**.`;
+}
+
+function useVietnameseExtraTime(guildId, channelId) {
+  if (!channelHasGame(guildId, channelId, 'vuatiengviet')) throw new Error('WRONG_EFFECT_CHANNEL');
+  const result = games.extendVuaChallenge(guildId);
+  if (result.error === 'NO_SESSION') throw new Error('NO_ACTIVE_GAME');
+  if (result.error === 'HARD_QUESTION_REQUIRED') throw new Error('HARD_QUESTION_REQUIRED');
+  if (result.error === 'EXPIRED') throw new Error('QUESTION_EXPIRED');
+  if (result.error) throw new Error('ALREADY_EXTENDED');
+  return `⏱️ Đồng Hồ Gia Hạn cộng **${result.seconds} giây** cho câu khó hiện tại — hết hạn <t:${Math.floor(result.question.expiresAt / 1000)}:R>.`;
+}
+
+function removePendingEffect(guildId, userId) {
+  const armed = new Set(Object.keys(ARMED_MESSAGES));
+  const target = listActiveEffects(guildId, userId).find(row => armed.has(row.effect_id));
+  if (!target) throw new Error('NO_EFFECT_TO_REMOVE');
+  removeActiveEffect(guildId, userId, target.effect_id);
+  const item = require('./itemCatalogService').CATALOG.find(entry => entry.effect === target.effect_id);
+  return `🧼 Đã hủy hiệu ứng chờ **${item?.name || target.effect_id}**. Bạn có thể kích hoạt vật phẩm khác.`;
+}
+
+function useLivingDictionary(guildId, channelId, userId) {
+  if (!channelHasGame(guildId, channelId, 'vuatiengviet')) throw new Error('WRONG_EFFECT_CHANNEL');
   const session = games.getVuaSession(guildId);
   if (!session) throw new Error('NO_ACTIVE_GAME');
+  if (!session.question.hard) throw new Error('HARD_QUESTION_REQUIRED');
+  if (games.isExpiredChallenge(session.question)) throw new Error('QUESTION_EXPIRED');
   const answer = session.question.answer;
-  return `🔎 Gợi ý thêm: từ đúng bắt đầu bằng **${answer[0].toUpperCase()}**, kết thúc bằng **${answer.at(-1)}** và có **${answer.replace(/\s/g, '').length} chữ cái**.`;
-}
-function useSkip(guildId, channelId) {
-  const channel = getGameByChannel(guildId, channelId);
-  if (!channel || !['doanitem', 'vuatiengviet', 'noitu'].includes(channel.game)) throw new Error('WRONG_EFFECT_CHANNEL');
-  if (channel.game === 'doanitem') {
-    const result = medianQuiz.skipMedianQuiz(guildId, 'doanitem');
-    if (!result) throw new Error('NO_ACTIVE_GAME');
-    return `⏭️ Đã đổi câu.\n${medianQuiz.quizText(result.nextQuestion)}`;
-  }
-  if (channel.game === 'vuatiengviet') {
-    const result = games.skipVuaSession(guildId);
-    if (!result) throw new Error('NO_ACTIVE_GAME');
-    return `⏭️ Đã đổi câu.\n${games.vuaQuestionText(result.nextQuestion)}`;
-  }
-  const session = games.skipWordSession(guildId);
-  if (!session) throw new Error('NO_ACTIVE_GAME');
-  return `⏭️ Đã đổi lượt nối từ. Từ tiếp theo phải bắt đầu bằng **${session.required}**.`;
-}
-function useMinesDetector(guildId, userId, channelId) {
-  const session = mines.getMinesByUser(guildId, userId);
-  if (!session || session.channel_id !== String(channelId)) throw new Error('NO_ACTIVE_MINES');
-  const state = JSON.parse(session.state_json);
-  const hidden = state.mines.filter(cell => !state.opened.includes(cell));
-  if (!hidden.length) throw new Error('NO_HIDDEN_MINE');
-  return `🧭 Máy dò rung mạnh: **ô ${hidden[crypto.randomInt(hidden.length)] + 1} có mìn**. Thông tin này chỉ mình bạn thấy.`;
+  const result = games.answerVuaSession(guildId, answer);
+  const reward = require('./gameRewardService').getGameReward(guildId, 'vuatiengviet') * 10;
+  const account = require('./economyService').rewardGame({ guildId, userId, amount: reward, game: 'vuatiengviet', outcome: 'win' });
+  require('./playerLevelService').addDiamonds(guildId, userId, HARD_QUESTION_DIAMONDS, { reason: 'vuatiengviet:living-dictionary' });
+  const line = resultBlock({ userId, outcome: 'win', stake: 0, payout: reward, gemsGained: HARD_QUESTION_DIAMONDS, result: { ...account, experienceGained: 0 }, reason: `📖 Từ Điển Sống điền **${answer}**` });
+  return `${line}\n\nCâu tiếp theo:\n${games.vuaQuestionText(result.nextQuestion)}`;
 }
 
-function useMinesSafeMap(guildId, userId, channelId) {
-  const session = mines.getMinesByUser(guildId, userId);
-  if (!session || session.channel_id !== String(channelId)) throw new Error('NO_ACTIVE_MINES');
-  const state = JSON.parse(session.state_json);
-  const minesSet = new Set(state.mines);
-  const openedSet = new Set(state.opened);
-  const safe = Array.from({ length: mines.CELL_COUNT }, (_, index) => index).filter(index => !minesSet.has(index) && !openedSet.has(index));
-  if (!safe.length) throw new Error('NO_HIDDEN_SAFE_CELL');
-  return `🗺️ Bản đồ xác nhận: **ô ${safe[crypto.randomInt(safe.length)] + 1} an toàn**. Thông tin này chỉ mình bạn thấy.`;
+function useVietnameseHint(guildId, channelId, effect, userId) {
+  if (!channelHasGame(guildId, channelId, 'vuatiengviet')) throw new Error('WRONG_EFFECT_CHANNEL');
+  const session = games.getVuaSession(guildId);
+  if (!session) throw new Error('NO_ACTIVE_GAME');
+  if (games.isExpiredChallenge(session.question)) throw new Error('QUESTION_EXPIRED');
+  const syllables = String(session.question.answer).trim().split(/\s+/u);
+  if (effect === 'quiz_letter_position') {
+    const hint = games.revealVuaLetter(guildId, userId);
+    return `🔎 Gợi ý riêng cho bạn: **tiếng thứ ${hint.wordPosition}, chữ thứ ${hint.letterPosition}** là **${hint.letter}**.`;
+  }
+  if (effect === 'quiz_first_word') return `🔎 Gợi ý riêng cho bạn: tiếng đầu tiên trong đáp án là **${syllables[0]}**.`;
+  const lengths = syllables.map(word => Array.from(word).length);
+  return `🔢 Gợi ý riêng cho bạn: số chữ cái mỗi tiếng là **[${lengths.join('] [')}]**.`;
 }
+
+const ARMED_MESSAGES = {
+    blackjack_redraw: '🃏 Thẻ Rút Lại đã sẵn sàng cho ván Xì dách kế tiếp.',
+    blackjack_swap: '🃏 Lệnh Bài Đổi Trắng đã sẵn sàng cho ván Xì dách kế tiếp.',
+    blackjack_first_ace: '🅰️ Át Chủ Bài đã sẵn sàng cho ván Xì dách kế tiếp.',
+    horse_second_insurance: '🏇 Bảo Hiểm Về Nhì đã sẵn sàng cho cuộc đua kế tiếp.',
+    horse_jackpot: '🏇 Trúng Đậm đã sẵn sàng cho cuộc đua kế tiếp.',
+    rps_counter: '✊ Bùa Khắc Chế đã sẵn sàng cho ván Oẳn tù tì với bot kế tiếp.',
+    rps_draw_win: '✊ Đặc Quyền Kẻ Hèn đã sẵn sàng cho ván Oẳn tù tì với bot kế tiếp.',
+    mines_blast_shield: '💣 Giáp Chống Nổ đã sẵn sàng cho ván Mines kế tiếp.',
+    poker_insurance: '♠️ Bảo Hiểm Cược đã sẵn sàng cho ván Poker với bot kế tiếp.',
+    chinchiro_soundproof_bowl: '🍚 Bát Cách Âm đã sẵn sàng cho ván Chinchiro kế tiếp.',
+    chinchiro_weighted_dice: '🎲 Xúc Xắc Chì đã sẵn sàng cho ván Chinchiro kế tiếp.',
+    chinchiro_otsuki_dice: '🎲 Xúc Xắc Của Quản Đốc đã sẵn sàng cho ván Chinchiro kế tiếp.',
+    chinchiro_karma: '🪬 Bùa Trả Đũa đã sẵn sàng và chỉ tiêu khi bạn ra Hifumi.',
+    taixiu_edge_insurance: '🛡️ Bảo Hiểm Sát Nút đã sẵn sàng; chỉ tiêu khi được hoàn ở ván Tài xỉu.',
+    baucua_blank_insurance: '☂️ Bảo Hiểm Trắng Tay đã sẵn sàng; chỉ tiêu khi được hoàn ở ván Bầu cua.',
+    horse_consolation: '🎫 Vé Khán Đài đã sẵn sàng; chỉ tiêu khi ngựa bạn chọn về ba.',
+    rps_loss_shield: '🩹 Bùa Giảm Đau đã sẵn sàng; chỉ tiêu khi bạn thua bot.',
+    blackjack_bust_guard: '🧷 Miếng Đệm Quắc đã sẵn sàng; chỉ tiêu khi bạn quắc đúng 22 điểm.',
+    poker_fold_coupon: '🏳️ Phiếu Bỏ Bài đã sẵn sàng; chỉ tiêu khi bạn bỏ bài ở Flop chưa bỏ thêm xu.',
+};
+function armedMessage(item) { return ARMED_MESSAGES[item.effect]; }
 
 function useItem({ guildId, userId, channelId, itemId }) {
   const item = getCatalogItem(itemId);
   if (!item || getInventoryQuantity(guildId, userId, itemId) < 1) throw new Error('ITEM_NOT_OWNED');
-  if (item.type === 'color') {
-    equipOwnedCosmetic(guildId, userId, item.id);
-    return { item, message: `🎨 Đã trang bị **${item.name}**. Dùng \`/hoso\` để xem profile mới.`, ephemeral: true };
+  if (SHARED_GAME_EFFECTS.has(item.effect)) throw new Error('MULTIPLAYER_ITEMS_DISABLED');
+  if (item.type === 'gacha') throw new Error('ITEM_NOT_USABLE');
+  if (String(item.effect).startsWith('coquay_')) throw new Error('COQUAY_IN_GAME_ITEM');
+  if (item.type === 'color') { equipOwnedCosmetic(guildId, userId, item.id); const icon = item.emoji || '🎨'; return { item, message: `${icon} Đã trang bị **${item.name}**. Dùng \`/hoso\` để xem.`, ephemeral: true }; }
+  if (item.effect === 'mines_row_scanner' || item.effect === 'mines_column_scanner') { const message = useMinesScanner(guildId, userId, channelId, item.effect); consumeInventory(guildId, userId, item.id); return { item, message, ephemeral: true }; }
+  if (item.effect === 'quiz_extra_time') { const message = useVietnameseExtraTime(guildId, channelId); consumeInventory(guildId, userId, item.id); return { item, message }; }
+  if (item.effect === 'remove_active_game_effect') { const message = db.transaction(() => { const value = removePendingEffect(guildId, userId); consumeInventory(guildId, userId, item.id); return value; })(); return { item, message, ephemeral: true }; }
+  if (item.effect === 'mines_radar') { const message = useMinesRadar(guildId, userId, channelId); consumeInventory(guildId, userId, item.id); return { item, message, ephemeral: true }; }
+  if (item.effect === 'quiz_living_dictionary') { const message = useLivingDictionary(guildId, channelId, userId); consumeInventory(guildId, userId, item.id); return { item, message }; }
+  if (['quiz_first_word', 'quiz_syllable_lengths', 'quiz_letter_position'].includes(item.effect)) {
+    const message = db.transaction(() => {
+      consumeInventory(guildId, userId, item.id);
+      return useVietnameseHint(guildId, channelId, item.effect, userId);
+    })();
+    return { item, message, ephemeral: true };
   }
-  if (item.type === 'chest') {
-    const opened = openChest(guildId, userId, item.id);
-    const lucky = opened.lucky ? ' 🍀 Bùa may mắn đã bảo đảm độ hiếm từ **EPIC**.' : '';
-    const ward = opened.protectedDuplicate ? ' 🧿 Bùa Chống Trùng đã đổi phần thưởng sang một thẻ còn thiếu.' : '';
-    return { item, opened, message: (opened.duplicate
-      ? `📦 Bạn mở được **${opened.reward.name}** (${opened.reward.rarity}) nhưng đã sở hữu, nên nhận **${opened.shards} Mảnh linh hồn**.`
-      : `📦 Bạn mở được **${opened.reward.name}** — độ hiếm **${opened.reward.rarity.toUpperCase()}**!`) + lucky + ward };
-  }
-  if (item.effect === 'quiz_hint') { const message = useHint(guildId, channelId); consumeInventory(guildId, userId, item.id); return { item, message }; }
-  if (item.effect === 'quiz_skip') { const message = useSkip(guildId, channelId); consumeInventory(guildId, userId, item.id); return { item, message }; }
-  if (item.effect === 'mines_detector') { const message = useMinesDetector(guildId, userId, channelId); consumeInventory(guildId, userId, item.id); return { item, message, ephemeral: true }; }
-  if (item.effect === 'mines_safe_cell') { const message = useMinesSafeMap(guildId, userId, channelId); consumeInventory(guildId, userId, item.id); return { item, message, ephemeral: true }; }
-  if (item.effect === 'bet_insurance') { activateEffect(guildId, userId, item.id, 'bet_insurance', { expiresAt: Date.now() + 86_400_000 }); return { item, message: '🛡️ Bảo hiểm cược đã kích hoạt: hoàn 25% nếu ván cược kế tiếp thua trắng, hiệu lực 24 giờ.' }; }
-  if (item.effect === 'bet_insurance_plus') { activateEffect(guildId, userId, item.id, 'bet_insurance_plus', { expiresAt: Date.now() + 86_400_000 }); return { item, message: '🛡️ Bảo hiểm cao cấp đã kích hoạt: hoàn 50% nếu ván cược kế tiếp thua trắng, hiệu lực 24 giờ.' }; }
-  if (item.effect === 'quiz_reward_boost') { activateEffect(guildId, userId, item.id, 'quiz_reward_boost', { expiresAt: Date.now() + 7 * 86_400_000 }); return { item, message: '✨ Bùa nhân đôi thưởng đã kích hoạt cho câu trả lời đúng tiếp theo, hiệu lực 7 ngày.' }; }
-  if (item.effect === 'craft_discount') { activateEffect(guildId, userId, item.id, 'craft_discount', { expiresAt: Date.now() + 7 * 86_400_000 }); return { item, message: '🔨 Búa Thợ Rèn đã kích hoạt: lần /craft tiếp theo giảm 25% Mảnh linh hồn, hiệu lực 7 ngày.' }; }
-  if (item.effect === 'chest_luck') { activateEffect(guildId, userId, item.id, 'chest_luck', { expiresAt: Date.now() + 7 * 86_400_000 }); return { item, message: '🍀 Bùa May Mắn đã kích hoạt: hòm sưu tập tiếp theo chắc chắn từ Epic trở lên, hiệu lực 7 ngày.' }; }
-  if (item.effect === 'chest_duplicate_ward') { activateEffect(guildId, userId, item.id, 'chest_duplicate_ward', { expiresAt: Date.now() + 7 * 86_400_000 }); return { item, message: '🧿 Bùa Chống Trùng đã kích hoạt cho hòm sưu tập tiếp theo, hiệu lực 7 ngày.' }; }
-  if (item.effect === 'soul_shards') {
-    db.transaction(() => { consumeInventory(guildId, userId, item.id, 1); addInventory(guildId, userId, 'soul_shard', 100); })();
-    return { item, message: '💠 Đã mở Túi Mảnh Linh Hồn và nhận **100 Mảnh linh hồn**.' };
-  }
-  if (item.effect === 'soul_shards_large') {
-    db.transaction(() => { consumeInventory(guildId, userId, item.id, 1); addInventory(guildId, userId, 'soul_shard', 300); })();
-    return { item, message: '💠 Đã mở Rương Mảnh Linh Hồn và nhận **300 Mảnh linh hồn**.' };
-  }
-  if (item.effect === 'hardcore_revive') { activateEffect(guildId, userId, item.id, 'hardcore_revive'); return { item, message: '❤️ Bùa hồi sinh đã kích hoạt cho Hardcore Run tiếp theo.' }; }
-  if (item.effect === 'hardcore_chest_lock') { activateEffect(guildId, userId, item.id, 'hardcore_chest_lock'); return { item, message: '🔒 Khóa Hòm đã kích hoạt cho kết quả hòm rỗng hoặc Legendary giả tiếp theo.' }; }
-  if (item.effect === 'boss_damage_boost') { activateEffect(guildId, userId, item.id, 'boss_damage_boost', { expiresAt: Date.now() + 7 * 86_400_000, charges: 3 }); return { item, message: '⚔️ Dầu Săn Boss đã kích hoạt: **3 chiến thắng** tiếp theo gây gấp đôi sát thương boss.' }; }
-  if (item.effect === 'season_points_boost') { activateEffect(guildId, userId, item.id, 'season_points_boost', { expiresAt: Date.now() + 7 * 86_400_000, charges: 3 }); return { item, message: '🚩 Cờ Hiệu đã kích hoạt: **3 ván** tiếp theo nhận gấp đôi điểm mùa.' }; }
-  if (item.effect === 'checkin_streak_guard') { activateEffect(guildId, userId, item.id, 'checkin_streak_guard', { expiresAt: Date.now() + 30 * 86_400_000 }); return { item, message: '📅 Thẻ Giữ Chuỗi đã kích hoạt và sẽ tự dùng nếu bạn bỏ lỡ đúng một ngày.' }; }
+  const message = armedMessage(item);
+  if (message) { activateEffect(guildId, userId, item.id, item.effect); return { item, message }; }
   throw new Error('ITEM_NOT_USABLE');
 }
 
-module.exports = { getActiveEffect, activateEffect, consumeActiveEffect, insuredRefund, rollCollectible, openChest, useItem };
+module.exports = { getActiveEffect, activateEffect, consumeActiveEffect, useItem, useMinesRadar, useVietnameseHint };

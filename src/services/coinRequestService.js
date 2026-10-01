@@ -3,9 +3,11 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags
 const { db } = require('../db');
 const { transferCoins } = require('./economyService');
 const { formatCoins } = require('../utils/economy');
+const { DAY_MS, dayKey } = require('./progressionService');
 
 const REQUEST_TTL_MS = 30_000;
 const REQUEST_COOLDOWN_MS = 60_000;
+const DAILY_REQUEST_LIMIT = 5;
 
 function getCoinRequest(id) {
   return db.prepare('SELECT * FROM coin_requests WHERE id = ?').get(String(id)) || null;
@@ -15,11 +17,17 @@ function expireRequests(now = Date.now()) {
   return db.prepare("UPDATE coin_requests SET status = 'expired', updated_at = ? WHERE status = 'open' AND expires_at <= ?").run(now, now).changes;
 }
 
-function createCoinRequest({ guildId, channelId, requesterId, targetId, amount, reason = '', now = Date.now() }) {
+const createCoinRequestTx = db.transaction(({ guildId, channelId, requesterId, targetId, amount, reason = '', now = Date.now() }) => {
   const value = Number(amount);
   if (!Number.isSafeInteger(value) || value < 1 || value > 100_000) throw new Error('INVALID_AMOUNT');
   if (String(requesterId) === String(targetId)) throw new Error('SELF_REQUEST');
   expireRequests(now);
+  const today = dayKey(now);
+  const usedToday = db.prepare('SELECT created_at FROM coin_requests WHERE requester_id=? AND created_at>=?')
+    .all(String(requesterId), now - DAY_MS * 2).filter(row => dayKey(row.created_at) === today).length;
+  if (usedToday >= DAILY_REQUEST_LIMIT) {
+    const error = new Error('DAILY_REQUEST_LIMIT'); error.used = usedToday; error.limit = DAILY_REQUEST_LIMIT; error.dayKey = today; throw error;
+  }
   const active = db.prepare("SELECT * FROM coin_requests WHERE guild_id = ? AND requester_id = ? AND status = 'open' ORDER BY created_at DESC LIMIT 1")
     .get(String(guildId), String(requesterId));
   if (active) { const error = new Error('ACTIVE_REQUEST'); error.request = active; throw error; }
@@ -40,7 +48,8 @@ function createCoinRequest({ guildId, channelId, requesterId, targetId, amount, 
     (id,guild_id,channel_id,message_id,requester_id,target_id,amount,reason,status,expires_at,created_at,updated_at)
     VALUES (@id,@guild_id,@channel_id,@message_id,@requester_id,@target_id,@amount,@reason,@status,@expires_at,@created_at,@updated_at)`).run(request);
   return request;
-}
+});
+function createCoinRequest(args) { return createCoinRequestTx(args); }
 
 function setRequestMessage(id, messageId) {
   db.prepare('UPDATE coin_requests SET message_id = ?, updated_at = ? WHERE id = ?').run(String(messageId), Date.now(), String(id));
@@ -73,7 +82,7 @@ function requestEmbed(request, status = request.status) {
   const color = status === 'accepted' ? 0x2ECC71 : status === 'declined' ? 0xE74C3C : status === 'expired' ? 0x7F8C8D : 0xF1C40F;
   const state = { open: 'Đang chờ phản hồi', accepted: 'Đã chấp nhận', declined: 'Đã từ chối', expired: 'Đã hết hạn' }[status] || status;
   return new EmbedBuilder().setColor(color).setTitle('🪙 YÊU CẦU XIN XU')
-    .setDescription(`<@${request.requester_id}> đang xin <@${request.target_id}> **${formatCoins(request.amount)} xu**.`)
+    .setDescription(`<@${request.requester_id}> đang xin <@${request.target_id}> **${formatCoins(request.amount)} :coin:**.`)
     .addFields(
       { name: 'Trạng thái', value: state, inline: true },
       { name: 'Hết hạn', value: status === 'open' ? `<t:${Math.floor(request.expires_at / 1000)}:R>` : '—', inline: true },
@@ -102,11 +111,11 @@ async function handleCoinRequestButton(interaction) {
     }
     const result = acceptCoinRequest(id, interaction.user.id);
     return interaction.update({
-      content: `✅ <@${request.target_id}> đã cho <@${request.requester_id}> **${formatCoins(request.amount)} xu**.`,
+      content: `✅ <@${request.target_id}> đã cho <@${request.requester_id}> **${formatCoins(request.amount)} :coin:**.`,
       embeds: [requestEmbed(request, 'accepted')], components: [], allowedMentions: { users: [request.target_id, request.requester_id] },
     });
   } catch (error) {
-    if (error.code === 'INSUFFICIENT_FUNDS') return interaction.reply({ content: `Bạn không đủ xu để chấp nhận. Số dư hiện tại: **${formatCoins(error.balance)} xu**.`, flags: MessageFlags.Ephemeral });
+    if (error.code === 'INSUFFICIENT_FUNDS') return interaction.reply({ content: 'Bạn không đủ xu để chấp nhận yêu cầu này.', flags: MessageFlags.Ephemeral });
     if (error.message === 'REQUEST_EXPIRED') return interaction.update({ embeds: [requestEmbed(request, 'expired')], components: [] });
     if (error.message === 'REQUEST_CLOSED') return interaction.reply({ content: 'Yêu cầu này đã được xử lý.', flags: MessageFlags.Ephemeral });
     throw error;
@@ -141,7 +150,7 @@ async function cleanupClosedCoinRequestMessages(client, logger = console, now = 
 }
 
 module.exports = {
-  REQUEST_TTL_MS, REQUEST_COOLDOWN_MS, createCoinRequest, getCoinRequest, setRequestMessage,
+  REQUEST_TTL_MS, REQUEST_COOLDOWN_MS, DAILY_REQUEST_LIMIT, createCoinRequest, getCoinRequest, setRequestMessage,
   acceptCoinRequest, declineCoinRequest, requestEmbed, requestButtons, handleCoinRequestButton,
   expireRequests, cleanupCoinRequests, cleanupClosedCoinRequestMessages,
 };

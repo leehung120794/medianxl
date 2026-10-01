@@ -1,21 +1,18 @@
 const { db } = require('../db');
 const { getGameChannel } = require('./gameChannelService');
 const { expireVuaChallenge, vuaQuestionText } = require('./funGameService');
-const { expireMedianQuiz, quizText } = require('./medianQuizService');
 
 function expireChallenge(guildId, game, now) {
   if (game === 'vuatiengviet') return expireVuaChallenge(guildId, now);
-  if (game === 'doanitem') return expireMedianQuiz(guildId, game, now);
   return null;
 }
 
 function timeoutMessage(game, result) {
-  if (game === 'vuatiengviet') return `⌛ Câu khó đã hết 30 giây và không còn hiệu lực.\n\nCâu thường mới:\n${vuaQuestionText(result.nextQuestion)}`;
-  return `⌛ Câu khó đã hết 30 giây và không còn hiệu lực.\n\nCâu thường mới:\n${quizText(result.nextQuestion)}`;
+  return `⌛ Câu khó đã hết thời gian và không còn hiệu lực.\n\nCâu thường mới:\n${vuaQuestionText(result.nextQuestion)}`;
 }
 
 async function processExpiredChallenges(client, logger = console, now = Date.now()) {
-  const rows = db.prepare("SELECT guild_id, game FROM game_sessions WHERE game IN ('vuatiengviet', 'doanitem')").all();
+  const rows = db.prepare("SELECT guild_id, game FROM game_sessions WHERE game = 'vuatiengviet'").all();
   let expired = 0;
   for (const row of rows) {
     const result = expireChallenge(row.guild_id, row.game, now);

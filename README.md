@@ -1,140 +1,137 @@
-# Median XL Discord Bot
+# Vietnamese Discord Game Bot
 
-Bot Discord chạy local bằng Node.js và discord.js v14. Bot đồng bộ tám nguồn Median XL về SQLite, sau đó tìm kiếm trên dữ liệu local.
+Bot Discord kết hợp toàn bộ hệ thống game/economy của Bot New với chức năng tra cứu item Median XL từ bot trước.
 
-## Nguồn và mã phân loại
+## Trò chơi
 
-| URL | Mã |
-|---|---|
-| `https://docs.median-xl.com/doc/items/tiereduniques` | TU |
-| `https://docs.median-xl.com/doc/items/sacreduniques` | SU |
-| `https://docs.median-xl.com/doc/items/runewords` | RW |
-| `https://docs.median-xl.com/doc/items/sets` | SET |
-| `https://docs.median-xl.com/doc/wiki/umos` | UMO |
-| `https://docs.median-xl.com/doc/wiki/cycles` | CYCLE |
-| `https://docs.median-xl.com/doc/wiki/relics` | RELIC |
-| `https://docs.median-xl.com/doc/wiki/trophies` | TROPHY |
-| `https://docs.median-xl.com/doc/quests/dungeons` (chỉ Nymyr's Light Reward) | SLEEP |
+- Bầu cua, Tài xỉu, Chinchiro, Oẳn tù tì
+- Xì dách, Đua ngựa nhiều người, Dò mìn, Cò quay Nga
+- Vua tiếng Việt
+- Sinh tồn
+
+## Tra cứu item Median XL
+
+- `/item query:<từ khóa>` tìm theo tên, base item hoặc stat.
+- Có thể lọc theo TU, SU, RW, SET, UMO, CYCLE, RELIC hoặc TROPHY.
+- Prefix tương ứng: `!item <từ khóa>` hoặc `!item <loại> <từ khóa>`.
+- Dữ liệu item nằm trong bảng `items` của `data/median-xl.sqlite`.
+- Chạy `npm run sync` khi cần đồng bộ lại dữ liệu item.
 
 ## Cài đặt
 
-Cần Node.js 18.17 trở lên. Chạy `npm install`, copy `.env.example` thành `.env`, điền token bot, client ID và guild ID thử nghiệm. Bot cần quyền `View Channel`, `Send Messages`, `Embed Links` và `Use Application Commands`.
+1. Cài Node.js 18.17 trở lên.
+2. Giải nén và chạy `npm install`.
+3. Sao chép `.env.example` thành `.env`, sau đó điền token và ID Discord.
+4. Chạy `npm run register` để đăng ký slash command cho server.
+5. Chạy `npm start`.
 
-Chạy `npm run sync` để tải dữ liệu lần đầu, `npm run register` để đăng ký slash command vào guild thử nghiệm, rồi `npm start` để chạy bot. Sau đó admin có thể dùng `/update` trực tiếp trong Discord để đồng bộ lại toàn bộ database; `/sync` vẫn được giữ như alias cũ.
+### Chạy bằng Docker
 
-## Lệnh
+1. Tạo `.env` từ `.env.example` và đăng ký lệnh một lần bằng `npm run register`.
+2. Chạy `docker compose up -d --build`.
+3. Database, WAL, backup và log được giữ ngoài container trong `./data` và `./logs`.
+4. Dùng `docker compose logs -f gamebot` để theo dõi; `docker compose down` sẽ gửi SIGTERM và cho bot tối đa 30 giây để đóng sạch.
 
-`/item query:<từ khóa> [type:TU|SU|RW|SET|UMO|CYCLE|RELIC|TROPHY|ALL]`
+Bot cần bật **Message Content Intent** trong Discord Developer Portal nếu muốn dùng prefix command và trả lời trực tiếp trong Vua tiếng Việt.
 
-`/compare item_1:<item> item_2:<item>` so sánh metadata và stats của hai item. Hai ô item có autocomplete và dùng ID nội bộ để phân biệt các item trùng tên.
+## Bắt đầu và tiến độ
 
-`/sleep [query]` tìm bonus awakening của The Sleep trong dungeon Nymyr's Light. Query có autocomplete theo các tên Trophy màu vàng, ví dụ `lord of lies`, `legacy of blood`, `yshari sanctum`, hoặc có thể tìm một phần như `lies`, `yshari`. Khi chạy `/sleep` không có query, bot yêu cầu nhập từ khóa. Embed chỉ hiển thị bonus tương ứng, kèm dungeon, reward và icon.
+- `/batdau`: hướng dẫn người mới và nhận một lần 500 xu cùng màu hồ sơ Xanh Băng.
+- `/trogiup`: chọn tab để xem lệnh theo từng nhóm; `/huongdan` vẫn là bản tóm tắt ngắn.
+- `/choi`: một lệnh chung để chọn đủ 9 game.
+- `/vatpham`: cửa hàng, mua, túi đồ, sử dụng, tặng và quay Gacha.
+- Vật phẩm bậc R–SSR mới: Kính Soi Chữ, Đồng Hồ Gia Hạn (Vua tiếng Việt); Máy Quét Hàng/Cột (Mines); Kính Lúp Nứt, Bảo Hiểm Trắng Tay (Bầu cua); Ống Ngắm Tổng Điểm, Bảo Hiểm Sát Nút (Tài xỉu); Vé Khán Đài (Đua ngựa); Bùa Giảm Đau (Oẳn tù tì); Miếng Đệm Quắc (Xì dách); Phiếu Bỏ Bài (Poker); Nước Thanh Tẩy (hủy hiệu ứng đang chờ). Vật phẩm bảo hiểm chỉ tiêu hao khi thực sự được hoàn. Vé Gacha ×10 bảo đảm ít nhất một SSR, nhân đôi trọng số UR và không thể trao đổi.
+- `/nhiemvu`: nhiệm vụ, điểm danh, thành tựu và thưởng vai trò hàng tuần; `kiemtra` mở menu xem/nhận nhanh mọi thưởng chưa nhận, `nhan` nhận tất cả hoặc theo loại (nhiệm vụ, thành tựu, thưởng vai trò), `tanthu` nhận thưởng tân thủ (1 vé Gacha ×10 + 3000 kim cương, một lần).
+- `/xephang`: bảng xếp hạng chung có dropdown để chuyển giữa tài sản và từng game.
+- `/xu vanchoi`: xem kết quả, tiền cược và payout của 10 ván gần nhất.
+- `/hoso [nguoidung]`: thẻ hồ sơ, huy hiệu và bảng thống kê đủ 9 game gồm số ván, thắng/thua/hòa, tỷ lệ thắng, tổng cược, tổng nhận và dòng xu ròng.
+- `/vatpham quay luot:<1|10>`: quay bằng kim cương; gói 10 lượt bảo đảm tối thiểu một phần thưởng SR.
+- `/choi chinchiro xu:<số xu>`: chơi Xúc Xắc Ngầm với Nhà cái trong một embed; người chơi chỉ bấm lắc khi Nhà cái cần so điểm.
+- Admin dùng `!addgem @người_chơi <số lượng>` để cộng kim cương. Mọi thay đổi kim cương và lượt gacha đều có operation ID chống xử lý trùng.
+- **Gacha: tỷ lệ theo độ hiếm là cố định.** Mặc định XU 50% · R 22% · SR 14% · SSR 10% · UR 4%. Bậc được chọn trước theo tỷ lệ này, rồi vật phẩm trong bậc được chọn **ngẫu nhiên đều**; thêm hay bớt vật phẩm không làm đổi tỷ lệ bậc (bậc có nhiều vật phẩm chỉ chia nhỏ tỷ lệ cho từng vật phẩm). Admin đổi tỷ lệ bậc bằng `/quantri config` với `GACHA_RATE_XU|R|SR|SSR|UR` (trọng số, tự chuẩn hóa về 100%; SR/SSR/UR tối thiểu 0.1), `/quantri themgacha` để thêm vật phẩm catalog vào bậc, `/quantri batgacha` để bật/tắt một phần thưởng và `/quantri xemgacha` để xem tỷ lệ từng bậc và từng vật phẩm.
+- **Thưởng sự kiện sau ván:** mỗi ván hợp lệ roll độc lập khả năng rơi thêm xu, gem (chỉnh bằng `/quantri config`) và **vật phẩm riêng của chính game đó** (không rơi vật phẩm dùng chung như vé Gacha). Mỗi game có tỷ lệ riêng: Bầu cua, Tài xỉu, Xì dách, Dò mìn, Chinchiro 4% · Đua ngựa, Poker 6% · Cò quay Nga 5% · Oẳn tù tì, Vua tiếng Việt 3% · Sinh tồn chưa có vật phẩm riêng nên không rơi. Độ hiếm rơi cố định R 60% · SR 28% · SSR 9% · UR 3% (game không có vật phẩm ở độ hiếm nào thì bỏ qua và chuẩn hóa lại), vật phẩm trong độ hiếm chọn ngẫu nhiên đều. Hệ số chung `GAME_ITEM_DROP_MULTIPLIER` (mặc định 1, 0 để tắt) nhân tất cả tỷ lệ này.
+- `/quantri datbuff` bật hệ số nhân có thời hạn: **xu drop**, **gem drop** (nhân số lượng khi đã roll trúng), **tỷ lệ rơi vật phẩm game** (nhân tỷ lệ rơi vật phẩm, tối đa 100%) và **tăng tỷ lệ ra vật phẩm Gacha** (nhân tỷ lệ các bậc R–UR so với bậc XU). Dùng `/quantri datbuff` với hành động `Xem buff đang chạy` để xem thời gian còn lại.
+- Admin dùng `/quantri datthuongvaitro` để gắn mức xu riêng, `/quantri xemthuongvaitro` để xem và `/quantri xoathuongvaitro` để xóa. Người chơi phải dùng `/nhiemvu nhan` (loại Thưởng vai trò) trong tuần để nhận; quên nhận sẽ mất phần tuần đó.
 
-### Xu, hồ sơ và trò chơi
+## Kiểm chứng công bằng
 
-Mỗi thành viên có một hồ sơ riêng trong từng server. `/hoso [user]` tạo thẻ profile PNG đơn giản với avatar, màu chủ đạo, số xu, thứ hạng và thành tích thắng/thua/hòa. Người chơi có thể mua màu trong shop rồi trang bị bằng `/use`; hồ sơ không còn danh hiệu, huy hiệu, khung hoặc hình nền riêng. `/xu sodu` xem nhanh số dư cá nhân, `/xu daily` nhận xu mỗi 24 giờ, `/xu top` mở bảng xếp hạng và `/xu chuyen user:<người nhận> xu:<số lượng>` chuyển xu cho thành viên khác. Hai phía của giao dịch được ghi trong cùng một transaction SQLite nên không có trường hợp trừ người gửi mà chưa cộng người nhận.
+Các game cược tiếp tục dùng seed và HMAC-SHA256 nội bộ để tạo kết quả xác định. Thông tin kỹ thuật về seed/commit không hiển thị trên embed game để giao diện ngắn gọn hơn.
 
-`/shop xem` mở cửa hàng xoay vòng 6–10 món mỗi ngày. Mỗi vòng ưu tiên vật phẩm liên quan đến game và chỉ dành tối đa một ô cho màu profile. Người chơi dùng `/buy`, `/inventory`, `/use`, `/collection`, `/craft` và `/giftitem` để mua, dùng, sưu tập, chế tạo hoặc tặng đồ. Catalog gồm vật phẩm hỗ trợ quiz/craft/Mines/Hardcore, hai cấp bảo hiểm cược, Bùa Chống Trùng, Bùa May Mắn, túi/rương mảnh, năm loại hòm và các màu hồ sơ. Hòm Trophy Hunter, Charm Sanctuary và Sacred Set chỉ mở đúng nhóm thẻ tương ứng. Bộ sưu tập có 37 thẻ boss, class, pet, relic, charm và set Median XL; vật phẩm trùng được đổi thành Mảnh linh hồn. `/inventory` hiển thị cả hiệu ứng đang kích hoạt và thời gian còn lại. Giá catalog mặc định được nhân 100 lần so với bảng giá ban đầu; giá do admin tự chỉnh được giữ nguyên. Admin quản lý bằng `/shop add`, `/shop edit`, `/shop remove`, `/shop rotate`, `/shop stock` và `/shop discount`; vật phẩm chỉ được chọn từ catalog hiệu ứng có sẵn.
+### Oẳn tù tì solo
 
-`/nhiemvu xem` hiển thị ba nhiệm vụ ngày và ba nhiệm vụ tuần; tiến độ được cập nhật trực tiếp từ kết quả các game. `/nhiemvu nhan` nhận các phần thưởng hoàn thành đúng một lần. `/nhiemvu diemdanh` tạo chuỗi tối đa 7 ngày, ngày thứ bảy nhận thêm Hòm Sanctuary. Thẻ Giữ Chuỗi tự bảo vệ khi bỏ lỡ đúng một ngày. Dầu Săn Boss và Cờ Hiệu Mùa Giải có ba lượt dùng, lần lượt nhân đôi sát thương boss và điểm mùa.
+- Đấu với bot: `/choi ott xu:<số xu> chon:<bua|keo|bao>`
+- Thách đấu người khác: `/choi ott xu:<số xu> doithu:@người_chơi`
+- Với prefix: `!ott solo @người_chơi <số xu>`
 
-`/sukien boss` hiển thị boss cộng đồng hằng tuần. Mỗi chiến thắng tự gây sát thương; người đã đóng góp nhận 100.000 xu và một Hòm Sanctuary sau khi boss bị hạ bằng `/sukien nhan`. `/xephang mua` hiển thị điểm mùa theo tháng; top 10 mùa trước nhận xu và hòm bằng `/xephang nhan`. Admin dùng prefix `!economystats` để xem tổng cung, trung bình số dư, xu tạo ra và xu đã tiêu/hủy trong 24 giờ.
+Đối thủ có 60 giây để chấp nhận. Sau khi chấp nhận, cả hai có 2 phút để bí mật chọn Búa, Kéo hoặc Bao. Bot giữ cược của hai người, trả toàn bộ cho người thắng và tự hoàn tiền nếu ván hết hạn.
 
-`/anxin user:<người cho> xu:<số lượng> [lydo]` đăng yêu cầu có nút chấp nhận/từ chối trong 30 giây. Chỉ người được xin mới thao tác được; khi chấp nhận, xu được chuyển trong một transaction duy nhất. Mỗi người chỉ được có một yêu cầu mở và phải chờ 60 giây giữa hai yêu cầu.
+### Xì dách
 
-Lịch sử mua hàng tự xóa sau 7 ngày. Yêu cầu xin xu đã đóng tự xóa cả bài Discord lẫn bản ghi SQLite sau 1 ngày. Kho đồ chỉ giữ một dòng cho mỗi loại vật phẩm/người chơi, nên vật phẩm cộng dồn không làm SQLite tăng một dòng cho mỗi món.
+- Chọn đối thủ bằng `chedochoi`: **nhà cái bot** (mặc định, chơi một mình với gấp đôi và tách bài) hoặc **người chơi khác**: `/choi xidach ante:<số xu> chedochoi:nguoichoi` mở bàn, bạn làm nhà cái, tối đa 3 người vào bàn trong 30 giây.
+- Ở bàn nhiều người, bài mỗi người được giữ kín: bấm **Xem bài của tôi** để xem bài và Rút bài/Dừng trong bảng riêng (chỉ bạn thấy); bot nhắc người đến lượt trong kênh và bài chỉ lộ khi ván kết thúc.
+- Với prefix: `!xidach <số xu> [bot|nguoichoi]` (mặc định bot).
 
-Các trò chơi hiện có:
+Trong ván với nhà cái bot, thắng thường nhận 2× tổng cược, Xì dách tự nhiên nhận 2,5×. Người chơi chỉ được Dừng khi có ít nhất 16 điểm (Gấp đôi chốt tay sau 1 lá nên không bị ràng buộc), nhà cái rút đến khi có ít nhất 15 điểm. Người chơi quắc trên 21 thua, nhưng nếu nhà cái cũng quắc thì **hòa** và hoàn cược; khi quắc mọi nút thao tác bị khóa. Luật 16/15 và cùng quắc = hòa áp dụng cho cả bàn nhiều người và đấu người (đấu người vốn đã hòa khi cả hai quắc). Lưu ý cân bằng: với hệ số 2× và luật mới, mô phỏng cho RTP khoảng 107% với chiến thuật cơ bản (người chơi có lợi); hạ `REGULAR_WIN_MULTIPLIER` xuống 1,8 để về khoảng 99%. Ngũ linh (đủ 5 lá không quắc) thắng nhà cái không có Ngũ linh. Trong ván 1v1, mỗi người xem tay bài bằng nút riêng, sau đó chọn Rút bài hoặc Dừng. Người có tay gần 21 nhất thắng toàn bộ tiền cược; Xì dách tự nhiên được ưu tiên cao nhất. Nếu ván hết hạn, cược được hoàn cho cả hai.
 
-Không game nào thu phí mở ván. Nối từ và Vua tiếng Việt được mở hoàn toàn miễn phí. Bầu cua, Oẳn tù tì và Tài xỉu chỉ thay đổi số dư theo khoản cược mà người chơi tự chọn, không trừ thêm phí hệ thống.
+### Poker
 
-- `/oantuti chon:<bua|keo|bao> xu:<mức cược>`: thắng nhận lãi bằng tiền cược, hòa hoàn cược.
-- `/baucua` mở một bàn cược chung trong 30 giây. Người chơi bấm nút linh vật, nhập số xu trong form và có thể cược nhiều cửa. Linh vật xuất hiện 1/2/3 lần trả lãi 1×/2×/3×.
-- `/taixiu` mở bàn Sic Bo chung trong 30 giây. Các nút gồm Tài, Xỉu, Chẵn, Lẻ, Bộ ba bất kỳ và Tổng cụ thể. Tài/Xỉu và Chẵn/Lẻ trả 1:1 nhưng đều thua khi kết quả là bộ ba; Bộ ba bất kỳ trả 31:1; tổng 4–17 trả từ 6:1 đến 62:1 theo độ hiếm.
-- `/blackjack xu:<mức cược>` mở một ván riêng với dealer. Người chơi dùng nút Rút bài, Dừng, Gấp đôi, Tách bài hoặc Bỏ ván. Game dùng shoe 6 bộ bài; dealer đứng ở mọi mức 17, Blackjack tự nhiên trả 3:2, thắng thường trả 1:1 và hòa hoàn cược. Chỉ được split một lần khi hai lá cùng hạng; hai Át sau split tự nhận thêm một lá rồi dừng, và Blackjack sau split được tính như thắng thường.
-- `/duangua` mở một ván chung cho nhiều người và nhận cược trong 30 giây. Người chơi bấm một trong năm ngựa để nhập cược, có thể cược nhiều ngựa trong cùng ván. Mỗi ngựa có xác suất và multiplier công khai từ x2.8 đến x8.5; multiplier đã gồm tiền cược hoàn lại. Bot khóa toàn bộ cược cùng lúc, công bố thứ tự về đích rồi thanh toán mọi người.
-- `/mines xu:<mức cược> min:<1–7>` mở bảng riêng 20 ô. Mỗi ô an toàn làm multiplier tăng theo xác suất còn sống; người chơi có thể rút sau ít nhất một ô hoặc tiếp tục mạo hiểm. Trúng mìn mất cược, mở hết ô an toàn tự động thanh toán. Ván chưa kết thúc được lưu SQLite và dùng lại được sau khi bot restart.
-- `/hardcore batdau xu:<mức cược> class:<class>` mở Hardcore Run cá nhân với Barbarian, Assassin hoặc Sorceress. Mỗi lượt dùng nút Tấn công, Phòng thủ, kỹ năng, bình máu hoặc rút thưởng. Boss xuất hiện mỗi 5 tầng; tầng 100 là mốc hoàn thành chính thức và có thể tiếp tục Overrun đến giới hạn kỹ thuật 999. Payout ngừng tăng theo tầng sau 100 và bị giới hạn 10.000.000 xu.
-- Các game đặt cược sẽ chọn ngẫu nhiên một câu khịa vui khi người chơi thua và không nhận lại xu nào. Bầu cua, Tài xỉu và Đua ngựa gom phần khịa vào kết quả chung; Oẳn tù tì, Blackjack và Mines hiện ngay trong kết quả cá nhân. Hòa, thắng, còn nhận payout hoặc chủ động bỏ ván sẽ không bị khịa.
-- `/noitu batdau`, sau đó các thành viên luân phiên nhập cụm từ trực tiếp vào channel Nối từ. Người vừa nối đúng phải chờ người khác nối đúng mới được chơi tiếp. Bot thả ✅ vào đáp án hợp lệ và lấy chính cụm từ đó làm mốc nối tiếp. Nối từ không có câu khó hoặc giới hạn thời gian; chỉ người kết thúc một chuỗi không còn đường nối mới nhận thưởng x10. Kho Nối từ dùng hơn 32.000 cụm từ. Dùng `/noitu boqua` khi không ai nối được.
-- Người chơi báo từ còn thiếu bằng `/noitu baotu` hoặc `!noitu baotu <cụm từ>`, và xem các từ riêng của server bằng `/noitu tudien` hoặc `!noitu tudien [trang]`. Admin xem hàng chờ bằng `/noitu choduyet`, sau đó dùng `/noitu duyet id:<id>` hoặc `/noitu tuchoi id:<id>`. Admin có thể thêm trực tiếp bằng `/noitu themtu tu:<cụm từ>` và xóa bằng `/noitu xoatu tu:<cụm từ>`; cả hai đều có prefix tương đương. Thay đổi có hiệu lực ngay và vẫn được giữ sau khi bot khởi động lại.
-- `/vuatiengviet batdau` xáo trộn các chữ cái của một từ hoặc cụm từ có nghĩa. Thành viên nhập đáp án trực tiếp trong channel; câu được giữ đến khi có người giải đúng hoặc dùng `/vuatiengviet boqua`.
-- `/doanitem batdau` dùng dữ liệu TU, SU, Set và Runeword từ SQLite; Trophy, Relic, Cycle và UMO không xuất hiện. TU chủ yếu hỏi base item hoặc Required Level. SU và Set có thể hỏi base item, Required Level hoặc Item Level; Runeword chỉ hỏi base và không yêu cầu nhớ chuỗi rune. Câu khó x10 giấu các metadata trực tiếp trong 30 giây.
+`/choi poker` chơi với hai bot và hỗ trợ Texas Hold’em, Poker 6+, Crazy Pineapple và Omaha 5 lá. Lệnh không cần nhập buy-in: mỗi người tự đóng ante 50 xu (đổi bằng `POKER_ANTE`), sau đó xu chỉ bị trừ thêm khi Call hoặc Raise. Ngay từ Flop, mỗi bot lật công khai một lá tẩy và giữ nguyên lá đó trong suốt ván. Ván có ba hành động Tố, Theo/Check và Bỏ bài; Turn và River có vòng cược riêng. Nhập toàn bộ stack trong cửa sổ Tố để All-in. Giao diện đánh giá bộ bài mạnh nhất hiện tại của người chơi sau mỗi lượt. Bot cân nhắc sức mạnh bài, draw sảnh/thùng, pot odds, áp lực stack, phong cách riêng và bluff; bot Crazy Pineapple tự chọn lá bỏ tốt nhất nhưng không được bỏ lá đã công khai. Hệ thống tự động hoàn phần cược không ai theo, tạo Main Pot và nhiều Side Pot theo mức đóng góp, rồi xét riêng những người đủ điều kiện cho từng pot khi Showdown. Omaha bắt buộc dùng đúng hai lá tẩy và ba lá chung.
 
-Các lệnh chơi đều có dạng prefix tương đương khi Message Content Intent đã bật: `!baucua`, `!taixiu`, `!duangua`, `!mines 100 3`, `!hardcore 100 barbarian`, `!oantuti bua 100`, `!blackjack 100`, `!noitu batdau`, `!vuatiengviet boqua` và `!doanitem batdau`. `!xidach 100` là alias của Blackjack và `!hc` là alias của Hardcore Run. Prefix cũ `!doanruneword` vẫn chuyển sang game Đoán item để tương thích. Với game phiên chung, có thể dùng `batdau`, `boqua`, `ketthuc` hoặc alias tiếng Anh `start`, `skip`, `end`.
+`/choi domin` có một ô đặc biệt không trùng vị trí mìn. Mở một ô cùng hàng hoặc cùng cột với ô đặc biệt sẽ phát cảnh báo trong mục tín hiệu riêng, còn ô trên bàn vẫn hiển thị 💎 như mọi ô an toàn khác. Tìm đúng ô 🌟 sẽ nhân thêm x1.50 vào multiplier hiện tại cho đến khi rút thưởng. Hệ số cơ sở đã tính xác suất nhận bonus và giảm dần theo số ô mở để tránh chiến thuật rút thưởng tạo xu vô hạn. Bỏ ván ngay không tính EXP hay tiến độ nhiệm vụ.
 
-`/trochoi` hoặc `!trochoi` (`!games`, `!gamehelp`) hiển thị toàn bộ lệnh dành cho người chơi, cách trả lời và các lệnh quản lý xu. Hướng dẫn này không liệt kê lệnh thiết lập hoặc lệnh admin.
+`/choi coquay cuoc:<xu>` (hoặc `!coquay <xu>`) là Cò quay Nga kiểu Buckshot Roulette: bạn và Bot mỗi bên 3 máu, cược một lần từ đầu, thắng nhận x2. Tự bắn đạn lép thì giữ lượt; tự bắn đạn thật mất 1 máu và mất lượt; bắn đối phương thì luôn chuyển lượt. Mỗi đợt nạp công khai số đạn thật/lép (đợt 1: 2–3 viên, đợt 2: 4–5, từ đợt 3: 6–8; luôn có ít nhất 1 thật và 1 lép). Bot chỉ dùng thông tin công khai và chọn nước tối ưu. Vật phẩm Gacha dùng bằng nút trong ván, mỗi loại 1 lần/ván: Kính Lúp Soi Nòng (SR), Bia Đỡ Đạn (SR), Cưa Cầm Tay (SSR), Còng Số 8 (UR).
 
-Admin đặt phần thưởng riêng cho từng server bằng `/game reward trochoi:<game> xu:<số>` hoặc prefix `!setreward <game> <số>`. `/game rewards` và `!rewards` hiển thị cấu hình hiện tại. Các game hỗ trợ thưởng cố định là `noitu`, `vuatiengviet`, `doanitem`; nhập `0` để tắt thưởng. Bầu cua, Tài xỉu và Oẳn tù tì thanh toán theo tiền cược nên không có mức thưởng cố định.
+Dò mìn dùng 2–7 mìn trên bàn 20 ô. Giáp Chống Nổ chỉ vô hiệu hóa **một** quả mìn đầu tiên bạn chạm trên mỗi bản đồ; quả mìn thứ hai vẫn phát nổ như bình thường.
 
-`/xu lichsu` hiển thị 10 giao dịch xu gần nhất của chính người dùng. `/xephang game trochoi:<game>` hiển thị top 10 riêng theo số trận thắng và tỷ lệ thắng của game được chọn.
+### Đua ngựa trực tiếp
 
-Admin đặt trần cược riêng cho từng server/game bằng `/game maxbet trochoi:<game> xu:<10–100000>` hoặc `!setmaxbet <game> <10–100000>`. `/game maxbets` và `!maxbets` hiển thị toàn bộ giới hạn; mặc định là 100.000 xu. Cấu hình áp dụng cho Bầu cua, Tài xỉu, Oẳn tù tì, Blackjack, Đua ngựa, Mines và Hardcore Run. Với game nhiều cửa/ngựa, bot kiểm tra tổng tiền một người đã cược trong cả ván. Blackjack tính cả cược ban đầu, Double và Split vào cùng giới hạn.
+Sau 30 giây nhận cược, bot khóa cược và hiển thị cuộc đua trực tiếp trong 18 giây qua 9 chặng. Hệ thống có 20 ngựa thường và 1 Thiên Mã đặc biệt; mỗi ván chọn đúng 6 con. Thiên Mã có 7% cơ hội xuất hiện và chiếm một trong sáu vị trí. Mỗi ngựa có kỹ năng và nhịp chạy riêng: xuất phát nhanh, ôm cua, giữ sức, núp gió, chống sự cố hoặc lội ngược dòng. Hệ số được tạo riêng cho từng ván theo RNG, ngày, khung giờ và phong độ hiện tại rồi được khóa trong suốt ván. Trong cuộc đua có thể xuất hiện các biến cố gây giảm tốc như đau bụng, vấp chân, dừng gặm cỏ, chạy nhầm làn hoặc mải tạo dáng. Khi cán đích, bot công bố bục vinh quang, khoảnh khắc quyết định, thông số nhà vô địch và thanh toán cược.
 
-Mỗi game bắt buộc có một channel riêng. Admin dùng `/game setup trochoi:<game> channel:<channel>` rồi dùng `/game channels` để kiểm tra. Channel Đoán runeword cũ được tự động chuyển thành channel Đoán item nếu server chưa cấu hình channel này. Bot không cho gán cùng một channel cho hai game và sẽ từ chối lượt chơi gửi sai channel.
+Ngựa được chia thành các hệ Cân bằng, Tốc độ, Bền bỉ, Kỹ thuật, Bí ẩn, Phòng thủ, Đột biến và Thần thoại. Sau khi khóa cược, bot mới RNG và công bố debuff của đường đua như mưa lớn, bùn lầy, gió ngược, cua gắt, nắng nóng, sương mù, mặt đường trơn hoặc khán đài náo loạn. Debuff tăng hoặc giảm cơ hội chiến thắng theo hệ ngựa và không được tiết lộ trong thời gian đặt cược.
 
-Dữ liệu Nối từ và Vua tiếng Việt được đóng gói trong `data/games/vietnamese-game-words.json`. Sau khi lọc trùng và chuẩn hóa cách viết, bot có hơn 27.000 cụm hai tiếng cho Nối từ và hơn 25.000 từ/cụm từ cho Vua tiếng Việt. Bot tạo chỉ mục theo tiếng đầu khi khởi động nên không phải quét toàn bộ dữ liệu ở mỗi lượt và không cần gọi mạng khi chơi. Dữ liệu được tạo lại bằng `npm run build:game-data` từ Viet39K của dự án `duyet/vietnamese-wordlist`; thông tin nguồn và giấy phép nằm trong `data/games/README.md`.
+Sinh tồn được giảm độ khó trong 10 tầng đầu: boss đầu có ít máu và sát thương hơn, Barbarian khởi đầu mạnh hơn, người chơi có 3 bình máu và nhận hồi phục cùng 1 bình sau khi thắng boss tầng 5 và 10. Bài mô phỏng chính sách chơi thận trọng nằm trong `scripts/simulate-hardcore.js`.
 
-Trong Nối từ, bot chỉ chọn từ của mình khi từ đó vẫn còn đường nối cho người chơi. Nếu người chơi đưa ra từ hợp lệ cuối cùng khiến bot không còn đường đi, bot công bố người đó thắng chuỗi, thưởng x10 mức xu cơ bản và tự mở một chuỗi thường mới. Danh sách từ đã dùng vẫn được lưu theo phiên để hạn chế lặp.
+## Thiết lập kênh
 
-Nối từ và Vua tiếng Việt yêu cầu đúng dấu tiếng Việt. Viết hoa/thường, dấu câu và khoảng trắng thừa vẫn được chuẩn hóa, nhưng câu trả lời bỏ dấu không được tính là đúng.
+Dùng `/quantri datkenh` để đặt kênh riêng cho từng game. Đua ngựa là bàn chung nhiều người và nhận cược trong 30 giây. Sinh tồn là game cá nhân có cược, trang bị hỗ trợ và bảng xếp hạng tầng.
 
-Phiên đang chơi được lưu trong bảng `game_sessions`, vì vậy không hết hạn và tiếp tục sau khi bot restart. Mỗi server chỉ có tối đa một bản ghi cho mỗi trò chữ; trạng thái cũ được cập nhật tại chỗ nên bảng này không tăng vô hạn.
+Các lệnh thông thường có trong `/trogiup` (chọn mục bằng dropdown) và `/huongdan` (bản tóm tắt). Quản trị viên dùng một lệnh `/quantri` để cấu hình kênh, phần thưởng, giới hạn cược, cửa hàng và vận hành. Các prefix command cũ vẫn có thể bật để tương thích.
 
-Trong các channel trả lời trực tiếp, bot giữ im lặng với mọi đáp án sai và chỉ phản hồi khi có người trả lời đúng. Điều này áp dụng cho Nối từ, Vua tiếng Việt và Đoán item để tránh spam channel.
+`/hoso` lấy cấp độ và thanh EXP làm tiến trình chính thay cho tỷ lệ thắng tổng. EXP cần cho cấp kế tiếp bằng cấp hiện tại nhân hệ số cấu hình; mỗi mốc cấp tự hiển thị phần thưởng kế tiếp. Mỗi ván thua/hòa nhận 10 EXP; ván thắng nhận `10 + floor(xu lãi / 2.000)`, tối đa 500 EXP/ván. Kết quả EXP và cấp mới được ghi ngay trên embed kết quả. Vua Tiếng Việt không nhận EXP trực tiếp từ ván chơi và trang chi tiết chỉ ghi tổng xu đã kiếm được, không hiển thị tỷ lệ thắng/thua.
 
-Nối từ, Vua tiếng Việt và Đoán item có 10% khả năng xuất hiện câu khó. Câu khó thưởng gấp 10 lần mức thưởng đã cấu hình và chỉ có hiệu lực trong 30 giây. Khi hết giờ, bot tự thông báo và thay bằng câu thường không giới hạn thời gian. Có thể đổi tỷ lệ bằng `HARD_QUESTION_CHANCE` trong `.env`, ví dụ `0.1` là 10%. Mỗi phiên lưu lịch sử gần đây để ưu tiên câu chưa xuất hiện và giảm lặp.
+Quản trị viên có thể dùng `/quantri kinhte` để xem tổng cung và dòng xu trong 24 giờ, hoặc `/quantri trangthai` để kiểm tra tính toàn vẹn database, backup gần nhất, phiên đang hoạt động và lỗi runtime.
 
-Ván Bầu cua/Tài xỉu và các lượt cược được lưu trong `multiplayer_rounds` và `multiplayer_bets`. Bot khôi phục bộ đếm khi restart, tự thanh toán khi hết 30 giây và xóa lịch sử ván đã đóng sau 7 ngày. Có thể đổi thời hạn bằng `MULTIPLAYER_ROUND_RETENTION_DAYS` (1–90). Bảng trả thưởng Tài xỉu dựa trên luật Sic Bo của Singapore Gambling Regulatory Authority: `https://www.gra.gov.sg/docs/default-source/game-rules/mbs/dice-games/sic-bo-mbs-version-5.pdf`.
+Các biến cân bằng game không còn bắt buộc phải sửa file rồi khởi động lại bot. Dùng `/quantri xemcauhinh` để xem và chỉnh giá trị bằng menu, hoặc `/quantri khoiphuc` để trở về giá trị `.env`/mặc định theo từng server. Hiện hỗ trợ cấu hình economy, phần thưởng game, tỷ lệ câu khó, ante Poker và hệ số EXP/level; thay đổi áp dụng ngay, riêng xu khởi đầu chỉ áp dụng cho tài khoản được tạo mới.
 
-Ván Blackjack đang chơi được lưu trong `blackjack_sessions`; mỗi người chỉ có một ván đang mở trong mỗi server. Bảng chỉ giữ ván chưa kết thúc và xóa ngay khi thanh toán hoặc người chơi bấm Bỏ ván, nên dữ liệu không tăng theo lịch sử chơi. Tiền cược, Double và Split đều được giữ trước khi chia/rút bài; bot chỉ cộng khoản thanh toán sau khi dealer hoàn tất lượt.
+Admin dùng `/quantri xoadulieu` để xóa xu, kim cương, EXP/cấp của một người chơi. Bỏ trống người chơi để xem trước số tài khoản bị ảnh hưởng và xác nhận thao tác trên toàn server.
 
-Ván Mines đang chơi được lưu trong `mines_sessions` theo cách tương tự và xóa ngay khi trúng mìn, rút thưởng, mở sạch bảng hoặc bỏ ván. Đua ngựa dùng `multiplayer_rounds` và `multiplayer_bets`; lịch sử ván đóng được dọn theo cùng thời hạn lưu của Bầu cua/Tài xỉu.
+`/quantri xoadulieu dulieu:RESET SERVER` (bỏ trống người chơi) xóa **mọi dữ liệu người chơi** của server: tài khoản xu, kim cương, cấp/EXP, túi đồ, hiệu ứng, lịch sử và pity Gacha, nhiệm vụ, thành tựu, thống kê, xếp hạng, quà đã nhận và ván đang chơi. **Cấu hình được giữ nguyên**: channel game, phần thưởng, giới hạn cược, cân bằng game, cửa hàng, pool Gacha, buff sự kiện và thưởng theo role. Có bước xác nhận và không thể hoàn tác.
 
-Hardcore Run lưu duy nhất ván đang hoạt động của mỗi người trong `hardcore_sessions`. Mỗi nút chứa số lượt hiện tại để nút cũ không thể xử lý lại sau khi trạng thái đã thay đổi. Phiên không hoạt động 7 ngày được tính là bỏ run và xóa. `hardcore_records` chỉ giữ một dòng thành tích tổng hợp cho mỗi thành viên/server, gồm tầng cao nhất, số run, số lần chết, rút thưởng và hoàn thành tầng 100; dữ liệu không tăng theo từng lượt chơi.
+## Vận hành và cân bằng
 
-Gacha Hardcore Run có hòm rỗng, Legendary giả không có chỉ số, đồ Common/Rare/Legendary/Cursed, Mimic và Ancient Mimic. Sau 5 hòm không có Rare, hòm kế tiếp tối thiểu Rare; sau 10 hòm không có Legendary, tỷ lệ Legendary tăng thêm 2% mỗi hòm. Các sự kiện xấu gồm Tax Collector lấy 15% payout, trộm bình máu và Wrong Portal giữ nguyên tầng rồi roll encounter mới.
+- `npm run test:coverage`: chạy test và bắt buộc đạt ngưỡng coverage trong CI.
+- `npm run test:stress -- 1000 12`: mô phỏng 1.000 người trên 12 kết nối, double-click xu/kim cương/gacha, SQLite bị giữ khóa và tiến trình khởi động lại sau thanh toán.
+- `npm run simulate:rtp -- 1000000`: mô phỏng RTP và làm CI thất bại khi vượt `RTP_MAX_PERCENT`. Các cửa cược xúc xắc được liệt kê chính xác toàn bộ kết quả để tránh cảnh báo sai do nhiễu Monte Carlo. Xì dách với nhà cái được mô phỏng bằng đúng luật của game (bộ bài 6 bộ không hoàn lại, quắc luôn thua, Ngũ linh, split, double; không tính vật phẩm) và có test đối chiếu từng ván với engine thật; RTP ước tính khoảng 91–95% tùy chiến thuật.
+- `/luat` mở luật ngắn theo từng game. Kết quả có nút chơi lại; thành tựu mới hiện ngay và huy hiệu xuất hiện trên `/hoso`.
 
-RNGesus dùng Chaos động thay vì một tỷ lệ cố định. Tỷ lệ base theo tầng được nhân ngẫu nhiên từ x0,25 đến x3, tăng nhiệt theo số tầng chưa gặp, và mỗi tầng có 2,5% khả năng Chaos Spike cộng thêm 4–10%; xác suất cuối cùng tối đa 12%. Embed chỉ hiển thị Chaos xanh/vàng/đỏ. RNGesus không thể bị đánh bại: người chơi phải bỏ chạy, hối lộ, cầu nguyện hoặc dùng Escape Relic. `/hardcore rates` và `!hardcore rates` hiển thị thuật toán tỷ lệ; `/hardcore hoso`, `/hardcore top` cùng các prefix tương ứng hiển thị thành tích.
+SQLite dùng chung được tạo tại `data/median-xl.sqlite`; dữ liệu item cũ được giữ nguyên và các bảng game/economy được tự động bổ sung khi bot khởi động. Bot sao lưu nhất quán khi khởi động và sau mỗi 24 giờ vào `data/backups`, mặc định giữ 14 bản gần nhất. Có thể đổi lịch và số bản giữ lại bằng `DB_BACKUP_INTERVAL_HOURS`, `DB_BACKUP_RETENTION` và `DB_BACKUP_DIR`.
+`/quantri ketthucvan mavan:<mã>` buộc kết thúc và hoàn cược mọi loại ván có mã (Xì dách với bot và bàn nhiều người, Xì dách và Oẳn tù tì đấu người, Poker, Dò mìn, Cò quay Nga, Chinchiro, Sinh tồn, Bầu cua, Tài xỉu, Đua ngựa). Ván Xì dách với bot, Dò mìn, Cò quay Nga, Chinchiro và Sinh tồn không hoạt động quá `SOLO_SESSION_TTL_MINUTES` phút (mặc định 10; 2 phút nếu tin nhắn ván chưa gửi được) sẽ tự đóng và **người chơi mất tiền cược** (để không thể bỏ ván đang thua rồi đòi hoàn); riêng ván chưa có tin nhắn vì lỗi gửi thì hoàn cược. Với Oẳn tù tì và Xì dách đấu người, bàn Xì dách và bàn Poker hết hạn giữa chừng, người còn nợ một hành động mất cược, người đã hoàn tất lượt được hoàn; hết hạn ở lời mời hoặc sảnh chờ thì hoàn cho tất cả. Admin kết thúc ván bằng `ketthucvan` vẫn hoàn cược cho mọi người.
 
-Hardcore Run tính hit theo Accuracy/Evasion với giới hạn 20–95%. Physical damage dùng giảm trừ `Defense / (Defense + 50 + tầng × 8)` và giới hạn tối đa 75%; magic damage dùng Resistance từ −50% đến 75%. Crit mặc định nhân 1,75 và tối đa 75%. Sau tầng 50, HP và damage của quái nhận thêm scaling lũy thừa để tạo trần độ khó thực tế trước tầng 100.
+Duel Oẳn tù tì, duel và bàn Xì dách đã kết thúc được giữ `GAME_RECORD_RETENTION_DAYS` ngày (mặc định 7) rồi tự xóa cùng dữ liệu bộ bài/tay bài. Lịch sử kim cương và gacha mặc định được giữ 180 ngày; điều chỉnh bằng `DIAMOND_LOG_RETENTION_DAYS` và `GACHA_HISTORY_RETENTION_DAYS`.
 
-Tài khoản mới mặc định có 1.000 xu và quà hằng ngày là 500 xu. Có thể đổi bằng `ECONOMY_STARTING_COINS` và `ECONOMY_DAILY_COINS`. Xu chỉ dùng trong game của server, không quy đổi thành tiền hoặc item. Bot chỉ giữ một dòng tổng hợp cho mỗi thành viên; nhật ký giao dịch được tự xóa sau 30 ngày để SQLite không tăng vô hạn. Đổi thời hạn bằng `ECONOMY_LOG_RETENTION_DAYS` (1–365 ngày).
+Khi nhận `SIGINT` hoặc `SIGTERM`, bot dừng các tác vụ nền, chờ bản sao lưu đang chạy hoàn tất, đóng kết nối Discord và SQLite trước khi thoát.
 
-Admin có ID trong `ADMIN_USER_ID` có thể quản lý xu ngay trong Discord bằng prefix command `!addgold @user <số xu> [lý do]` và `!removegold @user <số xu> [lý do]`. Khi mức phạt lớn hơn số dư, `!removegold` chỉ trừ hết số xu hiện có và không để tài khoản bị âm; thao tác cùng lý do được lưu vào lịch sử giao dịch. Có thể đổi dấu `!` bằng `COMMAND_PREFIX`. Các lệnh này không phải slash command và không được đăng ký vào danh sách guild command. Để bật lệnh, mở Discord Developer Portal → Bot → Privileged Gateway Intents, bật **Message Content Intent**, rồi đặt `ENABLE_PREFIX_COMMANDS=true` trong `.env`. Nếu chưa cấu hình quyền, bot vẫn khởi động bình thường nhưng prefix command sẽ được tắt.
+## Emoji của ứng dụng (Developer Portal → Bot → Emojis)
 
-`/update` đồng bộ lại toàn bộ database Median XL trực tiếp từ Discord. Lệnh chỉ hoạt động với user có ID nằm trong `ADMIN_USER_ID`, báo cáo số lượng từng nguồn và không cho chạy đồng thời hai lần. Có thể khai báo nhiều admin bằng dấu phẩy, ví dụ `ADMIN_USER_ID=111111111111111111,222222222222222222`. `/sync` là alias tương thích cho cùng thao tác. `/status` hiển thị lần sync gần nhất, số bản ghi theo loại và nguồn nào đang lỗi; command này được đăng ký vào runtime và chỉ admin mới xem được khi `ADMIN_USER_ID` đã cấu hình.
+Emoji tải lên ở Developer Portal dùng được ở mọi server mà bot có mặt. Khi khởi động bot tự tải danh sách và tra id theo **tên**, nên chỉ cần đặt đúng tên. Xúc xắc Chinchiro dùng `dieWhite1`–`dieWhite6`; thiếu emoji nào thì tự dùng emoji chuẩn (`:one:`…). Trong code dùng `appEmoji('tên', 'dự phòng')` (chuỗi `<:tên:id>`) hoặc `appEmojiObject('tên')` cho nút/menu (`src/utils/appEmoji.js`).
 
-Với Tiered Unique, database vẫn lưu từng Tier 1–4 để giữ dữ liệu đầy đủ, nhưng `/item` sẽ gộp các bản ghi cùng tên/base item và chỉ trả về Tier 4; nếu một item không có Tier 4 thì dùng tier cao nhất đang có. Tìm kiếm được thực hiện theo thứ tự ưu tiên: tên item khớp chính xác, tên bắt đầu bằng query, tên chứa query, base type, group/variant, rồi mới đến stat/raw text. Vì vậy query `raven` sẽ ưu tiên các tên như `Ravenbeak`, `Ravenflock` và `Graven Image` trước các item chỉ có chữ raven trong bonus. Search không phân biệt hoa thường, hỗ trợ dấu cách tùy chọn và keyword một phần. Nếu query khớp một item, bot gửi embed chi tiết. Nếu khớp nhiều item, bot gửi danh sách và select menu; chỉ người gọi lệnh được chọn và phiên chọn hết hạn sau 60 giây. Discord giới hạn select menu tối đa 25 lựa chọn; search service sẽ xếp hạng trước khi cắt kết quả để không làm mất name match quan trọng.
+## Định dạng tin nhắn kết quả và thưởng
 
-## Autocomplete, phân trang, embed và monitoring
+Mọi game dùng chung `src/utils/rewardText.js`: metric luôn đi kèm icon (xu `:coin:`, kim cương `:gem:`, EXP `:test_tube:`) và kết quả mỗi người gọn trên một dòng, ví dụ:
 
-`/item query:` hiện có autocomplete theo tên item, base item, nhóm, tier và stat. Kết quả được xếp hạng theo độ phù hợp và giới hạn 25 lựa chọn theo giới hạn của Discord. Khi search có nhiều hơn 25 kết quả, bot hiển thị select menu theo từng trang với nút `Trước`, `Sau` và `Đóng`; chỉ người gọi lệnh mới được thao tác và phiên hết hạn sau 120 giây. `/sleep query:` tiếp tục gợi ý tên Trophy màu vàng và hỗ trợ tìm một phần tên.
-
-Khi message command đã bật, `/item` cũng dùng được dưới dạng `!item <tên hoặc stat>`. Có thể lọc loại ở đầu query, ví dụ `!item SU Ophiophagus` hoặc `!item RW sword`. Prefix command dùng chung bộ xếp hạng, embed chi tiết và menu chọn kết quả với slash command.
-
-Embed chi tiết dùng màu riêng cho TU, SU, RW, SET, UMO, CYCLE, RELIC, TROPHY và SLEEP. Tiêu đề, category, base item, variant/tier, requirements và stats được tách rõ; mỗi dòng stat được hiển thị bằng bullet và cách một dòng để dễ đọc trên Discord. Các dòng có tính chất tiêu đề hoặc mở đầu nhóm được tạo khoảng cách riêng; stat dài tự động chia thành nhiều embed. Discord không giữ được màu CSS của trang Median XL, nên bot dùng màu embed theo loại item kết hợp với phân nhóm, khoảng cách và bullet để thay thế trực quan. Runeword có các field riêng cho base item, rune sequence và runes; TU có tier/base item; SET, UMO, CYCLE, RELIC, TROPHY và SLEEP có metadata tương ứng. Thumbnail được lấy từ icon item nếu source cung cấp.
-
-Bot ghi log Pino ra console và file `logs/bot.log`, event monitoring dạng JSON Lines tại `logs/events.jsonl` và snapshot sync tại `logs/status.json`. Runtime đã tích hợp monitoring cho sync, command, autocomplete, login, unhandled rejection và uncaught exception. Có thể đổi thư mục log bằng `LOG_DIR`, tên file bằng `LOG_FILE_NAME` và mức log bằng `LOG_LEVEL` trong `.env`. Không nên commit thư mục `logs/` lên Git hoặc upload các log chứa thông tin nhạy cảm.
-
-Chạy `npm run audit:bot` để kiểm tra đồng thời slash command runtime/register, schema command, SQLite integrity, khóa ngoại, số dư âm, JSON phiên game và item không còn trong catalog. Lệnh chỉ đọc trạng thái hiện tại và trả `ok: true` khi không phát hiện lỗi.
-
-## Lưu ý parser
-
-Website có nhiều bố cục bảng/card khác nhau. Parser mặc định dùng DOM table/card và giữ `raw_text` để dễ kiểm tra. Mỗi source được kiểm tra số lượng tối thiểu, mức giảm so với database cũ, type code, content hash và tên đáng ngờ trước khi được ghi. Nếu validation thất bại, dữ liệu cũ của riêng source đó được giữ nguyên và báo cáo sync ghi rõ nguyên nhân.
-
-
-## Breakpoint calculator
-
-Bot có command `/breakpoint` native trong Discord. Các tham số gồm `character`, `mode`, `weapon`, `speed` và `skill_slow`. Trường `weapon` có autocomplete và hiển thị WSM tương ứng.
-
-Ví dụ:
-
-```text
-/breakpoint character:Amazon mode:attack weapon:Short Bow speed:100 skill_slow:None (0)
-/breakpoint character:Sorceress mode:cast weapon:Short Staff speed:100 skill_slow:None (0)
+```
+<người chơi> thắng: +102.000 :coin: +11 :test_tube:
+🎉 BUFF SỰ KIỆN: +3 :gem: · 🟠 [SSR] Bùa Khắc Chế
 ```
 
-Các mode hiện hỗ trợ `Attack Speed`, `Cast Speed`, `Block Speed` và `Hit Recovery`. Engine sử dụng bảng `data/speedcalc.json`, được trích xuất từ [Median XL Speed Calculator](https://dev.median-xl.com/speedcalc/) và tệp animation data chính thức của calculator. Công thức frame dùng effective speed, WSM, animation speed, frames per direction và skill slow theo logic JavaScript của trang nguồn.
-
-Khi website thay đổi phiên bản hoặc animation data, cần trích xuất lại `SpeedcalcData.txt`, cập nhật `data/speedcalc.json`, sau đó chạy bộ kiểm thử breakpoint. Vì speed calculator có nhiều trường hợp morph/dual-wield/throwing chuyên biệt, nên các trường hợp nâng cao cần được đối chiếu thêm với website trước khi dùng cho build quan trọng.
+Số xu là **thay đổi ròng** (tiền nhận về − tiền cược): thắng `+`, thua `-` (mất cược), hòa `±0`. Vật phẩm rơi hiện icon độ hiếm: nếu đã tải emoji ứng dụng tên `r_icon`, `sr_icon`, `ssr_icon`, `ur_icon` thì bot dùng chúng, không thì dùng vòng tròn màu (🔵🟣🟠🔴).

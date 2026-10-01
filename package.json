@@ -1,17 +1,20 @@
 {
-  "name": "median-xl-discord-bot",
-  "version": "1.0.0",
+  "name": "vietnamese-discord-game-bot",
+  "version": "2.0.0",
   "private": true,
-  "description": "Local Discord bot for searching Median XL items",
+  "description": "Discord game bot with economy, multiplayer games and Median XL item search",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "start:trace": "node --trace-deprecation --trace-warnings src/index.js",
-    "sync": "node scripts/sync.js",
     "build:game-data": "node scripts/build-vietnamese-game-data.js",
     "register": "node scripts/register-commands.js",
-    "audit:bot": "node scripts/audit-bot.js",
-    "test": "node scripts/test-improvements.js && node scripts/test-games.js && node scripts/test-game-commands.js && node scripts/test-features.js && node scripts/test-page-monitor.js && node scripts/test-profile.js && node scripts/test-commerce.js && node scripts/test-progression.js"
+    "sync": "node scripts/sync.js",
+    "announce": "node scripts/post-announcement.js",
+    "test": "node scripts/test-game-bot.js && node scripts/test-operations.js && node scripts/test-item-effects.js && node scripts/test-session-lifecycle.js && node scripts/test-blackjack-sim.js && node scripts/test-poker-bot.js && node scripts/test-coquay.js && node scripts/test-reward-text.js && node scripts/test-command-handlers.js && node scripts/test-median-item.js && node scripts/audit-command-security.js",
+    "test:coverage": "c8 --check-coverage --lines 60 --functions 48 --branches 71 --statements 60 npm test",
+    "test:stress": "node scripts/stress-economy.js",
+    "simulate:rtp": "node scripts/simulate-rtp.js"
   },
   "engines": {
     "node": ">=18.17.0"
@@ -19,9 +22,12 @@
   "dependencies": {
     "@napi-rs/canvas": "^0.1.100",
     "better-sqlite3": "^12.4.1",
-    "cheerio": "^1.0.0",
+    "cheerio": "1.0.0",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.7",
     "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "c8": "^10.1.3"
   }
 }

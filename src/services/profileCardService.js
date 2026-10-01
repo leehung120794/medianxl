@@ -69,7 +69,7 @@ async function drawAvatar(ctx, avatarUrl, displayName, accent) {
     ctx.fillStyle = accent;
     ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '700 58px Arial';
+    ctx.font = '700 58px "Segoe UI", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(displayName).trim().slice(0, 1).toUpperCase() || '?', x, y + 2);
@@ -88,21 +88,23 @@ async function drawAvatar(ctx, avatarUrl, displayName, accent) {
 
 function drawStat(ctx, x, y, label, value, accent) {
   ctx.fillStyle = 'rgba(255,255,255,.55)';
-  ctx.font = '600 13px Arial';
+  ctx.font = '600 13px "Segoe UI", sans-serif';
   ctx.fillText(label.toUpperCase(), x, y);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 24px Arial';
+  ctx.font = '700 24px "Segoe UI", sans-serif';
   ctx.fillText(String(value), x, y + 31);
   ctx.fillStyle = accent;
   ctx.fillRect(x, y + 41, 34, 3);
 }
 
-async function renderProfileCard({ displayName, username, avatarUrl, account, rank, appearance }) {
+async function renderProfileCard({ displayName, username, avatarUrl, account, rank, appearance, progress = {}, xpTarget = 200, serverName = 'Server hiện tại' }) {
   const canvas = createCanvas(WIDTH, HEIGHT);
   const ctx = canvas.getContext('2d');
   const accent = appearance.color.value;
-  const decided = account.wins + account.losses;
-  const winRate = decided ? account.wins / decided * 100 : 0;
+  const level = Math.max(1, Number(progress.level) || 1);
+  const experience = Math.max(0, Number(progress.experience) || 0);
+  const target = Math.max(1, Number(xpTarget) || 200);
+  const expPercent = Math.max(0, Math.min(100, experience / target * 100));
 
   drawBackground(ctx, accent);
   roundedRect(ctx, 34, 34, 220, 272, 18);
@@ -115,18 +117,18 @@ async function renderProfileCard({ displayName, username, avatarUrl, account, ra
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 22px Arial';
+  ctx.font = '700 22px "Segoe UI", sans-serif';
   ctx.fillText(fitText(ctx, displayName, 188), 144, 259);
   ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.font = '14px Arial';
+  ctx.font = '14px "Segoe UI", sans-serif';
   ctx.fillText(fitText(ctx, `@${username}`, 180), 144, 283);
   ctx.textAlign = 'left';
 
   ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.font = '600 13px Arial';
-  ctx.fillText('MEDIAN XL • PLAYER PROFILE', 320, 72);
+  ctx.font = '800 21px "Segoe UI", sans-serif';
+  ctx.fillText(fitText(ctx, `SERVER • ${String(serverName).toUpperCase()}`, 470), 320, 76);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '800 32px Arial';
+  ctx.font = '800 32px "Segoe UI", sans-serif';
   ctx.fillText(fitText(ctx, displayName, 430), 320, 111);
   roundedRect(ctx, 810, 58, 112, 38, 12);
   ctx.fillStyle = `${accent}22`;
@@ -134,34 +136,34 @@ async function renderProfileCard({ displayName, username, avatarUrl, account, ra
   ctx.strokeStyle = `${accent}99`;
   ctx.stroke();
   ctx.fillStyle = accent;
-  ctx.font = '800 18px Arial';
+  ctx.font = '800 18px "Segoe UI", sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(`#${rank}`, 866, 83);
   ctx.textAlign = 'left';
 
   drawStat(ctx, 320, 153, 'Số dư', `${Number(account.balance).toLocaleString('vi-VN')} xu`, accent);
   drawStat(ctx, 530, 153, 'Tổng số ván', account.games_played, accent);
-  drawStat(ctx, 690, 153, 'Thắng / Thua', `${account.wins} / ${account.losses}`, accent);
-  drawStat(ctx, 855, 153, 'Hòa', account.draws, accent);
+  drawStat(ctx, 690, 153, 'Cấp độ', level, accent);
+  drawStat(ctx, 855, 153, 'Kim cương', Number(progress.diamonds || 0).toLocaleString('vi-VN'), accent);
 
   ctx.fillStyle = 'rgba(255,255,255,.55)';
-  ctx.font = '600 13px Arial';
-  ctx.fillText('TỶ LỆ THẮNG', 320, 258);
+  ctx.font = '600 13px "Segoe UI", sans-serif';
+  ctx.fillText(`TIẾN ĐỘ CẤP ${level}`, 320, 258);
   roundedRect(ctx, 420, 246, 430, 16, 8);
   ctx.fillStyle = 'rgba(255,255,255,.1)';
   ctx.fill();
-  const barWidth = 430 * Math.max(0, Math.min(100, winRate)) / 100;
+  const barWidth = 430 * expPercent / 100;
   if (barWidth > 0) {
     roundedRect(ctx, 420, 246, barWidth, 16, 8);
     ctx.fillStyle = accent;
     ctx.fill();
   }
   ctx.fillStyle = '#ffffff';
-  ctx.font = '700 14px Arial';
+  ctx.font = '700 14px "Segoe UI", sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText(`${winRate.toFixed(1)}%`, 920, 259);
+  ctx.fillText(`${experience.toLocaleString('vi-VN')} / ${target.toLocaleString('vi-VN')} EXP`, 920, 259);
   ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.font = '12px Arial';
+  ctx.font = '12px "Segoe UI", sans-serif';
   ctx.fillText(`Màu hồ sơ: ${appearance.color.name}`, 952, 291);
   return canvas.encode('png');
 }

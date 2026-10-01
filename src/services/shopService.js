@@ -2,8 +2,7 @@ const crypto = require('node:crypto');
 const { db } = require('../db');
 const { getAccount, spendCoins } = require('./economyService');
 const { getCosmetic, getProfileAppearance, grantCosmetic, equipCosmetic } = require('./profileCosmeticService');
-const { getCatalogItem, listCatalog, COLLECTIBLES } = require('./itemCatalogService');
-const { consumeActiveEffect } = require('./effectStateService');
+const { getCatalogItem, listCatalog } = require('./itemCatalogService');
 
 const MAX_PRICE = 100_000_000;
 const ROTATION_MS = 86_400_000;
@@ -24,7 +23,7 @@ function getShopItem(guildId, itemId) {
 
 function upsertShopItem({ guildId, catalogId, displayName, price, stock = null, minGames = 0, minWins = 0, minBalance = 0, createdBy }) {
   const catalog = getCatalogItem(catalogId);
-  if (!catalog || catalog.price <= 0 || catalog.shopEligible === false || ['material', 'collectible'].includes(catalog.type)) throw new Error('UNKNOWN_SHOP_EFFECT');
+  if (!catalog || catalog.price <= 0 || catalog.shopEligible === false) throw new Error('UNKNOWN_SHOP_EFFECT');
   const normalizedStock = stock === null || Number(stock) === 0 ? null : integer(stock, 1, 1_000_000);
   const now = Date.now();
   const values = { guild: String(guildId), item: itemCode(catalogId), cosmetic: catalog.id,
@@ -42,26 +41,42 @@ function upsertShopItem({ guildId, catalogId, displayName, price, stock = null, 
 }
 
 function seedShop(guildId) {
-  const guild = String(guildId); const now = Date.now();
-  const insert = db.prepare(`INSERT OR IGNORE INTO shop_items
+  const now = Date.now();
+  const retired = listCatalog().filter(item => item.retired).map(item => item.id);
+  if (retired.length) db.prepare(`UPDATE shop_items SET listed=0,active=0,updated_at=? WHERE guild_id=? AND cosmetic_id IN (${retired.map(() => '?').join(',')})`)
+    .run(now, String(guildId), ...retired);
+  const hiddenLegacy = db.prepare(`UPDATE shop_items SET listed=0,active=0,updated_at=?
+    WHERE guild_id=? AND created_by='system' AND (listed<>0 OR active<>0)`).run(Date.now(), String(guildId)).changes;
+  const cleanser = getCatalogItem('effect_cleanser');
+  const seedCleanser = db.prepare(`INSERT INTO shop_items
+    (guild_id,item_id,cosmetic_id,display_name,price,stock,min_games,min_wins,min_balance,listed,active,created_by,created_at,updated_at)
+    VALUES(?,?,?,?,?,NULL,0,0,0,1,0,'catalog',?,?)
+    ON CONFLICT(guild_id,item_id) DO UPDATE SET cosmetic_id=excluded.cosmetic_id,display_name=excluded.display_name,
+      price=excluded.price,listed=CASE WHEN shop_items.created_by='system' THEN 1 ELSE shop_items.listed END,
+      created_by='catalog',updated_at=excluded.updated_at
+    WHERE shop_items.created_by IN ('catalog','system') AND
+      (shop_items.cosmetic_id<>excluded.cosmetic_id OR shop_items.display_name<>excluded.display_name OR
+       shop_items.price<>excluded.price OR shop_items.created_by<>'catalog')`);
+  const cleanserChanges = cleanser ? seedCleanser.run(String(guildId), cleanser.id, cleanser.id, cleanser.name, cleanser.price, now, now).changes : 0;
+  const colors = listCatalog({ shopEligible: true }).filter(item => item.type === 'color');
+  if (colors.length) {
+    const placeholders = colors.map(() => '?').join(',');
+    db.prepare(`UPDATE shop_items SET listed=0,active=0,updated_at=?
+      WHERE guild_id=? AND cosmetic_id LIKE 'color_%' AND created_by='catalog' AND cosmetic_id NOT IN (${placeholders})`)
+      .run(now, String(guildId), ...colors.map(c => c.id));
+  }
+  const restoreLegacyColor = db.prepare(`UPDATE shop_items SET listed=1,active=0,created_by='catalog',updated_at=?
+    WHERE guild_id=? AND cosmetic_id=? AND created_by='system'`);
+  const insertColor = db.prepare(`INSERT OR IGNORE INTO shop_items
     (guild_id,item_id,cosmetic_id,display_name,price,stock,min_games,min_wins,min_balance,active,created_by,created_at,updated_at)
-    VALUES (?,?,?,?,?,NULL,0,0,0,0,'system',?,?)`);
-  const refreshSystemPrice = db.prepare(`UPDATE shop_items SET price=?,display_name=?,updated_at=?
-    WHERE guild_id=? AND cosmetic_id=? AND created_by='system' AND (price<>? OR display_name<>?)`);
-  const retireUnavailableItem = db.prepare('UPDATE shop_items SET listed=0,active=0,updated_at=? WHERE guild_id=? AND cosmetic_id=? AND (listed<>0 OR active<>0)');
-  let added = 0;
-  db.transaction(() => {
-    const eligible = listCatalog({ shopEligible: true });
-    const eligibleIds = new Set(eligible.map(item => item.id));
-    for (const item of eligible) {
-      added += insert.run(guild, itemCode(item.id), item.id, item.name, item.price, now, now).changes;
-      refreshSystemPrice.run(item.price, item.name, now, guild, item.id, item.price, item.name);
-    }
-    for (const row of db.prepare('SELECT cosmetic_id FROM shop_items WHERE guild_id=?').all(guild)) {
-      if (!eligibleIds.has(row.cosmetic_id)) retireUnavailableItem.run(now, guild, row.cosmetic_id);
-    }
-  })();
-  return added;
+    VALUES(?,?,?,?,?,NULL,0,0,0,0,'catalog',?,?)`);
+  const updateColor = db.prepare(`UPDATE shop_items SET display_name=?,price=?,updated_at=? WHERE guild_id=? AND cosmetic_id=? AND created_by='catalog'`);
+  for (const item of colors) {
+    restoreLegacyColor.run(now, String(guildId), item.id);
+    insertColor.run(String(guildId), item.id, item.id, item.name, item.price, now, now);
+    updateColor.run(item.name, item.price, now, String(guildId), item.id);
+  }
+  return hiddenLegacy + cleanserChanges;
 }
 function randomPick(pool, count) {
   const values = [...pool];
@@ -72,10 +87,21 @@ function rotateShop(guildId, size = 8, now = Date.now()) {
   const count = integer(size, 6, 10); seedShop(guildId);
   const entries = db.prepare('SELECT * FROM shop_items WHERE guild_id = ? AND listed = 1').all(String(guildId))
     .map(row => ({ row, item: getCatalogItem(row.cosmetic_id) })).filter(entry => entry.item);
+  if (!entries.length) {
+    db.transaction(() => {
+      db.prepare('UPDATE shop_items SET active=0 WHERE guild_id=?').run(String(guildId));
+      db.prepare(`INSERT INTO shop_settings (guild_id,rotation_size,next_rotation_at,updated_at) VALUES (?,?,?,?)
+        ON CONFLICT(guild_id) DO UPDATE SET rotation_size=excluded.rotation_size,next_rotation_at=excluded.next_rotation_at,updated_at=excluded.updated_at`)
+        .run(String(guildId), count, now + ROTATION_MS, now);
+    })();
+    return [];
+  }
   const chosen = new Map();
+  const cleanser = entries.find(entry => entry.row.item_id === 'effect_cleanser');
+  if (cleanser) chosen.set(cleanser.row.item_id, cleanser);
   for (const entry of [
     ...randomPick(entries.filter(x => x.item.type === 'chest'), 1),
-    ...randomPick(entries.filter(x => x.item.type === 'consumable'), 4),
+    ...randomPick(entries.filter(x => x.item.type === 'consumable' && x.row.item_id !== 'effect_cleanser'), cleanser ? 3 : 4),
     ...randomPick(entries.filter(x => x.item.type === 'color'), 1),
   ]) chosen.set(entry.row.item_id, entry);
   const gameEntries = entries.filter(x => ['chest', 'consumable'].includes(x.item.type) && !chosen.has(x.row.item_id));
@@ -93,15 +119,24 @@ function rotateShop(guildId, size = 8, now = Date.now()) {
   return listShopItems(guildId, { activeOnly: true, skipRotation: true });
 }
 function ensureRotation(guildId, now = Date.now()) {
-  const added = seedShop(guildId);
+  const seeded = seedShop(guildId);
+  if (seeded) return rotateShop(guildId, undefined, now);
+  const listed = db.prepare('SELECT cosmetic_id FROM shop_items WHERE guild_id=? AND listed=1').all(String(guildId))
+    .map(row => getCatalogItem(row.cosmetic_id)).filter(Boolean);
+  if (!listed.length) {
+    db.prepare('UPDATE shop_items SET active=0 WHERE guild_id=?').run(String(guildId));
+    return null;
+  }
   const settings = db.prepare('SELECT * FROM shop_settings WHERE guild_id = ?').get(String(guildId));
-  if (added || !settings || settings.next_rotation_at <= now || settings.next_rotation_at > now + ROTATION_MS) return rotateShop(guildId, settings?.rotation_size || 8, now);
+  if (!settings || settings.next_rotation_at <= now || settings.next_rotation_at > now + ROTATION_MS) return rotateShop(guildId, settings?.rotation_size || 8, now);
   const active = db.prepare('SELECT cosmetic_id FROM shop_items WHERE guild_id=? AND listed=1 AND active=1').all(String(guildId))
     .map(row => getCatalogItem(row.cosmetic_id)).filter(Boolean);
-  const minimumGameItems = Math.min(settings.rotation_size - 1, 5);
-  if (active.length !== settings.rotation_size
+  const targetSize = Math.min(settings.rotation_size, listed.length);
+  const availableGameItems = listed.filter(item => ['chest', 'consumable'].includes(item.type)).length;
+  const minimumGameItems = Math.min(targetSize - 1, 5, availableGameItems);
+  if (active.length !== targetSize
     || active.filter(item => ['chest', 'consumable'].includes(item.type)).length < minimumGameItems
-    || active.filter(item => item.type === 'color').length > 1) return rotateShop(guildId, settings.rotation_size || 8, now);
+    || active.filter(item => item.type === 'color').length > Math.min(1, targetSize)) return rotateShop(guildId, settings.rotation_size || 8, now);
   return null;
 }
 function listShopItems(guildId, { activeOnly = true, skipRotation = false } = {}) {
@@ -166,7 +201,7 @@ function requirementFailure(item, account) {
 }
 const purchaseTx = db.transaction(({ guildId, userId, itemId, quantity = 1 }) => {
   const amount = integer(quantity, 1, 100); const listing = getShopItem(guildId, itemId);
-  if (!listing || !listing.active || !listing.catalog) throw new Error('SHOP_ITEM_NOT_FOUND');
+  if (!listing || !listing.active || !listing.catalog || listing.catalog.retired) throw new Error('SHOP_ITEM_NOT_FOUND');
   getProfileAppearance(guildId, userId);
   if (!listing.catalog.stackable && amount !== 1) throw new Error('NON_STACKABLE_QUANTITY');
   if (!listing.catalog.stackable && getInventoryQuantity(guildId, userId, listing.cosmetic_id)) throw new Error('ALREADY_OWNED');
@@ -195,21 +230,6 @@ function transferInventory({ guildId, fromUserId, toUserId, itemId, quantity = 1
   return db.transaction(() => { consumeInventory(guildId, fromUserId, itemId, quantity); addInventory(guildId, toUserId, itemId, quantity);
     if (getCosmetic(itemId)) grantCosmetic(guildId, toUserId, itemId); return { item, quantity, remaining: getInventoryQuantity(guildId, fromUserId, itemId) }; })();
 }
-function craftCollectible(guildId, userId, itemId) {
-  const item = getCatalogItem(itemId); if (!item || item.type !== 'collectible') throw new Error('NOT_CRAFTABLE');
-  if (getInventoryQuantity(guildId, userId, itemId)) throw new Error('ALREADY_OWNED');
-  return db.transaction(() => {
-    const discounted = consumeActiveEffect(guildId, userId, 'craft_discount');
-    const cost = discounted ? Math.max(1, Math.ceil(item.craftCost * 0.75)) : item.craftCost;
-    consumeInventory(guildId, userId, 'soul_shard', cost);
-    addInventory(guildId, userId, itemId, 1);
-    return { item, cost, discounted, shards: getInventoryQuantity(guildId, userId, 'soul_shard') };
-  })();
-}
-function collectionProgress(guildId, userId) {
-  const owned = new Set(getInventory(guildId, userId).filter(row => row.item.type === 'collectible').map(row => row.item_id));
-  return { owned, total: COLLECTIBLES.length, count: owned.size, items: COLLECTIBLES };
-}
 function cleanupShopPurchases(now = Date.now(), retentionDays = 7) {
   return db.prepare('DELETE FROM shop_purchases WHERE created_at < ?').run(now - retentionDays * 86_400_000).changes;
 }
@@ -217,4 +237,4 @@ function cleanupShopPurchases(now = Date.now(), retentionDays = 7) {
 module.exports = { MAX_PRICE, ROTATION_MS, effectivePrice, upsertShopItem, getShopItem, listShopItems, editShopItem,
   removeShopItem, updateShopPrice, setShopStock, setShopDiscount, rotateShop, ensureRotation,
   purchaseShopItem, addInventory, consumeInventory, getInventoryQuantity, getInventory, equipOwnedCosmetic,
-  transferInventory, craftCollectible, collectionProgress, requirementFailure, cleanupShopPurchases };
+  transferInventory, requirementFailure, cleanupShopPurchases };

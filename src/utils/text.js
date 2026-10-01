@@ -12,41 +12,15 @@ function normalizeVietnamese(value = '') {
     .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function cleanText(value = '') {
-  return String(value).replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-}
-
-function splitLines(value = '') {
-  return cleanText(value).split(/\n+/).map(s => s.trim()).filter(Boolean);
-}
-
-function parseNumberAfter(label, text) {
-  const match = text.match(new RegExp(`${label}\\s*:?\\s*([0-9]+)`, 'i'));
-  return match ? Number(match[1]) : null;
-}
-
+function cleanText(value = '') { return String(value).replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim(); }
+function splitLines(value = '') { return cleanText(value).split(/\n+/).map(value => value.trim()).filter(Boolean); }
+function parseNumberAfter(label, text) { const match = text.match(new RegExp(`${label}\\s*:?\\s*([0-9]+)`, 'i')); return match ? Number(match[1]) : null; }
 function parseRequirements(lines) {
   const text = lines.join('\n');
-  return {
-    requiredLevel: parseNumberAfter('Required Level', text),
-    requiredStrength: parseNumberAfter('Required Strength', text),
-    requiredDexterity: parseNumberAfter('Required Dexterity', text),
-    itemLevel: parseNumberAfter('Item Level', text),
-  };
+  return { requiredLevel: parseNumberAfter('Required Level', text), requiredStrength: parseNumberAfter('Required Strength', text), requiredDexterity: parseNumberAfter('Required Dexterity', text), itemLevel: parseNumberAfter('Item Level', text) };
 }
-
-function parseSockets(lines) {
-  const line = lines.find(x => /socketed/i.test(x));
-  const m = line?.match(/socketed\s*\((\d+)\)/i);
-  return m ? Number(m[1]) : null;
-}
-
-function parseLimit(lines) {
-  const line = lines.find(x => /limit per item/i.test(x));
-  const m = line?.match(/limit per item\s*:\s*(\d+)/i);
-  return m ? Number(m[1]) : null;
-}
-
+function parseSockets(lines) { const match = lines.find(value => /socketed/i.test(value))?.match(/socketed\s*\((\d+)\)/i); return match ? Number(match[1]) : null; }
+function parseLimit(lines) { const match = lines.find(value => /limit per item/i.test(value))?.match(/limit per item\s*:\s*(\d+)/i); return match ? Number(match[1]) : null; }
 function sourceMeta(sourceSlug) {
   const map = {
     tiereduniques: { source_type: 'tiered_unique', type_code: 'TU', label: 'Tiered Unique' },

@@ -1,98 +1,67 @@
 const { CATALOG: PROFILE_COSMETICS, DEFAULT_IDS } = require('./profileCosmeticService');
 
-const RARITY = Object.freeze({ common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 });
 const DEFAULT_PRICE_MULTIPLIER = 100;
 const shopPrice = basePrice => basePrice * DEFAULT_PRICE_MULTIPLIER;
 const DEFAULT_PROFILE_ITEMS = new Set(DEFAULT_IDS);
 
 const UTILITY_ITEMS = [
-  { id: 'hint_charm', type: 'consumable', name: 'Bùa Gợi Ý', effect: 'quiz_hint', rarity: 'common', price: shopPrice(300), stackable: true, tradeable: true, description: 'Mở thêm một gợi ý trong Đoán item hoặc Vua tiếng Việt.' },
-  { id: 'skip_card', type: 'consumable', name: 'Thẻ Đổi Câu', effect: 'quiz_skip', rarity: 'common', price: shopPrice(500), stackable: true, tradeable: true, description: 'Đổi câu hiện tại mà không nhận thưởng.' },
-  { id: 'reward_booster', type: 'consumable', name: 'Bùa Nhân Đôi Thưởng', effect: 'quiz_reward_boost', rarity: 'rare', price: shopPrice(1000), stackable: true, tradeable: true, description: 'Nhân đôi xu cho câu trả lời đúng tiếp theo trong Nối từ, Vua tiếng Việt hoặc Đoán item; hiệu lực 7 ngày.' },
-  { id: 'craft_discount', type: 'consumable', name: 'Búa Thợ Rèn', effect: 'craft_discount', rarity: 'rare', price: shopPrice(1200), stackable: true, tradeable: true, description: 'Giảm 25% Mảnh linh hồn cho lần chế tạo thẻ tiếp theo; hiệu lực 7 ngày.' },
-  { id: 'chest_luck', type: 'consumable', name: 'Bùa May Mắn Hòm', effect: 'chest_luck', rarity: 'epic', price: shopPrice(2000), stackable: true, tradeable: true, description: 'Hòm sưu tập tiếp theo chắc chắn cho thẻ từ Epic trở lên; hiệu lực 7 ngày.' },
-  { id: 'soul_pouch', type: 'consumable', name: 'Túi Mảnh Linh Hồn', effect: 'soul_shards', rarity: 'rare', price: shopPrice(2500), stackable: true, tradeable: true, description: 'Mở để nhận ngay 100 Mảnh linh hồn dùng cho /craft.' },
-  { id: 'soul_crate', type: 'consumable', name: 'Rương Mảnh Linh Hồn', effect: 'soul_shards_large', rarity: 'epic', price: shopPrice(6000), stackable: true, tradeable: true, description: 'Mở để nhận ngay 300 Mảnh linh hồn dùng cho /craft.' },
-  { id: 'duplicate_ward', type: 'consumable', name: 'Bùa Chống Trùng', effect: 'chest_duplicate_ward', rarity: 'epic', price: shopPrice(1800), stackable: true, tradeable: true, description: 'Nếu hòm kế tiếp ra thẻ đã sở hữu, tự đổi sang một thẻ còn thiếu cùng bộ; hiệu lực 7 ngày.' },
-  { id: 'mines_detector', type: 'consumable', name: 'Máy Dò Bẫy', effect: 'mines_detector', rarity: 'rare', price: shopPrice(800), stackable: true, tradeable: true, description: 'Báo riêng vị trí một quả mìn chưa mở trong ván Mines.' },
-  { id: 'mines_safe_map', type: 'consumable', name: 'Bản Đồ An Toàn Mines', effect: 'mines_safe_cell', rarity: 'rare', price: shopPrice(1000), stackable: true, tradeable: true, description: 'Chỉ ra riêng một ô an toàn chưa mở trong ván Mines hiện tại.' },
-  { id: 'bet_insurance', type: 'consumable', name: 'Bảo Hiểm Cược', effect: 'bet_insurance', rarity: 'rare', price: shopPrice(1500), stackable: true, tradeable: true, description: 'Kích hoạt một lần hoàn 25% tiền cược nếu ván kế tiếp thua trắng; hiệu lực 24 giờ.' },
-  { id: 'bet_insurance_plus', type: 'consumable', name: 'Bảo Hiểm Cược Cao Cấp', effect: 'bet_insurance_plus', rarity: 'epic', price: shopPrice(3500), stackable: true, tradeable: true, description: 'Kích hoạt một lần hoàn 50% tiền cược nếu ván kế tiếp thua trắng; hiệu lực 24 giờ.' },
-  { id: 'hardcore_revive', type: 'consumable', name: 'Bùa Hồi Sinh', effect: 'hardcore_revive', rarity: 'epic', price: shopPrice(3000), stackable: true, tradeable: true, description: 'Kích hoạt một lần hồi sinh trong Hardcore Run; tối đa một lần mỗi run.' },
-  { id: 'chest_lock', type: 'consumable', name: 'Khóa Hòm', effect: 'hardcore_chest_lock', rarity: 'rare', price: shopPrice(1200), stackable: true, tradeable: true, description: 'Loại bỏ một kết quả hòm rỗng hoặc đồ Legendary giả trong Hardcore Run.' },
-  { id: 'boss_fury', type: 'consumable', name: 'Dầu Săn Boss', effect: 'boss_damage_boost', rarity: 'rare', price: shopPrice(1400), stackable: true, tradeable: true, description: 'Ba chiến thắng tiếp theo gây gấp đôi sát thương lên boss cộng đồng; hiệu lực 7 ngày.' },
-  { id: 'season_booster', type: 'consumable', name: 'Cờ Hiệu Mùa Giải', effect: 'season_points_boost', rarity: 'epic', price: shopPrice(2200), stackable: true, tradeable: true, description: 'Ba ván tiếp theo nhận gấp đôi điểm mùa; hiệu lực 7 ngày.' },
-  { id: 'streak_guard', type: 'consumable', name: 'Thẻ Giữ Chuỗi', effect: 'checkin_streak_guard', rarity: 'rare', price: shopPrice(900), stackable: true, tradeable: true, description: 'Tự bảo vệ chuỗi điểm danh nếu bỏ lỡ đúng một ngày; hiệu lực 30 ngày.' },
-  { id: 'common_chest', type: 'chest', name: 'Hòm Sanctuary', effect: 'open_common_chest', rarity: 'common', price: shopPrice(1000), stackable: true, tradeable: true, description: 'Mở thẻ sưu tập; vật phẩm trùng đổi thành Mảnh linh hồn.' },
-  { id: 'premium_chest', type: 'chest', name: 'Hòm Nephalem', effect: 'open_premium_chest', rarity: 'epic', price: shopPrice(5000), stackable: true, tradeable: true, description: 'Tỷ lệ cao nhận thẻ Epic, Legendary hoặc Mythic.' },
-  { id: 'boss_cache', type: 'chest', name: 'Hòm Trophy Hunter', effect: 'open_boss_chest', collectionPool: 'boss', minimumRarity: 'rare', rarity: 'epic', price: shopPrice(4500), stackable: true, tradeable: true, description: 'Chỉ mở thẻ boss, tối thiểu Rare.' },
-  { id: 'charm_cache', type: 'chest', name: 'Hòm Charm Sanctuary', effect: 'open_charm_chest', collectionPool: 'charm', minimumRarity: 'rare', rarity: 'epic', price: shopPrice(5500), stackable: true, tradeable: true, description: 'Chỉ mở thẻ charm Median XL, tối thiểu Rare.' },
-  { id: 'set_cache', type: 'chest', name: 'Hòm Sacred Set', effect: 'open_set_chest', collectionPool: 'set', minimumRarity: 'rare', rarity: 'epic', price: shopPrice(5000), stackable: true, tradeable: true, description: 'Chỉ mở thẻ Sacred Set, tối thiểu Rare.' },
-  { id: 'soul_shard', type: 'material', name: 'Mảnh Linh Hồn', effect: 'craft_material', rarity: 'rare', price: 0, stackable: true, tradeable: false, description: 'Nguyên liệu chế tạo thẻ sưu tập còn thiếu.' },
+  { id: 'gacha_ticket_1', type: 'gacha', name: 'Vé Gacha ×1 · SSR', effect: 'gacha_ticket_1', rarity: 'SSR', price: 0, shopEligible: false, stackable: true, tradeable: false, description: 'Quay 1 lượt Gacha, chắc chắn nhận vật phẩm SSR trở lên. Vé được dùng tự động khi quay; không thể trao đổi.' },
+  { id: 'gacha_ticket_10', type: 'gacha', name: 'Vé Gacha ×10', effect: 'gacha_ticket_10', rarity: 'UR', price: 0, shopEligible: false, stackable: true, tradeable: false, description: 'Quay 10 lượt Gacha, chắc chắn có ít nhất một SSR và nhân đôi trọng số UR. Vé được dùng tự động khi quay; không thể trao đổi.' },
+  { id: 'vietnamese_word_count', type: 'consumable', name: 'Kính Soi Chữ', effect: 'quiz_letter_position', rarity: 'R', price: shopPrice(500), stackable: true, tradeable: true, description: 'Tiết lộ một chữ cái và vị trí chính xác của nó trong đáp án Vua tiếng Việt hiện hành; chỉ bạn nhìn thấy. Dùng tiếp sẽ mở vị trí khác.' },
+  { id: 'vietnamese_extra_time', type: 'consumable', name: 'Đồng Hồ Gia Hạn', effect: 'quiz_extra_time', rarity: 'SSR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Cộng 15 giây cho câu hỏi khó hiện tại; mỗi câu chỉ gia hạn một lần.' },
+  { id: 'mines_row_scanner', type: 'consumable', name: 'Máy Quét Hàng', effect: 'mines_row_scanner', rarity: 'R', price: shopPrice(600), stackable: true, tradeable: true, description: 'Báo số mìn trong một hàng ngẫu nhiên còn ô chưa mở của ván Mines hiện tại.' },
+  { id: 'mines_column_scanner', type: 'consumable', name: 'Máy Quét Cột', effect: 'mines_column_scanner', rarity: 'R', price: shopPrice(600), stackable: true, tradeable: true, description: 'Báo số mìn trong một cột ngẫu nhiên còn ô chưa mở của ván Mines hiện tại.' },
+  { id: 'baucua_small_lens', type: 'consumable', name: 'Kính Lúp Nứt', effect: 'baucua_small_lens', rarity: 'R', price: shopPrice(600), stackable: true, tradeable: true, description: 'Loại trừ một linh vật chắc chắn không xuất hiện trong ván Bầu cua đang mở.' },
+  { id: 'taixiu_total_scope', type: 'consumable', name: 'Ống Ngắm Tổng Điểm', effect: 'taixiu_total_scope', rarity: 'R', price: shopPrice(600), stackable: true, tradeable: true, description: 'Báo tổng điểm ván Tài xỉu đang mở thuộc khoảng 3-7, 8-13 hoặc 14-18. Sau khi dùng, ván này không thể dùng Xúc Xắc Từ Tính.' },
+  { id: 'taixiu_edge_insurance', type: 'consumable', name: 'Bảo Hiểm Sát Nút', effect: 'taixiu_edge_insurance', rarity: 'SR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Hoàn 50% cược nếu cửa Tài thua ở tổng 10 hoặc cửa Xỉu thua ở tổng 11. Chỉ tiêu hao khi được hoàn.' },
+  { id: 'baucua_blank_insurance', type: 'consumable', name: 'Bảo Hiểm Trắng Tay', effect: 'baucua_blank_insurance', rarity: 'SSR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Hoàn 35% tổng cược nếu không linh vật nào bạn cược xuất hiện. Chỉ tiêu hao khi được hoàn.' },
+  { id: 'horse_consolation', type: 'consumable', name: 'Vé Khán Đài', effect: 'horse_consolation', rarity: 'R', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Hoàn 20% tiền cược nếu ngựa bạn chọn về ba. Chỉ tiêu hao khi được hoàn và không chồng với Bảo Hiểm Về Nhì hoặc Trúng Đậm.' },
+  { id: 'rps_loss_shield', type: 'consumable', name: 'Bùa Giảm Đau', effect: 'rps_loss_shield', rarity: 'R', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Hoàn 20% tiền cược khi thua bot trong Oẳn tù tì. Chỉ tiêu hao khi được hoàn.' },
+  { id: 'blackjack_bust_guard', type: 'consumable', name: 'Miếng Đệm Quắc', effect: 'blackjack_bust_guard', rarity: 'R', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Nếu quắc đúng 22 điểm trong ván Xì dách với nhà cái, hoàn 25% tiền cược của tay đó. Chỉ tiêu hao khi được hoàn.' },
+  { id: 'poker_fold_coupon', type: 'consumable', name: 'Phiếu Bỏ Bài', effect: 'poker_fold_coupon', rarity: 'R', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Hoàn 50% Ante nếu bạn bỏ bài ở Flop khi chưa bỏ thêm xu ngoài Ante (Poker với bot). Chỉ tiêu hao khi được hoàn.' },
+  { id: 'effect_cleanser', type: 'consumable', name: 'Nước Thanh Tẩy', effect: 'remove_active_game_effect', rarity: 'SSR', price: 50_000, shopEligible: true, gachaEligible: false, stackable: true, tradeable: true, description: 'Hủy hiệu ứng vật phẩm đang chờ kích hoạt gần nhất để bạn đổi sang vật phẩm khác. Vật phẩm đã bị hủy không được hoàn lại.' },
+  { id: 'baucua_magnifier', type: 'consumable', name: 'Kính Lúp Bầu Cua', effect: 'baucua_magnifier', rarity: 'SR', price: shopPrice(1000), stackable: true, tradeable: true, description: 'Loại trừ 2 linh vật chắc chắn không xuất hiện trong ván Bầu cua đang mở.' },
+  { id: 'taixiu_magnetic_dice', type: 'consumable', name: 'Xúc Xắc Từ Tính', effect: 'taixiu_no_triple', rarity: 'SR', price: shopPrice(1200), stackable: true, tradeable: true, description: 'Loại bỏ kết quả bộ ba trong ván Tài xỉu đang mở.' },
+  { id: 'divine_eye', type: 'consumable', name: 'Mắt Thần', effect: 'dice_divine_eye', rarity: 'UR', price: shopPrice(5000), stackable: true, tradeable: true, description: 'Tiết lộ 1 mặt chắc chắn xuất hiện; ván đó áp dụng giới hạn cược an toàn.' },
+  { id: 'blackjack_redraw', type: 'consumable', name: 'Thẻ Rút Lại', effect: 'blackjack_redraw', rarity: 'SR', price: shopPrice(1200), stackable: true, tradeable: true, description: 'Nếu bị quắc trong ván Xì dách kế tiếp, được bỏ lá vừa rút và rút lại.' },
+  { id: 'blackjack_swap', type: 'consumable', name: 'Lệnh Bài Đổi Trắng', effect: 'blackjack_swap', rarity: 'SSR', price: shopPrice(2800), stackable: true, tradeable: true, description: 'Đổi một lá bài rác trên tay lấy lá mới trong ván Xì dách kế tiếp.' },
+  { id: 'blackjack_ace', type: 'consumable', name: 'Át Chủ Bài', effect: 'blackjack_first_ace', rarity: 'UR', price: shopPrice(5500), stackable: true, tradeable: true, description: 'Lá đầu tiên của bạn trong ván Xì dách kế tiếp chắc chắn là Át.' },
+  { id: 'horse_second_insurance', type: 'consumable', name: 'Bảo Hiểm Về Nhì', effect: 'horse_second_insurance', rarity: 'SSR', price: shopPrice(2600), stackable: true, tradeable: true, description: 'Hoàn tiền cược gốc nếu ngựa đã chọn về nhì trong cuộc đua kế tiếp.' },
+  { id: 'horse_jackpot', type: 'consumable', name: 'Trúng Đậm', effect: 'horse_jackpot', rarity: 'UR', price: shopPrice(6000), stackable: true, tradeable: true, description: 'Nhân đôi payout nếu ngựa đã chọn thắng cuộc đua kế tiếp.' },
+  { id: 'rps_counter_charm', type: 'consumable', name: 'Bùa Khắc Chế', effect: 'rps_counter', rarity: 'SR', price: shopPrice(1000), stackable: true, tradeable: true, description: 'Trong ván với bot kế tiếp, bot chỉ có thể hòa hoặc thua lựa chọn của bạn.' },
+  { id: 'rps_coward_privilege', type: 'consumable', name: 'Đặc Quyền Kẻ Hèn', effect: 'rps_draw_win', rarity: 'SSR', price: shopPrice(2500), stackable: true, tradeable: true, description: 'Ván với bot kế tiếp nếu hòa sẽ tính thắng và trả payout 1,5 lần cược.' },
+  { id: 'coquay_magnifier', type: 'consumable', name: 'Kính Lúp Soi Nòng', effect: 'coquay_magnifier', rarity: 'SR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Dùng bằng nút trong ván Cò quay Nga: lén xem viên đạn đang lên nòng là thật hay lép. Mỗi ván dùng tối đa 1 lần.' },
+  { id: 'coquay_decoy', type: 'consumable', name: 'Bia Đỡ Đạn', effect: 'coquay_decoy', rarity: 'SR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Dùng bằng nút trong ván Cò quay Nga: đỡ 1 sát thương khi Bot bắn đạn thật vào bạn. Mỗi ván dùng tối đa 1 lần.' },
+  { id: 'coquay_saw', type: 'consumable', name: 'Cưa Cầm Tay', effect: 'coquay_saw', rarity: 'SSR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Dùng bằng nút trong ván Cò quay Nga: viên kế tiếp nếu là đạn thật gây 2 sát thương (kể cả khi tự bắn). Mỗi ván dùng tối đa 1 lần.' },
+  { id: 'coquay_cuffs', type: 'consumable', name: 'Còng Số 8', effect: 'coquay_cuffs', rarity: 'UR', price: 0, shopEligible: false, stackable: true, tradeable: true, description: 'Dùng bằng nút trong ván Cò quay Nga: lần tới súng chuyển sang Bot, Bot mất lượt và súng quay lại tay bạn. Mỗi ván dùng tối đa 1 lần.' },
+  { id: 'mines_radar', type: 'consumable', name: 'Radar Nhỏ', effect: 'mines_radar', rarity: 'SR', price: shopPrice(1200), stackable: true, tradeable: true, description: 'Quét một khu vực 3x3 và báo chính xác số mìn trong đó.' },
+  { id: 'mines_blast_shield', type: 'consumable', name: 'Giáp Chống Nổ', effect: 'mines_blast_shield', rarity: 'SSR', price: shopPrice(3000), stackable: true, tradeable: true, description: 'Vô hiệu hóa quả mìn đầu tiên đạp trúng trong ván Mines kế tiếp.' },
+  { id: 'poker_insurance', type: 'consumable', name: 'Bảo Hiểm Cược Poker', effect: 'poker_insurance', rarity: 'SSR', price: shopPrice(3200), stackable: true, tradeable: true, description: 'Chỉ dùng với Poker bot: hoàn ngẫu nhiên 25%–50% tiền cược khi thua trắng ở Showdown kế tiếp.' },
+  { id: 'living_dictionary', type: 'consumable', name: 'Từ Điển Sống', effect: 'quiz_living_dictionary', rarity: 'UR', price: shopPrice(5500), stackable: true, tradeable: true, description: 'Giải ngay câu hỏi khó Vua tiếng Việt trước khi hết giờ và nhận đủ thưởng câu khó: xu ×10 và 10 kim cương.' },
+  { id: 'vietnamese_first_word', type: 'consumable', name: 'Mở Đầu Từ Điển', effect: 'quiz_first_word', rarity: 'SSR', price: shopPrice(3000), stackable: true, tradeable: true, description: 'Tiết lộ tiếng đầu tiên trong đáp án của câu Vua tiếng Việt hiện hành; chỉ bạn nhìn thấy.' },
+  { id: 'vietnamese_syllable_lengths', type: 'consumable', name: 'Đếm Âm Tiết', effect: 'quiz_syllable_lengths', rarity: 'SR', price: shopPrice(1600), stackable: true, tradeable: true, description: 'Tiết lộ số chữ cái của từng tiếng trong đáp án câu Vua tiếng Việt hiện hành; chỉ bạn nhìn thấy.' },
+  { id: 'chinchiro_soundproof_bowl', type: 'consumable', name: 'Bát Cách Âm', effect: 'chinchiro_soundproof_bowl', rarity: 'R', price: shopPrice(700), stackable: true, tradeable: true, description: 'Tăng tối đa từ 3 lên 4 lần lắc trong ván Chinchiro kế tiếp.' },
+  { id: 'chinchiro_weighted_dice', type: 'consumable', name: 'Xúc Xắc Chì', effect: 'chinchiro_weighted_dice', rarity: 'SR', price: shopPrice(1600), stackable: true, tradeable: true, description: 'Viên xúc xắc đầu tiên mỗi lần lắc luôn ra ngẫu nhiên 4, 5 hoặc 6.' },
+  { id: 'chinchiro_otsuki_dice', type: 'consumable', name: 'Xúc Xắc Của Quản Đốc', effect: 'chinchiro_otsuki_dice', rarity: 'SSR', price: shopPrice(3800), stackable: true, tradeable: true, description: 'Dùng bộ xúc xắc chỉ có mặt 4, 5, 6 trong ván Chinchiro kế tiếp.' },
+  { id: 'chinchiro_karma_charm', type: 'consumable', name: 'Bùa Trả Đũa', effect: 'chinchiro_karma', rarity: 'UR', price: shopPrice(6500), stackable: true, tradeable: true, description: 'Tự động đảo Hifumi 1-2-3 thành thắng lãi x2; chỉ tiêu khi kích hoạt.' },
 ];
 
-const COLLECTIBLES = [
-  ['card_baal', 'Thẻ Boss · Baal', 'boss', 'rare', 80],
-  ['card_belial', 'Thẻ Boss · Belial', 'boss', 'epic', 180],
-  ['card_lucion', 'Thẻ Boss · Lucion', 'boss', 'legendary', 420],
-  ['card_deimoss', 'Thẻ Boss · Deimoss', 'boss', 'mythic', 900],
-  ['class_amazon', 'Huy Hiệu · Amazon', 'class', 'common', 45],
-  ['class_assassin', 'Huy Hiệu · Assassin', 'class', 'common', 45],
-  ['class_barbarian', 'Huy Hiệu · Barbarian', 'class', 'common', 45],
-  ['class_druid', 'Huy Hiệu · Druid', 'class', 'common', 45],
-  ['class_necromancer', 'Huy Hiệu · Necromancer', 'class', 'common', 45],
-  ['class_paladin', 'Huy Hiệu · Paladin', 'class', 'common', 45],
-  ['class_sorceress', 'Huy Hiệu · Sorceress', 'class', 'common', 45],
-  ['pet_edryem', 'Pet · Edyrem', 'pet', 'rare', 100],
-  ['pet_nephalem', 'Pet · Nephalem Spirit', 'pet', 'legendary', 500],
-  ['relic_sunstone', 'Relic · Sunstone', 'relic', 'epic', 220],
-  ['relic_worldstone', 'Relic · Worldstone Shard', 'relic', 'mythic', 1000],
-  ['boss_butcher', 'Thẻ Boss · The Butcher', 'boss', 'rare', 90],
-  ['boss_akarat', 'Thẻ Boss · Akarat', 'boss', 'rare', 110],
-  ['boss_tal_rasha', 'Thẻ Boss · Tal Rasha', 'boss', 'epic', 220],
-  ['boss_bartuc', 'Thẻ Boss · Bartuc', 'boss', 'epic', 260],
-  ['boss_azmodan', 'Thẻ Boss · Azmodan', 'boss', 'legendary', 520],
-  ['boss_astrogha', 'Thẻ Boss · Astrogha', 'boss', 'legendary', 600],
-  ['boss_bull_prince_rodeo', 'Thẻ Boss · Bull Prince Rodeo', 'boss', 'epic', 300],
-  ['boss_phoboss', 'Thẻ Boss · Phoboss', 'boss', 'mythic', 1100],
-  ['charm_sunstone', 'Charm · Sunstone of the Twin Seas', 'charm', 'rare', 100],
-  ['charm_scroll_of_kings', 'Charm · Scroll of Kings', 'charm', 'rare', 120],
-  ['charm_horazons_focus', "Charm · Horazon's Focus", 'charm', 'rare', 140],
-  ['charm_visions_of_akarat', 'Charm · Visions of Akarat', 'charm', 'epic', 220],
-  ['charm_worldstone_key', 'Charm · Sacred Worldstone Key', 'charm', 'epic', 280],
-  ['charm_moon_spider', 'Charm · Moon of the Spider', 'charm', 'epic', 320],
-  ['charm_fools_gold', "Charm · Fool's Gold", 'charm', 'rare', 180],
-  ['charm_black_road', 'Charm · The Black Road', 'charm', 'legendary', 520],
-  ['charm_legacy_of_blood', 'Charm · Legacy of Blood', 'charm', 'legendary', 620],
-  ['charm_paragons_hammer', "Charm · Paragon's Hammer", 'charm', 'legendary', 700],
-  ['charm_dimensional_key', 'Charm · Dimensional Key', 'charm', 'mythic', 1200],
-  ['set_pantheon', 'Sacred Set · Pantheon', 'set', 'rare', 160],
-  ['set_celestias_myth', "Sacred Set · Celestia's Myth", 'set', 'epic', 300],
-  ['set_yshari', 'Sacred Set · Yshari', 'set', 'legendary', 650],
-].map(([id, name, collection, rarity, craftCost]) => ({
-  id, type: 'collectible', name, collection, rarity, craftCost, price: 0,
-  stackable: false, tradeable: true, effect: 'collection', description: `${rarity.toUpperCase()} · Bộ sưu tập ${collection}.`,
-}));
-
 const COSMETICS = PROFILE_COSMETICS.map(item => ({
-  ...item,
-  rarity: item.rarity || 'rare',
-  price: shopPrice(10000),
-  shopEligible: !DEFAULT_PROFILE_ITEMS.has(item.id),
-  stackable: false,
-  tradeable: false,
-  effect: `profile_${item.type}`,
-  description: 'Đổi màu chủ đạo của thẻ /hoso.',
+  ...item, rarity: item.rarity || 'rare', price: shopPrice(10000),
+  shopEligible: item.shopEligible === false ? false : !DEFAULT_PROFILE_ITEMS.has(item.id), stackable: false, tradeable: false,
+  effect: 'profile_color', description: 'Đổi màu chủ đạo của thẻ /hoso.',
 }));
-
-const CATALOG = Object.freeze([...COSMETICS, ...UTILITY_ITEMS, ...COLLECTIBLES]);
+const RETIRED_SHARED_EFFECTS = new Set([
+  'baucua_magnifier', 'baucua_small_lens', 'baucua_blank_insurance',
+  'taixiu_total_scope', 'taixiu_no_triple', 'taixiu_edge_insurance', 'dice_divine_eye',
+  'horse_second_insurance', 'horse_jackpot', 'horse_consolation',
+]);
+const CATALOG = Object.freeze([...COSMETICS, ...UTILITY_ITEMS].map(item => RETIRED_SHARED_EFFECTS.has(item.effect)
+  ? { ...item, shopEligible: false, gachaEligible: false, retired: true, description: 'Ngừng hỗ trợ: vật phẩm không còn tác dụng trong ván nhiều người. Vật phẩm đã sở hữu vẫn được giữ trong kho.' }
+  : item));
 const BY_ID = new Map(CATALOG.map(item => [item.id, item]));
-
 function getCatalogItem(id) { return BY_ID.get(String(id)) || null; }
-function listCatalog({ shopEligible = false, collectible = false } = {}) {
-  if (collectible) return COLLECTIBLES;
-  if (shopEligible) return CATALOG.filter(item => item.price > 0 && item.shopEligible !== false && item.type !== 'material' && item.type !== 'collectible');
-  return CATALOG;
+function listCatalog({ shopEligible = false } = {}) {
+  return shopEligible ? CATALOG.filter(item => item.price > 0 && item.shopEligible !== false) : CATALOG;
 }
-
-module.exports = { RARITY, DEFAULT_PRICE_MULTIPLIER, CATALOG, COSMETICS, UTILITY_ITEMS, COLLECTIBLES, getCatalogItem, listCatalog };
+module.exports = { DEFAULT_PRICE_MULTIPLIER, CATALOG, COSMETICS, UTILITY_ITEMS, getCatalogItem, listCatalog };

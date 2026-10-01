@@ -1,12 +1,18 @@
-const { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
+const { ActionRowBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const { listCatalog } = require('../services/itemCatalogService');
 const {
   listShopItems, upsertShopItem, editShopItem, removeShopItem, rotateShop,
   setShopStock, setShopDiscount,
 } = require('../services/shopService');
 const { formatCoins } = require('../utils/economy');
+const { GAME_FILTERS, itemMatchesGame, gameLabels } = require('../services/itemGameService');
 
-const RARITY_ICON = { common: '⚪', rare: '🔵', epic: '🟣', legendary: '🟠', mythic: '🔴' };
+const { itemIcon } = require('../utils/rarity');
+const SHOP_TABS = Object.freeze([
+  { id: 'all', label: 'Tất cả', emoji: '🏪', description: 'Toàn bộ vật phẩm đang bán' },
+  { id: 'profile', label: 'Hồ sơ', emoji: '🎨', description: 'Màu tùy chỉnh thẻ hồ sơ' },
+  ...GAME_FILTERS.map(game => ({ ...game, description: `Vật phẩm áp dụng cho ${game.label}` })),
+]);
 function isAdmin(interaction) {
   const ids = String(process.env.ADMIN_USER_ID || '').split(/[,;\n]/).map(id => id.trim()).filter(Boolean);
   return ids.includes(interaction.user.id) || interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
@@ -18,17 +24,29 @@ function conditionOptions(command) {
     .addIntegerOption(o => o.setName('min_wins').setDescription('Số trận thắng tối thiểu').setMinValue(0).setMaxValue(1000000))
     .addIntegerOption(o => o.setName('min_balance').setDescription('Số dư tối thiểu').setMinValue(0).setMaxValue(1000000));
 }
-function shopEmbed(guildId) {
-  const items = listShopItems(guildId);
+function shopSelectRow(ownerId, selected = 'all') {
+  const menu = new StringSelectMenuBuilder().setCustomId(`shop:${ownerId}`).setPlaceholder('Chọn nhóm vật phẩm…')
+    .addOptions(SHOP_TABS.map(tab => new StringSelectMenuOptionBuilder().setLabel(tab.label).setValue(tab.id).setEmoji(tab.emoji)
+      .setDescription(tab.description).setDefault(tab.id === selected)));
+  return new ActionRowBuilder().addComponents(menu);
+}
+function shopEmbed(guildId, selected = 'all') {
+  const tab = SHOP_TABS.find(item => item.id === selected) || SHOP_TABS[0];
+  const items = listShopItems(guildId).filter(row => tab.id === 'profile'
+    ? row.catalog?.type === 'color' : itemMatchesGame(row.catalog, tab.id));
   const description = items.length ? items.map(row => {
     const item = row.catalog;
-    const price = row.final_price < row.price ? `~~${formatCoins(row.price)}~~ **${formatCoins(row.final_price)} xu**` : `**${formatCoins(row.price)} xu**`;
+    const price = row.final_price < row.price ? `~~${formatCoins(row.price)}~~ **${formatCoins(row.final_price)} :coin:**` : `**${formatCoins(row.price)} :coin:**`;
     const stock = row.stock === null ? '∞' : Math.max(0, row.stock - row.sold_count);
     const conditions = [row.min_games ? `${row.min_games} ván` : null, row.min_wins ? `${row.min_wins} thắng` : null, row.min_balance ? `số dư ${formatCoins(row.min_balance)}` : null].filter(Boolean).join(' · ');
-    return `${RARITY_ICON[item?.rarity] || '⚪'} **${row.display_name}** · \`${row.item_id}\`\n${item?.description || ''}\n💰 ${price} · Kho: **${stock}**${conditions ? ` · Yêu cầu: ${conditions}` : ''}`;
-  }).join('\n\n') : 'Cửa hàng chưa có vật phẩm.';
-  return new EmbedBuilder().setColor(0xC0392B).setTitle('🏪 CỬA HÀNG SANCTUARY').setDescription(description.slice(0, 4096))
-    .setFooter({ text: 'Cửa hàng tự xoay mỗi ngày • Dùng /buy để mua' });
+    const rarity = ['R', 'SR', 'SSR', 'UR'].includes(item?.rarity) ? ` [${item.rarity}]` : '';
+    const games = gameLabels(item);
+    const scope = games?.length ? `Áp dụng: ${games.join(', ')}` : games ? 'Vật phẩm hồ sơ · không gắn với game' : 'Dùng chung · hiện ở mọi bộ lọc';
+    const icon = itemIcon(item);
+    return `${icon} **${row.display_name}${rarity}** · \`${row.item_id}\`\n_${scope}_\n${item?.description || ''}\n💰 ${price} · Kho: **${stock}**${conditions ? ` · Yêu cầu: ${conditions}` : ''}`;
+  }).join('\n\n') : 'Không có vật phẩm thuộc mục này trong vòng xoay hôm nay.';
+  return new EmbedBuilder().setColor(0xC0392B).setTitle(`${tab.emoji} CỬA HÀNG · ${tab.label.toUpperCase()}`).setDescription(description.slice(0, 4096))
+    .setFooter({ text: 'Dùng menu để đổi mục • Cửa hàng tự xoay mỗi ngày • /vatpham mua để mua' });
 }
 
 module.exports = {
@@ -63,7 +81,7 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.guildId) return interaction.reply({ content: 'Lệnh này chỉ dùng trong server.', flags: MessageFlags.Ephemeral });
     const sub = interaction.options.getSubcommand();
-    if (sub === 'xem') return interaction.reply({ embeds: [shopEmbed(interaction.guildId)] });
+    if (sub === 'xem') return interaction.reply({ embeds: [shopEmbed(interaction.guildId)], components: [shopSelectRow(interaction.user.id)] });
     if (!isAdmin(interaction)) return interaction.reply({ content: 'Chỉ admin mới được quản lý cửa hàng.', flags: MessageFlags.Ephemeral });
     let item;
     if (sub === 'add') item = upsertShopItem({ guildId: interaction.guildId, catalogId: interaction.options.getString('effect', true),
@@ -79,10 +97,17 @@ module.exports = {
       return interaction.reply({ content: removed ? '✅ Đã gỡ vật phẩm khỏi shop.' : 'Không tìm thấy vật phẩm.', flags: MessageFlags.Ephemeral });
     } else if (sub === 'rotate') {
       const rows = rotateShop(interaction.guildId, interaction.options.getInteger('size') || 8);
-      return interaction.reply({ content: `🔄 Đã xoay cửa hàng với **${rows.length} vật phẩm**.`, embeds: [shopEmbed(interaction.guildId)], flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: `🔄 Đã xoay cửa hàng với **${rows.length} vật phẩm**.`, embeds: [shopEmbed(interaction.guildId)], components: [shopSelectRow(interaction.user.id)], flags: MessageFlags.Ephemeral });
     } else if (sub === 'stock') item = setShopStock(interaction.guildId, interaction.options.getString('item', true), interaction.options.getInteger('quantity', true));
     else if (sub === 'discount') item = setShopDiscount(interaction.guildId, interaction.options.getString('item', true), interaction.options.getInteger('percent', true), interaction.options.getInteger('hours') || 0);
-    return interaction.reply({ content: `✅ Đã cập nhật **${item.display_name}** · giá hiện tại **${formatCoins(item.final_price)} xu**.`, flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: `✅ Đã cập nhật **${item.display_name}** · giá hiện tại **${formatCoins(item.final_price)} :coin:**.`, flags: MessageFlags.Ephemeral });
   },
-  shopEmbed,
+  async handleSelect(interaction) {
+    const [, ownerId] = interaction.customId.split(':');
+    if (interaction.user.id !== ownerId) return interaction.reply({ content: 'Chỉ người mở cửa hàng này mới có thể đổi mục.', flags: MessageFlags.Ephemeral });
+    const selected = interaction.values[0];
+    if (!SHOP_TABS.some(tab => tab.id === selected)) return interaction.reply({ content: 'Mục cửa hàng không hợp lệ.', flags: MessageFlags.Ephemeral });
+    return interaction.update({ embeds: [shopEmbed(interaction.guildId, selected)], components: [shopSelectRow(ownerId, selected)] });
+  },
+  SHOP_TABS, shopEmbed, shopSelectRow,
 };

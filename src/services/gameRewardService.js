@@ -1,6 +1,6 @@
 const { db } = require('../db');
 
-const REWARD_GAMES = Object.freeze(['noitu', 'vuatiengviet', 'doanitem']);
+const REWARD_GAMES = Object.freeze(['vuatiengviet']);
 
 function envReward(name, fallback) {
   const value = Number(process.env[name]);
@@ -8,18 +8,8 @@ function envReward(name, fallback) {
 }
 
 const DEFAULT_REWARDS = Object.freeze({
-  noitu: envReward('NOITU_REWARD', 20),
   vuatiengviet: envReward('VUATIENGVIET_REWARD', 25),
-  doanitem: envReward('DOANITEM_REWARD', 50),
 });
-
-db.transaction(() => {
-  const legacy = db.prepare("SELECT guild_id, reward FROM game_rewards WHERE game = 'doanruneword'").all();
-  const existing = db.prepare("SELECT 1 FROM game_rewards WHERE guild_id = ? AND game = 'doanitem'");
-  const insert = db.prepare("INSERT OR IGNORE INTO game_rewards (guild_id, game, reward, updated_at) VALUES (?, 'doanitem', ?, ?)");
-  for (const row of legacy) if (!existing.get(row.guild_id)) insert.run(row.guild_id, row.reward, Date.now());
-  db.prepare("DELETE FROM game_rewards WHERE game = 'doanruneword'").run();
-})();
 
 function getGameReward(guildId, game) {
   if (!REWARD_GAMES.includes(game)) throw new Error('INVALID_REWARD_GAME');

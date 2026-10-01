@@ -1,26 +1,14 @@
 const crypto = require('node:crypto');
 const { normalizeVietnamese } = require('../utils/text');
 const { db } = require('../db');
-const { getApprovedWords } = require('./wordSuggestionService');
+const { getGameConfig } = require('./gameConfigService');
 const gameWordData = require('../../data/games/vietnamese-game-words.json');
 
 const commandCooldowns = new Map();
-const wordSessions = new Map();
 const vuaSessions = new Map();
 const HARD_DURATION_MS = 30_000;
 const configuredHardChance = Number(process.env.HARD_QUESTION_CHANCE);
 const HARD_QUESTION_CHANCE = Number.isFinite(configuredHardChance) ? Math.max(0, Math.min(1, configuredHardChance)) : 0.1;
-
-const CORE_WORDS = [
-  'học sinh', 'sinh viên', 'viên mãn', 'mãn nguyện', 'nguyện vọng', 'vọng cổ', 'cổ tích', 'tích cực', 'cực khổ', 'khổ đau',
-  'đau lòng', 'lòng tốt', 'tốt bụng', 'bụng đói', 'đói khát', 'khát nước', 'nước mắt', 'mắt kính', 'kính trọng', 'trọng tài',
-  'tài năng', 'năng động', 'động vật', 'vật lý', 'lý tưởng', 'tưởng tượng', 'tượng đá', 'đá quý', 'quý giá', 'giá trị',
-  'trị bệnh', 'bệnh viện', 'viện trợ', 'trợ giúp', 'giúp đỡ', 'đỡ đầu', 'đầu tiên', 'tiên phong', 'phong cảnh', 'cảnh đẹp',
-  'đẹp mắt', 'mắt sáng', 'sáng tạo', 'tạo hình', 'hình ảnh', 'ảnh hưởng', 'hưởng thụ', 'thụ động', 'động lực', 'lực lượng',
-  'lượng sức', 'sức khỏe', 'khỏe mạnh', 'mạnh mẽ', 'ngoài trời', 'trời xanh', 'xanh lá', 'lá cây', 'cây cảnh',
-  'cảnh giác', 'giác quan', 'quan trọng', 'trọng lượng', 'lượng giác', 'giác ngộ', 'ngộ nhận', 'nhận thức', 'thức ăn', 'ăn uống',
-  'uống nước', 'nước hoa', 'hoa hồng', 'hồng hào', 'hào hứng', 'hứng thú', 'thú vị', 'vị trí', 'trí tuệ', 'tuệ giác',
-];
 
 const CURATED_VUA_QUESTIONS = [
   { answer: 'học sinh', hint: 'Người đang theo học' },
@@ -51,8 +39,6 @@ const CURATED_HARD_VUA_QUESTIONS = [
   { answer: 'tương trợ', hint: 'Giúp đỡ lẫn nhau' },
 ];
 
-const EXTRA_CHAIN_WORDS = gameWordData.vuaWords.filter(word => String(word).trim().split(/\s+/).length >= 2);
-const WORDS = [...new Map([...CORE_WORDS, ...gameWordData.wordChains, ...EXTRA_CHAIN_WORDS].map(word => [normalizeVietnamese(word), word])).values()];
 const generatedVuaQuestions = gameWordData.vuaWords.map(answer => {
   const syllables = answer.split(/\s+/).length;
   const letters = Array.from(answer.replace(/\s+/g, '')).length;
@@ -60,29 +46,26 @@ const generatedVuaQuestions = gameWordData.vuaWords.map(answer => {
 });
 const VUA_QUESTIONS = [...new Map([...generatedVuaQuestions, ...CURATED_VUA_QUESTIONS]
   .map(question => [normalizeVietnamese(question.answer), question])).values()];
-const HARD_VUA_QUESTIONS = [...new Map([...VUA_QUESTIONS.filter(question => {
+function isHardVuaQuestion(question) {
   const letters = Array.from(question.answer.replace(/\s+/g, '')).length;
-  return question.answer.split(/\s+/).length >= 3 || letters >= 13;
-}), ...CURATED_HARD_VUA_QUESTIONS].map(question => [normalizeVietnamese(question.answer), question])).values()];
+  return question.answer.trim().split(/\s+/).length >= 3 || letters >= 13;
+}
+const NORMAL_VUA_QUESTIONS = VUA_QUESTIONS.filter(question => !isHardVuaQuestion(question));
+const HARD_VUA_QUESTIONS = [...new Map([...VUA_QUESTIONS.filter(isHardVuaQuestion), ...CURATED_HARD_VUA_QUESTIONS]
+  .map(question => [normalizeVietnamese(question.answer), question])).values()];
 const RECENT_WORD_LIMIT = 2_000;
-const normalizedWords = new Map(WORDS.map(word => [normalizeVietnamese(word), word]));
-let wordsByFirst;
-let playableWords;
 
 function saveSession(guildId, game, state) {
-  const serializable = game === 'noitu' ? { ...state, used: [...state.used] } : state;
   db.prepare(`INSERT INTO game_sessions (guild_id, game, state_json, updated_at) VALUES (?, ?, ?, ?)
     ON CONFLICT(guild_id, game) DO UPDATE SET state_json = excluded.state_json, updated_at = excluded.updated_at`)
-    .run(String(guildId), game, JSON.stringify(serializable), Date.now());
+    .run(String(guildId), game, JSON.stringify(state), Date.now());
 }
 
 function loadSession(guildId, game) {
   const row = db.prepare('SELECT state_json FROM game_sessions WHERE guild_id = ? AND game = ?').get(String(guildId), game);
   if (!row) return null;
   try {
-    const state = JSON.parse(row.state_json);
-    if (game === 'noitu') state.used = new Set(state.used || []);
-    return state;
+    return JSON.parse(row.state_json);
   } catch {
     db.prepare('DELETE FROM game_sessions WHERE guild_id = ? AND game = ?').run(String(guildId), game);
     return null;
@@ -100,37 +83,18 @@ function randomItem(items) {
 function shouldBeHard(options = {}) {
   if (options.forceHard === true) return true;
   if (options.forceHard === false) return false;
-  return Math.random() < HARD_QUESTION_CHANCE;
+  const chance = Number.isFinite(options.hardChance) ? Math.max(0, Math.min(1, options.hardChance)) : HARD_QUESTION_CHANCE;
+  return crypto.randomInt(1_000_000) < Math.floor(chance * 1_000_000);
 }
 
-function challengeMeta(hard, now = Date.now()) {
-  return { hard, expiresAt: hard ? now + HARD_DURATION_MS : null };
+function challengeMeta(hard, now = Date.now(), durationSeconds = HARD_DURATION_MS / 1000) {
+  const duration = Number.isSafeInteger(durationSeconds) && durationSeconds > 0 ? durationSeconds : HARD_DURATION_MS / 1000;
+  return { hard, expiresAt: hard ? now + duration * 1000 : null, durationSeconds: hard ? duration : null };
 }
 
 function isExpiredChallenge(value, now = Date.now()) {
   return Boolean(value?.hard && value.expiresAt && now >= value.expiresAt);
 }
-
-function firstWord(phrase) {
-  return normalizeVietnamese(phrase).split(' ')[0] || '';
-}
-
-function lastWord(phrase) {
-  return normalizeVietnamese(phrase).split(' ').at(-1) || '';
-}
-
-wordsByFirst = new Map();
-for (const word of WORDS) {
-  const first = firstWord(word);
-  if (!wordsByFirst.has(first)) wordsByFirst.set(first, []);
-  wordsByFirst.get(first).push(word);
-}
-function playableContinuationCount(phrase) {
-  const normalized = normalizeVietnamese(phrase);
-  return (wordsByFirst.get(lastWord(phrase)) || []).filter(next => normalizeVietnamese(next) !== normalized).length;
-}
-
-playableWords = WORDS.filter(word => playableContinuationCount(word) > 0);
 
 function consumeCommandCooldown(guildId, userId, game, milliseconds = 3000, now = Date.now()) {
   const key = `${guildId}:${userId}:${game}`;
@@ -138,124 +102,6 @@ function consumeCommandCooldown(guildId, userId, game, milliseconds = 3000, now 
   if (remaining > 0) return remaining;
   commandCooldowns.set(key, now + milliseconds);
   return 0;
-}
-
-function continuationCount(phrase) {
-  return (wordsByFirst.get(lastWord(phrase)) || []).length;
-}
-
-function approvedWordMap(guildId) {
-  return new Map(getApprovedWords(guildId).map(word => [normalizeVietnamese(word), word]));
-}
-
-function knownWord(guildId, phrase) {
-  const normalized = normalizeVietnamese(phrase);
-  return normalizedWords.get(normalized) || approvedWordMap(guildId).get(normalized) || null;
-}
-
-function continuationsFor(guildId, required) {
-  const combined = [...(wordsByFirst.get(required) || []), ...getApprovedWords(guildId).filter(word => firstWord(word) === required)];
-  return [...new Map(combined.map(word => [normalizeVietnamese(word), word])).values()];
-}
-
-function chooseWordChallenge(hard, recent = []) {
-  const recentSet = new Set(recent);
-  let candidates = playableWords.filter(word => !recentSet.has(normalizeVietnamese(word)));
-  if (!candidates.length) candidates = playableWords;
-  if (hard) {
-    const minimum = Math.min(...candidates.map(playableContinuationCount));
-    candidates = candidates.filter(word => playableContinuationCount(word) === minimum);
-  }
-  return randomItem(candidates);
-}
-
-function applyWordChallenge(session, phrase, hard, now = Date.now()) {
-  session.phrase = phrase;
-  session.required = lastWord(phrase);
-  Object.assign(session, challengeMeta(hard, now));
-  session.recent = [...(session.recent || []).filter(item => item !== normalizeVietnamese(phrase)), normalizeVietnamese(phrase)].slice(-RECENT_WORD_LIMIT);
-  session.used.add(normalizeVietnamese(phrase));
-}
-
-function startWordSession(guildId, options = {}) {
-  const phrase = chooseWordChallenge(false);
-  const session = { phrase: '', required: '', used: new Set(), recent: [], turns: 0, lastPlayerId: null, hard: false, expiresAt: null, accentSensitive: true };
-  applyWordChallenge(session, phrase, false, options.now);
-  wordSessions.set(String(guildId), session);
-  saveSession(guildId, 'noitu', session);
-  return session;
-}
-
-function getWordSession(guildId) {
-  const key = String(guildId);
-  if (!wordSessions.has(key)) {
-    const stored = loadSession(guildId, 'noitu');
-    if (stored) {
-      if (!stored.accentSensitive) {
-        // Old sessions stored accent-free keys. Keep the current prompt and
-        // restart its used-word history under the new accent-sensitive rules.
-        stored.used = new Set([normalizeVietnamese(stored.phrase)]);
-        stored.recent = [normalizeVietnamese(stored.phrase)];
-        stored.accentSensitive = true;
-        saveSession(guildId, 'noitu', stored);
-      } else stored.recent ||= [...stored.used];
-      stored.required = lastWord(stored.phrase);
-      stored.lastPlayerId ||= null;
-      // Word chain no longer has timed/hard rounds. Clear legacy sessions on load.
-      stored.hard = false;
-      stored.expiresAt = null;
-      saveSession(guildId, 'noitu', stored);
-      wordSessions.set(key, stored);
-    }
-  }
-  return wordSessions.get(key) || null;
-}
-
-function playWord(guildId, answer, playerId, now = Date.now()) {
-  const session = getWordSession(guildId);
-  if (!session) return { ok: false, error: 'NO_SESSION' };
-  const normalizedPlayerId = String(playerId || '');
-  if (normalizedPlayerId && session.lastPlayerId === normalizedPlayerId) return { ok: false, error: 'WAIT_TURN', session };
-  const normalized = normalizeVietnamese(answer);
-  const canonical = knownWord(guildId, normalized);
-  if (!canonical) return { ok: false, error: 'UNKNOWN_WORD', session };
-  if (session.used.has(normalized)) return { ok: false, error: 'USED_WORD', session };
-  if (firstWord(canonical) !== session.required) return { ok: false, error: 'WRONG_LINK', session };
-  session.used.add(normalized);
-  session.turns += 1;
-  session.lastPlayerId = normalizedPlayerId || null;
-  const replies = continuationsFor(guildId, lastWord(canonical)).filter(word => !session.used.has(normalizeVietnamese(word)));
-  if (!replies.length) {
-    const botPhrase = chooseWordChallenge(false, session.recent);
-    session.used.clear();
-    applyWordChallenge(session, botPhrase, false, now);
-    saveSession(guildId, 'noitu', session);
-    return { ok: true, answer: canonical, botPhrase, required: session.required, turns: session.turns, chainReset: true, chainWon: true, hard: false, nextHard: false, expiresAt: null };
-  }
-  applyWordChallenge(session, canonical, false, now);
-  saveSession(guildId, 'noitu', session);
-  return { ok: true, answer: canonical, required: session.required, turns: session.turns, chainReset: false, chainWon: false, hard: false, nextHard: false, expiresAt: null };
-}
-
-function skipWordSession(guildId, options = {}) {
-  const session = getWordSession(guildId);
-  if (!session) return null;
-  const phrase = chooseWordChallenge(false, session.recent);
-  session.lastPlayerId = null;
-  applyWordChallenge(session, phrase, false, options.now);
-  saveSession(guildId, 'noitu', session);
-  return session;
-}
-
-function expireWordChallenge(guildId, now = Date.now()) {
-  return null;
-}
-
-function endWordSession(guildId) {
-  const existed = Boolean(getWordSession(guildId));
-  wordSessions.delete(String(guildId));
-  deleteSession(guildId, 'noitu');
-  return existed;
 }
 
 function shuffleLetters(answer) {
@@ -272,20 +118,28 @@ function shuffleLetters(answer) {
   return shuffled.join(' · ');
 }
 
-function makeVuaQuestion(base, hard = false, now = Date.now()) {
-  return { ...base, mixed: shuffleLetters(base.answer), ...challengeMeta(hard, now) };
+function makeVuaQuestion(base, hard = false, now = Date.now(), durationSeconds = HARD_DURATION_MS / 1000) {
+  return { ...base, mixed: shuffleLetters(base.answer), ...challengeMeta(hard, now, durationSeconds) };
 }
 
 function nextVuaQuestion(recent = [], options = {}) {
   const hard = shouldBeHard(options);
-  const pool = hard ? HARD_VUA_QUESTIONS : VUA_QUESTIONS;
+  const pool = hard ? HARD_VUA_QUESTIONS : NORMAL_VUA_QUESTIONS;
   const recentSet = new Set(recent.map(normalizeVietnamese));
   const candidates = pool.filter(question => !recentSet.has(normalizeVietnamese(question.answer)));
-  return makeVuaQuestion(randomItem(candidates.length ? candidates : pool), hard, options.now);
+  return makeVuaQuestion(randomItem(candidates.length ? candidates : pool), hard, options.now, options.hardDurationSeconds);
+}
+
+function configuredQuestionOptions(guildId, options = {}) {
+  return {
+    ...options,
+    hardChance: getGameConfig(guildId, 'HARD_QUESTION_CHANCE'),
+    hardDurationSeconds: getGameConfig(guildId, 'HARD_QUESTION_DURATION_SECONDS'),
+  };
 }
 
 function startVuaSession(guildId, options = {}) {
-  const question = nextVuaQuestion([], options);
+  const question = nextVuaQuestion([], configuredQuestionOptions(guildId, options));
   const session = { question, recent: [normalizeVietnamese(question.answer)], rounds: 0 };
   vuaSessions.set(String(guildId), session);
   saveSession(guildId, 'vuatiengviet', session);
@@ -297,9 +151,17 @@ function getVuaSession(guildId) {
   if (!vuaSessions.has(key)) {
     const stored = loadSession(guildId, 'vuatiengviet');
     if (stored) {
-      if (!stored.question?.mixed || stored.question.mixed.includes(' / ')) stored.question = makeVuaQuestion(stored.question);
-      stored.question.hard = Boolean(stored.question.hard);
+      if (!stored.question?.mixed || stored.question.mixed.includes(' / ')) {
+        stored.question = makeVuaQuestion(stored.question, Boolean(stored.question?.hard), Date.now(),
+          getGameConfig(guildId, 'HARD_QUESTION_DURATION_SECONDS'));
+      }
+      stored.question.hard = Boolean(stored.question.hard || isHardVuaQuestion(stored.question));
+      if (stored.question.hard && !stored.question.expiresAt) {
+        stored.question.expiresAt = Date.now() + getGameConfig(guildId, 'HARD_QUESTION_DURATION_SECONDS') * 1000;
+        stored.question.durationSeconds = getGameConfig(guildId, 'HARD_QUESTION_DURATION_SECONDS');
+      }
       stored.question.expiresAt ||= null;
+      stored.question.durationSeconds ||= stored.question.hard ? HARD_DURATION_MS / 1000 : null;
       stored.recent ||= [normalizeVietnamese(stored.question.answer)];
       vuaSessions.set(key, stored);
     }
@@ -307,14 +169,42 @@ function getVuaSession(guildId) {
   return vuaSessions.get(key) || null;
 }
 
+function revealVuaLetter(guildId, userId) {
+  const session = getVuaSession(guildId);
+  if (!session) throw new Error('NO_ACTIVE_GAME');
+  if (isExpiredChallenge(session.question)) throw new Error('QUESTION_EXPIRED');
+
+  const segmenter = new Intl.Segmenter('vi', { granularity: 'grapheme' });
+  const words = String(session.question.answer).normalize('NFC').trim().split(/\s+/u);
+  const positions = words.flatMap((word, wordIndex) => [...segmenter.segment(word)]
+    .filter(part => /\p{L}/u.test(part.segment))
+    .map((part, letterIndex) => ({ wordIndex, letterIndex, letter: part.segment })));
+  const revealedByUser = session.question.revealedLettersByUser || {};
+  const previous = Array.isArray(revealedByUser[String(userId)]) ? revealedByUser[String(userId)] : [];
+  const available = positions.map((position, index) => ({ ...position, index }))
+    .filter(position => !previous.includes(position.index));
+  if (!available.length) throw new Error('NO_UNREVEALED_LETTERS');
+
+  const chosen = randomItem(available);
+  const updated = {
+    ...session,
+    question: {
+      ...session.question,
+      revealedLettersByUser: { ...revealedByUser, [String(userId)]: [...previous, chosen.index] },
+    },
+  };
+  saveSession(guildId, 'vuatiengviet', updated);
+  vuaSessions.set(String(guildId), updated);
+  return { letter: chosen.letter, wordPosition: chosen.wordIndex + 1, letterPosition: chosen.letterIndex + 1 };
+}
+
 function answerVuaSession(guildId, answer, now = Date.now()) {
   const session = getVuaSession(guildId);
   if (!session) return { ok: false, error: 'NO_SESSION' };
   if (isExpiredChallenge(session.question, now)) return { ok: false, error: 'EXPIRED', expiration: expireVuaChallenge(guildId, now) };
-  const compact = value => normalizeVietnamese(value).replace(/\s+/g, '');
-  if (compact(answer) !== compact(session.question.answer)) return { ok: true, correct: false, question: session.question };
+  if (normalizeVietnamese(answer) !== normalizeVietnamese(session.question.answer)) return { ok: true, correct: false, question: session.question };
   const question = session.question;
-  session.question = nextVuaQuestion(session.recent, { now });
+  session.question = nextVuaQuestion(session.recent, configuredQuestionOptions(guildId, { now }));
   session.recent = [...session.recent.filter(item => item !== normalizeVietnamese(session.question.answer)), normalizeVietnamese(session.question.answer)].slice(-RECENT_WORD_LIMIT);
   session.rounds += 1;
   saveSession(guildId, 'vuatiengviet', session);
@@ -325,10 +215,31 @@ function skipVuaSession(guildId, options = {}) {
   const session = getVuaSession(guildId);
   if (!session) return null;
   const skipped = session.question;
-  session.question = nextVuaQuestion(session.recent, options);
+  session.question = nextVuaQuestion(session.recent, configuredQuestionOptions(guildId, options));
   session.recent = [...session.recent.filter(item => item !== normalizeVietnamese(session.question.answer)), normalizeVietnamese(session.question.answer)].slice(-RECENT_WORD_LIMIT);
   saveSession(guildId, 'vuatiengviet', session);
   return { skipped, nextQuestion: session.question };
+}
+
+function vietnameseDayKey(now = Date.now()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+const skipVuaSessionForPlayerTx = db.transaction((guildId, userId, now = Date.now()) => {
+  const session = getVuaSession(guildId);
+  if (!session) return { error: 'NO_SESSION' };
+  const limit = getGameConfig(guildId, 'VTV_DAILY_SKIP_LIMIT');
+  const dayKey = vietnameseDayKey(now);
+  const usage = db.prepare('SELECT skips_used FROM vua_daily_skips WHERE guild_id=? AND user_id=? AND day_key=?').get(String(guildId), String(userId), dayKey);
+  const used = usage?.skips_used || 0;
+  if (used >= limit) return { error: 'LIMIT_REACHED', used, limit };
+  db.prepare(`INSERT INTO vua_daily_skips(guild_id,user_id,day_key,skips_used) VALUES(?,?,?,1)
+    ON CONFLICT(guild_id,user_id,day_key) DO UPDATE SET skips_used=skips_used+1`).run(String(guildId), String(userId), dayKey);
+  return { ...skipVuaSession(guildId), used: used + 1, limit };
+});
+
+function skipVuaSessionForPlayer(guildId, userId, now = Date.now()) {
+  return skipVuaSessionForPlayerTx(String(guildId), String(userId), now);
 }
 
 function expireVuaChallenge(guildId, now = Date.now()) {
@@ -339,6 +250,19 @@ function expireVuaChallenge(guildId, now = Date.now()) {
   session.recent = [...session.recent, normalizeVietnamese(session.question.answer)].slice(-RECENT_WORD_LIMIT);
   saveSession(guildId, 'vuatiengviet', session);
   return { expired, nextQuestion: session.question };
+}
+
+const EXTRA_TIME_MS = 15_000;
+function extendVuaChallenge(guildId, now = Date.now()) {
+  const session = getVuaSession(guildId);
+  if (!session) return { error: 'NO_SESSION' };
+  const question = session.question;
+  if (!question.hard) return { error: 'HARD_QUESTION_REQUIRED' };
+  if (isExpiredChallenge(question, now)) return { error: 'EXPIRED' };
+  if (question.extended) return { error: 'ALREADY_EXTENDED' };
+  question.expiresAt += EXTRA_TIME_MS; question.extended = true;
+  saveSession(guildId, 'vuatiengviet', session);
+  return { ok: true, question, seconds: EXTRA_TIME_MS / 1000 };
 }
 
 function vuaQuestionText(question) {
@@ -354,7 +278,6 @@ function endVuaSession(guildId) {
 }
 
 module.exports = {
-  WORDS,
   VUA_QUESTIONS,
   HARD_VUA_QUESTIONS,
   HARD_DURATION_MS,
@@ -362,22 +285,17 @@ module.exports = {
   shouldBeHard,
   challengeMeta,
   isExpiredChallenge,
-  continuationCount,
-  knownWord,
   shuffleLetters,
   randomItem,
   consumeCommandCooldown,
-  startWordSession,
-  getWordSession,
-  playWord,
-  skipWordSession,
-  expireWordChallenge,
-  endWordSession,
   startVuaSession,
   getVuaSession,
+  revealVuaLetter,
   answerVuaSession,
   skipVuaSession,
+  skipVuaSessionForPlayer,
   expireVuaChallenge,
+  extendVuaChallenge,
   endVuaSession,
   vuaQuestionText,
 };
