@@ -4,6 +4,8 @@
 **Trạng thái:** Sẵn sàng phát hành  
 **Phiên bản bot:** 2.0.0
 
+Tài liệu dành cho việc lập trình lại toàn bộ game: [Đặc tả kỹ thuật Sinh tồn 999 tầng](./2026-10-01-hardcore-implementation-spec.md).
+
 ## Tổng quan
 
 Sinh tồn là chế độ chơi một người dùng xu làm tiền cược, vượt từng tầng bằng các nút tương tác và tự quyết định thời điểm rút thưởng. Người chơi giữ toàn bộ payout hiện tại khi rút an toàn; nếu chết trước khi rút, payout của run đó mất hết.
@@ -166,7 +168,9 @@ RNGesus bắt đầu có thể xuất hiện từ tầng 5 và không thể bị
 - **Vé Thoát Hiểm:** tiêu thụ một vé để đi tiếp an toàn.
 - **Chiến đấu:** chết ngay.
 
-Các bẫy khác gồm Tax Collector làm giảm 15% payout, kẻ trộm lấy bình máu và Wrong Portal giữ nguyên tầng rồi tạo encounter mới.
+Các bẫy khác gồm Tax Collector làm giảm 15% payout, kẻ trộm lấy bình máu và Wrong Portal. Portal có 25% dẫn tới Healing Sanctuary, Treasure Vault hoặc Rift Blessing rồi hoàn thành tầng an toàn. 75% còn lại gây mất HP, cạn Energy, mất bình máu, giảm payout hoặc giảm Defense/Resistance; sau đó người chơi vẫn ở nguyên tầng, phải đấu Rift Ambusher cấp Elite và chịu một đòn phủ đầu.
+
+Luck ngoài tăng SSR và khả năng phát hiện Mimic còn tăng 0,5 điểm phần trăm cơ hội Portal tốt, 1 điểm phần trăm cơ hội bắt Treasure Goblin và 1,5 điểm phần trăm Lucky Break cho mỗi điểm. Lucky Break vô hiệu hóa Tax Collector hoặc Potion Thief. Các giới hạn lần lượt là 40% Portal tốt, 80% bắt Goblin và 30% Lucky Break.
 
 ## Payout và điều kiện hoàn thành
 
@@ -177,24 +181,4 @@ Các bẫy khác gồm Tax Collector làm giảm 15% payout, kẻ trộm lấy b
 - Đạt tầng 100 được ghi nhận là một lần hoàn thành, kể cả khi người chơi tiếp tục Overrun.
 - Tầng cao nhất, số run, số lần chết, số lần rút an toàn và số lần hoàn thành được lưu vào hồ sơ Sinh tồn.
 - Run không hoạt động trong 7 ngày sẽ bị hệ thống đóng và mất khoản cược đang giữ.
-
-## Mức độ khó tầng 999
-
-Bản cân bằng này dùng bộ mô phỏng chơi thận trọng và lấy item thật từ database Median XL. Kết quả hiệu chuẩn ổn định gần nhất:
-
-- 100 run Assassin mô phỏng đến tầng 999.
-- 14 run tạo được trạng thái trước Boss cuối.
-- 2.800 lượt tái đấu Deimoss từ các trạng thái đó.
-- 72 lượt thắng Boss cuối.
-- Tỷ lệ hoàn thành ước tính: **0,36%**, dưới giới hạn 0,5%.
-
-Đây là tỷ lệ thực nghiệm của chiến thuật mô phỏng, không phải xác suất được khóa cứng. Class, lựa chọn nâng cấp, quyết định mở hòm, thời điểm dùng bình và hành vi rút thưởng sẽ làm kết quả thực tế thay đổi.
-
-## Ghi chú vận hành
-
-- Cần bật Message Content Intent nếu server dùng prefix command.
-- Cần giữ bảng `items` trong `data/median-xl.sqlite`; thiếu dữ liệu item sẽ khiến hòm dùng bộ item dự phòng.
-- Sau khi cập nhật, chạy `npm run register` để đồng bộ lựa chọn 7 class và các subcommand Sinh tồn.
-- Có thể kiểm tra cân bằng bằng `npm run simulate:hardcore -- 100 999 40000 assassin 100`.
-- Bộ kiểm thử đầy đủ: `npm test`.
 

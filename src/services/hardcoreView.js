@@ -65,16 +65,21 @@ function encounterText(state) {
   if (encounter.type === 'rngesus') return `${icon('skull')} **RNGesus · HP ∞ · KHÔNG THỂ BỊ ĐÁNH BẠI**\nChiến đấu là chết. Bỏ chạy: 75% sống; nếu thất bại, Vé Thoát Hiểm tự dùng làm bảo hiểm. Hối lộ: mất 40% payout. Cầu nguyện: 10% nhận trang bị SSR trở lên, nếu trượt sẽ chết. Vé: chủ động tiêu thụ 1 vé để thoát.`;
   if (encounter.type === 'trap') {
     const names = { tax_collector: '🧾 TAX COLLECTOR', potion_thief: '🦹 KẺ TRỘM BÌNH MÁU', wrong_portal: '🌀 WRONG PORTAL' };
+    const breakChance = Math.round((encounter.luckyBreakChance ?? Math.min(0.3, Math.max(0, state.luck || 0) * 0.015)) * 1000) / 10;
+    const goodChance = Math.round((encounter.portalGoodChance ?? Math.min(0.4, 0.25 + Math.max(0, state.luck || 0) * 0.005)) * 1000) / 10;
     const detail = encounter.kind === 'tax_collector' ? 'Đi tiếp sẽ giảm payout 15%.'
       : encounter.kind === 'potion_thief' ? 'Đi tiếp có thể mất 1 bình máu.'
-        : 'Đi tiếp sẽ giữ nguyên tầng và roll sự kiện mới.';
-    return `**${names[encounter.kind]}**\nChọn **Chấp nhận số phận** để xử lý: ${detail}`;
+        : `Portal có **${goodChance}%** dẫn tới khu vực có lợi; phần còn lại gây hiệu ứng Rift xấu, giữ nguyên tầng rồi buộc đấu một Elite được đánh phủ đầu.`;
+    const luck = encounter.kind === 'wrong_portal' ? `\n🍀 Luck hiện tại: **${state.luck}** · Portal tốt **${goodChance}%**.`
+      : `\n🍀 Luck hiện tại: **${state.luck}** · Lucky Break **${breakChance}%**.`;
+    return `**${names[encounter.kind]}**\nChọn **Chấp nhận số phận** để xử lý: ${detail}${luck}`;
   }
   if (encounter.type === 'surprise') {
     if (encounter.kind === 'blacksmith') return `🔨 **THỢ RÈN LANG THANG**\nNâng **${encounter.itemName} Lv.${encounter.itemLevel}** thêm 1 cấp với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Cấp mới cộng lại hiệu ứng của item.`;
     if (encounter.kind === 'purifier') return `✨ **TU SĨ GIẢI NGUYỀN**\nGiải lời nguyền của **${encounter.itemName} Lv.${encounter.itemLevel}** với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Item giữ hiệu ứng có lợi và trở thành SSR; các hiệu ứng phạt được hoàn tác.`;
     if (encounter.kind === 'wandering_healer') return `🧙 **NGƯỜI CHỮA TRỊ LANG THANG**\nNhận miễn phí tối đa **${formatCoins(encounter.heal)} HP** và 1 bình máu, hoặc bỏ qua.`;
-    return `🪙 **TREASURE GOBLIN**\nĐuổi theo để có 60% cơ hội cộng **${formatCoins(encounter.reward)} xu** vào payout. Nếu hụt, nó cuỗm 10% payout hiện tại.`;
+    const chance = Math.round((encounter.successChance ?? 0.6) * 1000) / 10;
+    return `🪙 **TREASURE GOBLIN**\nĐuổi theo để có **${chance}%** cơ hội cộng **${formatCoins(encounter.reward)} xu** vào payout. Nếu hụt, nó cuỗm 10% payout hiện tại. Luck tăng 1% cơ hội mỗi điểm, tối đa 80%.`;
   }
   return '🕳️ **PHÒNG TRỐNG**\nBấm **Đi tiếp** để vượt tầng. Có thể rút thưởng thay vì tiếp tục.';
 }

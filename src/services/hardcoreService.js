@@ -241,6 +241,10 @@ function eventCost(state, rate) {
   return Math.max(1, Math.min(payout, Math.floor(payout * rate)));
 }
 
+function luckyBreakChance(luck) { return Math.min(0.3, Math.max(0, Number(luck) || 0) * 0.015); }
+function portalGoodChance(luck) { return Math.min(0.4, 0.25 + Math.max(0, Number(luck) || 0) * 0.005); }
+function treasureGoblinChance(luck) { return Math.min(0.8, 0.6 + Math.max(0, Number(luck) || 0) * 0.01); }
+
 function makeSurpriseEvent(state) {
   const kinds = ['wandering_healer', 'treasure_goblin'];
   const forgeable = forgeableItems(state);
@@ -257,7 +261,24 @@ function makeSurpriseEvent(state) {
     return { type: 'surprise', kind, itemName: item.name, itemLevel: item.level, cost: eventCost(state, 0.2) };
   }
   if (kind === 'wandering_healer') return { type: 'surprise', kind, heal: Math.max(20, Math.floor(state.maxHp * 0.3)) };
-  return { type: 'surprise', kind, success: randomFloat() < 0.6, reward: Math.max(1, Math.floor(state.stake * 0.25)), penaltyRate: 0.1 };
+  const successChance = treasureGoblinChance(state.luck);
+  return { type: 'surprise', kind, success: randomFloat() < successChance, successChance, reward: Math.max(1, Math.floor(state.stake * 0.25)), penaltyRate: 0.1 };
+}
+
+function makeTrap(state) {
+  const kind = pick(['tax_collector', 'potion_thief', 'wrong_portal']);
+  if (kind !== 'wrong_portal') {
+    const breakChance = luckyBreakChance(state.luck);
+    return { type: 'trap', kind, luckyBreak: breakChance > 0 && randomFloat() < breakChance, luckyBreakChance: breakChance };
+  }
+  const goodChance = portalGoodChance(state.luck);
+  if (randomFloat() < goodChance) {
+    return { type: 'trap', kind, portalOutcome: 'good', portalGoodChance: goodChance, blessing: pick(['healing_sanctuary', 'treasure_vault', 'rift_blessing']) };
+  }
+  const penalties = ['blood_loss', 'payout_corruption', 'dimensional_curse'];
+  if (state.energy > 0) penalties.push('energy_drain');
+  if (state.potions > 0) penalties.push('supply_loss');
+  return { type: 'trap', kind, portalOutcome: 'bad', portalGoodChance: goodChance, penalty: pick(penalties) };
 }
 
 function generateEncounter(state) {
@@ -272,7 +293,7 @@ function generateEncounter(state) {
   if (roll < 0.75 - chestBoost / 2) return makeChest(state);
   if (roll < 0.83 - chestBoost / 2) return { type: 'shrine', kind: pick(['healing', 'armor', 'blood', 'experience', 'corrupted', 'fake']) };
   if (roll < 0.88) return makeChest(state, true);
-  if (roll < 0.94) return { type: 'trap', kind: pick(['tax_collector', 'potion_thief', 'wrong_portal']) };
+  if (roll < 0.94) return makeTrap(state);
   if (roll < 0.98) return makeSurpriseEvent(state);
   return { type: 'empty' };
 }
@@ -589,6 +610,51 @@ function applyShrine(state, kind) {
   const damage = Math.max(10, Math.floor(state.maxHp * 0.3)); state.hp = Math.max(0, state.hp - damage); return `🤡 Shrine giả gây ${damage} damage.`;
 }
 
+function applyWrongPortalPenalty(state, penalty) {
+  if (penalty === 'energy_drain') {
+    const lost = state.energy;
+    state.energy = 0;
+    return `🔷 Mana Void hút cạn **${lost} Energy**.`;
+  }
+  if (penalty === 'supply_loss') {
+    const lost = Math.min(2, state.potions);
+    state.potions -= lost;
+    return `🧪 Túi đồ vỡ trong khe nứt: mất **${lost} bình máu**.`;
+  }
+  if (penalty === 'payout_corruption') {
+    state.payoutFactor *= 0.9;
+    return '💸 Rift Corruption làm giảm **10% payout** của run.';
+  }
+  if (penalty === 'dimensional_curse') {
+    const defenseLost = Math.min(5, state.defense);
+    const resistanceBefore = state.resistance;
+    state.defense -= defenseLost;
+    state.resistance = Math.max(-50, state.resistance - 5);
+    return `☣️ Dimensional Curse khiến bạn mất **${defenseLost} Defense** và **${resistanceBefore - state.resistance} Resistance**.`;
+  }
+  const damage = Math.min(Math.max(0, state.hp - 1), Math.max(1, Math.floor(state.maxHp * 0.15)));
+  state.hp -= damage;
+  return `🩸 Blood Rift xé cơ thể, gây **${damage} damage** nhưng không trực tiếp kết liễu bạn.`;
+}
+
+function applyWrongPortalBlessing(state, blessing) {
+  if (blessing === 'treasure_vault') {
+    const reward = Math.max(1, Math.floor(state.stake * 0.5));
+    state.bonus += reward;
+    return `💰 Treasure Vault cộng **${reward} xu** vào payout của run.`;
+  }
+  if (blessing === 'rift_blessing') {
+    state.defense += 4;
+    state.resistance = Math.min(75, state.resistance + 5);
+    state.luck += 1;
+    return '✨ Rift Blessing ban **+4 Defense, +5 Resistance và +1 Luck**.';
+  }
+  state.maxHp += 10;
+  state.hp = state.maxHp;
+  state.potions = Math.min(5, state.potions + 1);
+  return '💚 Healing Sanctuary ban **+10 HP tối đa**, hồi đầy máu và tặng 1 bình máu.';
+}
+
 const DISPLAY_STATS = ['hp', 'maxHp', 'damageMin', 'damageMax', 'defense', 'energy', 'potions', 'luck', 'critChance', 'evasion', 'resistance', 'escapeTokens'];
 function statSnapshot(state) { return Object.fromEntries(DISPLAY_STATS.map(key => [key, Number(state[key]) || 0])); }
 function statChanges(state, before) {
@@ -604,8 +670,8 @@ const actionTx = db.transaction(({ sessionId, userId, expectedTurn, action }) =>
   const before = statSnapshot(state);
   state.lastStatChanges = null;
   state.turn += 1;
-  if (action === 'retreat') return { settled: true, state, result: finishRun(session, state, state.cleared > 0 ? 'cashout' : 'forfeit') };
   if (state.phase === 'summit') return { settled: true, state, result: finishRun(session, state, 'summit') };
+  if (action === 'retreat') return { settled: true, state, result: finishRun(session, state, state.cleared > 0 ? 'cashout' : 'forfeit') };
 
   if (state.phase === 'upgrade') {
     if (action === 'upgrade_attack') { state.damageMin += 5; state.damageMax += 5; state.lastLog = '⚔️ +5 sát thương.'; }
@@ -666,7 +732,10 @@ const actionTx = db.transaction(({ sessionId, userId, expectedTurn, action }) =>
   } else if (state.encounter.type === 'trap') {
     if (action !== 'continue') throw new Error('INVALID_ACTION');
     const kind = state.encounter.kind;
-    if (kind === 'tax_collector') {
+    if (state.encounter.luckyBreak && kind !== 'wrong_portal') {
+      const avoided = kind === 'tax_collector' ? 'Tax Collector' : 'kẻ trộm bình máu';
+      completeFloor(state, `🍀 Lucky Break! Bạn tránh được **${avoided}** mà không chịu tổn thất.`, 0);
+    } else if (kind === 'tax_collector') {
       state.payoutFactor *= 0.85;
       completeFloor(state, '🧾 Tax Collector thu 15% payout vì lý do: “quy định là quy định”.', 0);
     } else if (kind === 'potion_thief') {
@@ -674,7 +743,18 @@ const actionTx = db.transaction(({ sessionId, userId, expectedTurn, action }) =>
       state.potions = Math.max(0, state.potions - stolen);
       completeFloor(state, stolen ? '🦹 Kẻ trộm lấy mất 1 bình máu rồi biến mất.' : '🦹 Kẻ trộm kiểm tra túi đồ rỗng và tỏ vẻ thất vọng.', 0);
     } else {
-      setNextEncounter(state, `🌀 Wrong Portal đưa bạn quay lại chính tầng ${state.floor}. Quái mới đã được roll lại.`);
+      if (state.encounter.portalOutcome === 'good') {
+        const blessingLog = applyWrongPortalBlessing(state, state.encounter.blessing);
+        completeFloor(state, `🌀 Wrong Portal bất ngờ dẫn tới một khu vực an toàn.\n${blessingLog}`, 0);
+        state.lastStatChanges = statChanges(state, before);
+        saveState(session, state);
+        return { settled: false, state, result: null };
+      }
+      const penaltyLog = applyWrongPortalPenalty(state, state.encounter.penalty || 'blood_loss');
+      state.encounter = makeEnemy(state.floor, 'elite', 'Rift Ambusher', state);
+      const ambush = enemyTurn(state);
+      state.lastLog = `🌀 Wrong Portal ném bạn vào ổ phục kích của **Rift Ambusher**.\n${penaltyLog}\nElite được ra đòn trước! ${ambush}`;
+      if (state.hp <= 0) return { settled: true, state, result: finishRun(session, state, 'death') };
     }
   } else if (state.encounter.type === 'surprise') {
     const event = state.encounter;
@@ -868,7 +948,7 @@ module.exports = {
   MIN_BET, MAX_BET, MAX_PAYOUT, MAX_FLOOR, COMPLETION_FLOOR, CLASSES, ITEMS,
   hitChance, defenseReduction, physicalAfterDefense, magicAfterResistance, resolvePhysicalAttack,
   enemyScale, makeEnemy, rollEnemyAttackType, medianItemForRarity, addRiftModifier, rngesusChance, rollRngesus, chaosLabel, baseMultiplier, potentialPayout, generateEncounter,
-  applyItem, forgeItem, purifyItem, makeSurpriseEvent,
+  applyItem, forgeItem, purifyItem, makeSurpriseEvent, luckyBreakChance, portalGoodChance, treasureGoblinChance,
   startHardcore, resumeHardcore, playHardcore, getHardcoreByUser, setMessageId, hardcoreEmbed, hardcoreRows, forceEndHardcoreSession,
   handleHardcoreButton, handleHardcoreItemsButton, getHardcoreRecord, getHardcoreTop, cleanupStaleHardcoreSessions,
 };

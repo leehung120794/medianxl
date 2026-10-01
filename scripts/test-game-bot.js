@@ -158,6 +158,12 @@ assert.equal(hardcoreWorld.regionForFloor(1).name, 'Sanctuary');
 assert.equal(hardcoreWorld.regionForFloor(999).name, 'Dimensional Plane');
 assert.equal(hardcoreWorld.bossForFloor(50).name, 'The Butcher');
 assert.equal(hardcoreWorld.bossForFloor(250).name, 'Deimoss the Fleshweaver');
+assert.equal(hardcore.luckyBreakChance(0), 0);
+assert.equal(hardcore.luckyBreakChance(20), 0.3);
+assert.equal(hardcore.portalGoodChance(0), 0.25);
+assert.equal(hardcore.portalGoodChance(30), 0.4);
+assert.equal(hardcore.treasureGoblinChance(10), 0.7);
+assert.equal(hardcore.treasureGoblinChance(100), 0.8);
 const modifiedEnemy = hardcore.makeEnemy(100, 'normal', 'Modifier Dummy', { modifiers: ['stone_skin', 'fortified', 'swift_horror'] });
 const plainEnemy = hardcore.makeEnemy(100, 'normal', 'Plain Dummy', { modifiers: [] });
 assert(modifiedEnemy.maxHp > plainEnemy.maxHp && modifiedEnemy.defense > plainEnemy.defense && modifiedEnemy.evasion > plainEnemy.evasion);
@@ -211,6 +217,41 @@ assert.equal(JSON.parse(resumedSession.state_json).turn, 0, 'tiếp tục không
 const resumedTurn = hardcore.playHardcore({ sessionId: resumable.session.id, userId: 'alice', expectedTurn: 0, action: 'continue' });
 hardcore.playHardcore({ sessionId: resumable.session.id, userId: 'alice', expectedTurn: resumedTurn.state.turn, action: 'retreat' });
 const hardcoreRepository = require('../src/services/hardcoreRepository');
+const summitRun = hardcore.startHardcore({ guildId: 'hardcore-summit', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'barbarian', forcedEncounter: { type: 'empty' } });
+summitRun.state.floor = 999;
+summitRun.state.cleared = 999;
+summitRun.state.completed = true;
+summitRun.state.phase = 'summit';
+summitRun.state.encounter = { type: 'summit' };
+hardcoreRepository.saveState(summitRun.session, summitRun.state);
+const summitResult = hardcore.playHardcore({ sessionId: summitRun.session.id, userId: 'alice', expectedTurn: 0, action: 'retreat' });
+assert.equal(summitResult.result.reason, 'summit', 'nhận thưởng sau tầng 999 phải ghi nhận summit thay vì cashout');
+const portalRun = hardcore.startHardcore({ guildId: 'hardcore-wrong-portal', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'barbarian', forcedEncounter: { type: 'trap', kind: 'wrong_portal', penalty: 'energy_drain' } });
+const portalResult = hardcore.playHardcore({ sessionId: portalRun.session.id, userId: 'alice', expectedTurn: 0, action: 'continue' });
+assert.equal(portalResult.settled, false);
+assert.equal(portalResult.state.floor, 1, 'Wrong Portal phải giữ nguyên tầng hiện tại');
+assert.equal(portalResult.state.energy, 0, 'Wrong Portal phải áp dụng penalty đã pre-roll');
+assert.equal(portalResult.state.encounter.type, 'combat');
+assert.equal(portalResult.state.encounter.rank, 'elite');
+assert.equal(portalResult.state.encounter.name, 'Rift Ambusher');
+assert.match(portalResult.state.lastLog, /được ra đòn trước/);
+hardcore.playHardcore({ sessionId: portalRun.session.id, userId: 'alice', expectedTurn: 1, action: 'retreat' });
+const luckyPortalRun = hardcore.startHardcore({ guildId: 'hardcore-lucky-portal', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'barbarian', forcedEncounter: { type: 'trap', kind: 'wrong_portal', portalOutcome: 'good', blessing: 'treasure_vault' } });
+const luckyPortalResult = hardcore.playHardcore({ sessionId: luckyPortalRun.session.id, userId: 'alice', expectedTurn: 0, action: 'continue' });
+assert.equal(luckyPortalResult.settled, false);
+assert.equal(luckyPortalResult.state.cleared, 1, 'Wrong Portal tốt phải hoàn thành tầng an toàn');
+assert.equal(luckyPortalResult.state.bonus, 5, 'Treasure Vault phải cộng 50% tiền cược vào bonus');
+assert.notEqual(luckyPortalResult.state.encounter.name, 'Rift Ambusher');
+hardcore.playHardcore({ sessionId: luckyPortalRun.session.id, userId: 'alice', expectedTurn: 1, action: 'retreat' });
+const luckyBreakRun = hardcore.startHardcore({ guildId: 'hardcore-lucky-break', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'barbarian', forcedEncounter: { type: 'trap', kind: 'tax_collector', luckyBreak: true, luckyBreakChance: 0.3 } });
+const luckyBreakResult = hardcore.playHardcore({ sessionId: luckyBreakRun.session.id, userId: 'alice', expectedTurn: 0, action: 'continue' });
+assert.equal(luckyBreakResult.state.payoutFactor, 1, 'Lucky Break phải vô hiệu hóa Tax Collector');
+assert.match(luckyBreakResult.state.lastLog, /Lucky Break/);
+hardcore.playHardcore({ sessionId: luckyBreakRun.session.id, userId: 'alice', expectedTurn: 1, action: 'retreat' });
 const insuredRun = hardcore.startHardcore({ guildId: 'hardcore-rng-insurance', userId: 'alice', channelId: 'channel', stake: 10,
   classKey: 'paladin', forcedEncounter: { type: 'rngesus', fleeSuccess: false, prayerSuccess: false, prayerRarity: 'legendary' } });
 insuredRun.state.escapeTokens = 1;
