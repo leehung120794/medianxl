@@ -17,6 +17,7 @@ const { PermissionFlagsBits } = require('discord.js');
 const { REWARD_GAMES, setGameReward, listGameRewards } = require('./gameRewardService');
 const { formatCoins } = require('../utils/economy');
 const { BET_GAMES, setGameBetLimit, listGameBetLimits } = require('./gameBetLimitService');
+const { CLASSES: HARDCORE_CLASSES } = require('./hardcoreService');
 
 const COMMANDS = { baucua, taixiu, chinchiro, oantuti, blackjack, poker, duangua, mines, coquay, hardcore, vuatiengviet, trochoi, use, item };
 const NAME_ALIASES = {
@@ -77,7 +78,7 @@ function help(prefix, command) {
   if (command === 'chinchiro') return `Cách dùng: \`${prefix}chinchiro <số xu>\``;
   if (command === 'coquay') return `Cách dùng: \`${prefix}coquay <số xu>\``;
   if (command === 'mines') return `Cách dùng: \`${prefix}domin <số xu> <số mìn 2–7>\``;
-  if (command === 'hardcore') return `Cách dùng: \`${prefix}sinhton <số xu> <barbarian|assassin|sorceress>\` hoặc \`${prefix}sinhton <hoso|xephang|tyle>\``;
+  if (command === 'hardcore') return `Cách dùng: \`${prefix}sinhton <số xu> <amazon|assassin|barbarian|druid|necromancer|paladin|sorceress>\` hoặc \`${prefix}sinhton <hoso|xephang|tyle>\``;
   if (command === 'vuatiengviet') return `Cách dùng: \`${prefix}vtv <batdau|boqua|ketthuc>\``;
   return `Cách dùng: \`${prefix}${command}\``;
 }
@@ -206,7 +207,7 @@ async function handleGamePrefix(message) {
     } else {
       const amount = Number(parts[0]);
       const classKey = normalizeSearch(parts[1] || '');
-      if (!Number.isSafeInteger(amount) || !['barbarian', 'assassin', 'sorceress'].includes(classKey)) {
+      if (!Number.isSafeInteger(amount) || !Object.prototype.hasOwnProperty.call(HARDCORE_CLASSES, classKey)) {
         await message.reply({ content: help(prefix, name), allowedMentions: { repliedUser: false } });
         return true;
       }

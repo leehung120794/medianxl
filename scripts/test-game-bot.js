@@ -135,16 +135,97 @@ assert(expRace.fields.some(field => /Thành tựu mới/.test(field.name) && /<@
 assert(Math.abs(Object.values(raceMarket.horses).reduce((sum, quote) => sum + quote.chance, 0) - 1) < 0.000001);
 assert(Object.values(raceMarket.horses).every(quote => quote.multiplier >= 1.5 && quote.multiplier <= 30));
 const hardcore = require('../src/services/hardcoreService');
+const hardcoreWorld = require('../src/services/hardcoreWorld');
 assert.equal(typeof hardcore.startHardcore, 'function');
 assert.equal(hardcore.COMPLETION_FLOOR, 100);
 assert.equal(hardcore.MAX_FLOOR, 999);
+assert.equal(hardcore.baseMultiplier({ cleared: 100, bosses: 2 }), 12);
+assert.equal(hardcore.baseMultiplier({ cleared: 999, bosses: 19 }), 12, 'payout phải ngừng tăng sau tầng 100');
+assert(hardcore.enemyScale(999).hp < 100 && hardcore.enemyScale(999).damage < 50, 'quái tầng sâu không được tăng theo cấp số nhân');
+const finalBoss = hardcore.makeEnemy(999, 'final_boss', null, { modifiers: [] });
+assert.equal(finalBoss.name, 'Deimoss the Fleshweaver');
+assert.equal(finalBoss.rank, 'final_boss');
+assert.equal(finalBoss.damageType, 'physical');
+assert.match(JSON.stringify(hardcore.hardcoreEmbed({ classKey: 'barbarian', floor: 999, cleared: 998, encounter: finalBoss, modifiers: [], items: [], bosses: 19, stake: 10, bonus: 0, payoutFactor: 1, payoutSpent: 0, hp: 100, maxHp: 100, damageMin: 10, damageMax: 20, defense: 10, energy: 3, maxEnergy: 3, potions: 0, luck: 0, critChance: 0.1, evasion: 5, resistance: 5, escapeTokens: 0, turn: 0, lastLog: 'test' }, 'alice').toJSON()), /Vật lý/);
+assert.equal(hardcoreWorld.bossForFloor(50).damageType, 'physical');
+assert.equal(hardcoreWorld.bossForFloor(100).damageType, 'magic');
+assert.deepEqual(Object.keys(hardcore.CLASSES).sort(), ['amazon', 'assassin', 'barbarian', 'druid', 'necromancer', 'paladin', 'sorceress']);
+assert.equal(hardcoreWorld.regionForFloor(1).name, 'Sanctuary');
+assert.equal(hardcoreWorld.regionForFloor(999).name, 'Dimensional Plane');
+assert.equal(hardcoreWorld.bossForFloor(50).name, 'The Butcher');
+assert.equal(hardcoreWorld.bossForFloor(250).name, 'Deimoss the Fleshweaver');
+const modifiedEnemy = hardcore.makeEnemy(100, 'normal', 'Modifier Dummy', { modifiers: ['stone_skin', 'fortified', 'swift_horror'] });
+const plainEnemy = hardcore.makeEnemy(100, 'normal', 'Plain Dummy', { modifiers: [] });
+assert(modifiedEnemy.maxHp > plainEnemy.maxHp && modifiedEnemy.defense > plainEnemy.defense && modifiedEnemy.evasion > plainEnemy.evasion);
 assert(hardcore.defenseReduction(100, 10) > 0 && hardcore.defenseReduction(100, 10) < 0.75);
+const forgeState = { cleared: 10, stake: 100, bonus: 0, payoutFactor: 1, payoutSpent: 0, damageMin: 10, damageMax: 15, defense: 5,
+  resistance: 0, critChance: 0, luck: 0, potions: 0, escapeTokens: 0, maxHp: 100, hp: 100,
+  items: [{ name: 'Test Blade', rarity: 'rare', level: 1, attack: 4, text: '+4 sát thương' }] };
+const forged = hardcore.forgeItem(forgeState, 'Test Blade', 10);
+assert.equal(forged.level, 2);
+assert.deepEqual([forgeState.damageMin, forgeState.damageMax], [14, 19]);
+assert.equal(forgeState.payoutSpent, 10);
+const cursedState = { cleared: 10, stake: 100, bonus: 0, payoutFactor: 0.9, payoutSpent: 0, damageMin: 10, damageMax: 15, defense: 0,
+  resistance: 0, critChance: 0, luck: 0, potions: 0, escapeTokens: 0, maxHp: 80, hp: 80,
+  items: [{ name: 'Cursed Test', rarity: 'cursed', level: 1, attack: 8, maxHp: -20, bonusPenalty: 0.1, curseDefenseLost: 5, text: 'Nguyền' }] };
+const purified = hardcore.purifyItem(cursedState, 'Cursed Test', 10);
+assert.equal(purified.rarity, 'legendary');
+assert.equal(purified.purified, true);
+assert.equal(cursedState.maxHp, 100);
+assert.equal(cursedState.defense, 5);
+assert(Math.abs(cursedState.payoutFactor - 1) < 1e-9);
 const hardcoreStarted = hardcore.startHardcore({ guildId: 'hardcore-structure', userId: 'alice', channelId: 'channel', stake: 10,
   classKey: 'barbarian', forcedEncounter: { type: 'empty' } });
 assert.doesNotThrow(() => hardcore.hardcoreEmbed(hardcoreStarted.state, 'alice').toJSON());
 assert.equal(hardcore.hardcoreRows(hardcoreStarted.session.id, hardcoreStarted.state)[0].components.length, 2);
+const crowdedState = { ...hardcoreStarted.state, items: Array.from({ length: 200 }, (_, index) => ({
+  name: `Median Item ${index}`, rarity: 'legendary', typeCode: index % 2 ? 'SU' : 'SET', level: 1,
+  text: '+10 sát thương, +10 Defense, +10 Resistance và một dòng mô tả đủ dài để kiểm tra giới hạn embed',
+})) };
+assert(hardcore.hardcoreEmbed(crowdedState, 'alice').toJSON().fields.length <= 25, 'run nhiều item không được vượt giới hạn field của Discord');
 const hardcoreEnded = hardcore.playHardcore({ sessionId: hardcoreStarted.session.id, userId: 'alice', expectedTurn: 0, action: 'retreat' });
 assert.equal(hardcoreEnded.settled, true);
+const hardcoreRepository = require('../src/services/hardcoreRepository');
+const insuredRun = hardcore.startHardcore({ guildId: 'hardcore-rng-insurance', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'paladin', forcedEncounter: { type: 'rngesus', fleeSuccess: false, prayerSuccess: false, prayerRarity: 'legendary' } });
+insuredRun.state.escapeTokens = 1;
+hardcoreRepository.saveState(insuredRun.session, insuredRun.state);
+const insuredEscape = hardcore.playHardcore({ sessionId: insuredRun.session.id, userId: 'alice', expectedTurn: 0, action: 'flee' });
+assert.equal(insuredEscape.settled, false);
+assert.equal(insuredEscape.state.escapeTokens, 0);
+assert.equal(insuredEscape.state.cleared, 1);
+hardcore.playHardcore({ sessionId: insuredRun.session.id, userId: 'alice', expectedTurn: 1, action: 'retreat' });
+const prayerRun = hardcore.startHardcore({ guildId: 'hardcore-prayer', userId: 'alice', channelId: 'channel', stake: 10,
+  classKey: 'paladin', forcedEncounter: { type: 'rngesus', fleeSuccess: false, prayerSuccess: true, prayerRarity: 'cursed' } });
+const prayerReward = hardcore.playHardcore({ sessionId: prayerRun.session.id, userId: 'alice', expectedTurn: 0, action: 'pray' });
+assert.equal(prayerReward.settled, false);
+assert(['legendary', 'cursed'].includes(prayerReward.state.items[0].rarity));
+assert.equal(prayerReward.state.cleared, 1);
+hardcore.playHardcore({ sessionId: prayerRun.session.id, userId: 'alice', expectedTurn: 1, action: 'retreat' });
+for (const classKey of Object.keys(hardcore.CLASSES)) {
+  const userId = `class-${classKey}`;
+  const trainingDummy = hardcore.makeEnemy(1, 'normal', 'Training Dummy');
+  trainingDummy.hp = 999;
+  trainingDummy.maxHp = 999;
+  const started = hardcore.startHardcore({ guildId: 'hardcore-classes', userId, channelId: 'channel', stake: 10,
+    classKey, forcedEncounter: trainingDummy });
+  const usedSkill = hardcore.playHardcore({ sessionId: started.session.id, userId, expectedTurn: 0, action: 'skill' });
+  assert.equal(usedSkill.settled, false, `${classKey} phải dùng được kỹ năng riêng`);
+  assert.equal(usedSkill.state.energy, hardcore.CLASSES[classKey].energy - 2);
+  hardcore.playHardcore({ sessionId: started.session.id, userId, expectedTurn: 1, action: 'retreat' });
+}
+const shieldBoss = hardcore.makeEnemy(100, 'boss', null, { modifiers: [] });
+shieldBoss.evasion = -100;
+shieldBoss.damageMin = 1;
+shieldBoss.damageMax = 1;
+const shieldRun = hardcore.startHardcore({ guildId: 'hardcore-boss-mechanic', userId: 'sorceress', channelId: 'channel', stake: 10,
+  classKey: 'sorceress', forcedEncounter: shieldBoss });
+const shieldedHit = hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 0, action: 'skill' });
+assert.equal(shieldedHit.state.encounter.hp, shieldBoss.maxHp, 'Rift Shield phải chặn đòn đầu tiên đánh vào boss');
+assert.equal(shieldedHit.state.encounter.attackAttempts, 1);
+const openHit = hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 1, action: 'attack' });
+assert(openHit.state.encounter.hp < shieldBoss.maxHp, 'đòn thứ hai phải xuyên qua Rift Shield');
+hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 2, action: 'retreat' });
 const fun = require('../src/services/funGameService');
 const vua = fun.startVuaSession('test-guild', { forceHard: false, now: 1 });
 assert(vua.question.answer && vua.question.mixed);

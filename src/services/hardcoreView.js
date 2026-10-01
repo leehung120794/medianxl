@@ -4,29 +4,44 @@ const { baseMultiplier, potentialPayout } = require('./hardcoreEngine');
 const { resultBlock, coins } = require('../utils/rewardText');
 const emojiMap = require('../discordEmojiMap');
 const { rarityLabel, normalizeEquipment, effectText } = require('./hardcoreEquipment');
+const { MODIFIERS, regionForFloor, modifierStacks } = require('./hardcoreWorld');
 
 const icon = (name, fallback = '•') => emojiMap[`:${name}:`] || fallback;
 
-function rankLabel(rank) { return { normal: 'Thường', elite: 'Elite', boss: 'BOSS', mimic: 'Mimic', ancient_mimic: 'Ancient Mimic' }[rank] || rank; }
+function rankLabel(rank) { return { normal: 'Thường', elite: 'Elite', boss: 'BOSS', final_boss: 'BOSS CUỐI', mimic: 'Mimic', ancient_mimic: 'Ancient Mimic' }[rank] || rank; }
 function encounterText(state) {
   const encounter = state.encounter;
   if (state.phase === 'upgrade') return `${icon('gift')} **NÂNG CẤP SAU MỐC TẦNG ${encounter.milestone}**\nChọn đúng một nút để nhận nâng cấp trong phần còn lại của run. +HP tăng giới hạn tối đa và hồi 30 HP; Rút thưởng chốt payout.`;
   if (state.phase === 'summit') return `${icon('trophy')} **ĐÃ CHINH PHỤC TẦNG 999**\nĐây là giới hạn Sinh tồn. Bấm **Rút thưởng** để nhận payout hiện tại.`;
   if (encounter.type === 'combat') {
-    const skillHint = state.classKey === 'assassin' ? 'Shadow Step gây thêm sát thương và né phản công.'
-      : state.classKey === 'sorceress' ? 'Arcane Burst gây sát thương phép mạnh.'
-        : 'Iron Will gây thêm sát thương.';
-    return `${icon('crossed_swords')} **${encounter.name}** · ${rankLabel(encounter.rank)}\n${icon('heart')} ${formatCoins(encounter.hp)}/${formatCoins(encounter.maxHp)} HP · ${icon('crossed_swords')} ${formatCoins(encounter.damageMin)}–${formatCoins(encounter.damageMax)} · ${icon('shield')} ${formatCoins(encounter.defense)}\n**Tấn công:** đánh và hồi 1 năng lượng. **Phòng thủ:** giảm đòn kế tiếp, hồi 1 năng lượng. **Kỹ năng:** tốn 2 năng lượng — ${skillHint}\n**Bình máu:** hồi 35% HP tối đa; quái vẫn đánh trả nếu còn sống.`;
+    const skillHint = {
+      amazon: 'Barrage bắn hai phát liên tiếp.',
+      assassin: 'Shadow Step gây thêm sát thương và né phản công.',
+      barbarian: 'Iron Will gây thêm sát thương vật lý.',
+      druid: 'Wild Regeneration tấn công và hồi 12% HP tối đa.',
+      necromancer: 'Totem Ward gây sát thương phép và đỡ đòn phản công.',
+      paladin: 'Divine Shield tấn công rồi phòng thủ trước đòn phản công.',
+      sorceress: 'Arcane Burst gây sát thương phép mạnh.',
+    }[state.classKey] || 'Dùng kỹ năng riêng của class.';
+    const mechanic = encounter.mechanicDescription ? `\n${icon('warning')} **Cơ chế boss:** ${encounter.mechanicDescription}` : '';
+    const damageType = { physical: 'Vật lý', magic: 'Phép', mixed: 'Hỗn hợp' }[encounter.damageType] || 'Hỗn hợp';
+    return `${icon('crossed_swords')} **${encounter.name}** · ${rankLabel(encounter.rank)}\n${icon('heart')} ${formatCoins(encounter.hp)}/${formatCoins(encounter.maxHp)} HP · ${icon('crossed_swords')} ${formatCoins(encounter.damageMin)}–${formatCoins(encounter.damageMax)} · **${damageType}** · ${icon('shield')} ${formatCoins(encounter.defense)}${mechanic}\n**Tấn công:** đánh và hồi 1 năng lượng. **Phòng thủ:** Defense x2, chặn thêm 40% sát thương, miễn chí mạng và hồi 1 năng lượng. **Kỹ năng:** tốn 2 năng lượng — ${skillHint}\n**Bình máu:** hồi 35% HP tối đa; quái vẫn đánh trả nếu còn sống.`;
   }
   if (encounter.type === 'chest') return `${icon('package')} **HÒM BÍ ẨN**\n${encounter.inspected ? 'Đã kiểm tra một lần; kết quả có thể không phát hiện được Mimic.' : 'Kiểm tra một lần để thử phát hiện Mimic; Mở để nhận đồ hoặc có thể phải đánh Mimic; Bán để lấy thêm 15% tiền cược vào payout.'}${encounter.revealed ? `\n${icon('warning')} Mimic đã bị phát hiện: **Tránh Mimic** để đi tiếp an toàn.` : ''}`;
   if (encounter.type === 'shrine') return `${icon('moyai')} **SHRINE KHÔNG RÕ NGUỒN GỐC**\n**Chạm Shrine** để nhận hiệu ứng ngẫu nhiên (có cả hiệu ứng gây hại), hoặc **Bỏ qua** để đi tiếp.`;
-  if (encounter.type === 'rngesus') return `${icon('skull')} **RNGesus · HP ∞ · KHÔNG THỂ BỊ ĐÁNH BẠI**\nChiến đấu là chết. Bỏ chạy: 65% sống; Hối lộ: mất 40% payout; Cầu nguyện: 10% nhận Legendary, nếu trượt sẽ chết; Vé: tiêu thụ 1 vé để thoát.`;
+  if (encounter.type === 'rngesus') return `${icon('skull')} **RNGesus · HP ∞ · KHÔNG THỂ BỊ ĐÁNH BẠI**\nChiến đấu là chết. Bỏ chạy: 75% sống; nếu thất bại, Vé Thoát Hiểm tự dùng làm bảo hiểm. Hối lộ: mất 40% payout. Cầu nguyện: 10% nhận trang bị SSR trở lên, nếu trượt sẽ chết. Vé: chủ động tiêu thụ 1 vé để thoát.`;
   if (encounter.type === 'trap') {
     const names = { tax_collector: '🧾 TAX COLLECTOR', potion_thief: '🦹 KẺ TRỘM BÌNH MÁU', wrong_portal: '🌀 WRONG PORTAL' };
     const detail = encounter.kind === 'tax_collector' ? 'Đi tiếp sẽ giảm payout 15%.'
       : encounter.kind === 'potion_thief' ? 'Đi tiếp có thể mất 1 bình máu.'
         : 'Đi tiếp sẽ giữ nguyên tầng và roll sự kiện mới.';
     return `**${names[encounter.kind]}**\nChọn **Chấp nhận số phận** để xử lý: ${detail}`;
+  }
+  if (encounter.type === 'surprise') {
+    if (encounter.kind === 'blacksmith') return `🔨 **THỢ RÈN LANG THANG**\nNâng **${encounter.itemName} Lv.${encounter.itemLevel}** thêm 1 cấp với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Cấp mới cộng lại hiệu ứng của item.`;
+    if (encounter.kind === 'purifier') return `✨ **TU SĨ GIẢI NGUYỀN**\nGiải lời nguyền của **${encounter.itemName} Lv.${encounter.itemLevel}** với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Item giữ hiệu ứng có lợi và trở thành SSR; các hiệu ứng phạt được hoàn tác.`;
+    if (encounter.kind === 'wandering_healer') return `🧙 **NGƯỜI CHỮA TRỊ LANG THANG**\nNhận miễn phí tối đa **${formatCoins(encounter.heal)} HP** và 1 bình máu, hoặc bỏ qua.`;
+    return `🪙 **TREASURE GOBLIN**\nĐuổi theo để có 60% cơ hội cộng **${formatCoins(encounter.reward)} xu** vào payout. Nếu hụt, nó cuỗm 10% payout hiện tại.`;
   }
   return '🕳️ **PHÒNG TRỐNG**\nBấm **Đi tiếp** để vượt tầng. Có thể rút thưởng thay vì tiếp tục.';
 }
@@ -70,25 +85,43 @@ function itemFields(state, itemCatalog) {
   const definitions = new Map(Object.values(itemCatalog).flat().map(item => [item.name, item]));
   const lines = owned.map(item => {
     const definition = definitions.get(item.name);
-    return `• **${item.name} Lv.${item.level}** [${rarityLabel(item.rarity)}] — ${definition ? effectText(definition, item.level) : item.text || 'Không rõ tác dụng'}`;
+    const source = definition || item;
+    const label = `${item.typeCode || rarityLabel(item.rarity)}${item.purified ? ' · Đã giải nguyền' : ''}`;
+    return `• **${item.name} Lv.${item.level}** [${label}] — ${effectText(source, item.level)}`;
   });
   const chunks = [];
   for (const line of lines) {
     if (!chunks.length || `${chunks.at(-1)}\n${line}`.length > 1000) chunks.push(line.slice(0, 1000));
     else chunks[chunks.length - 1] += `\n${line}`;
   }
-  return chunks.map((value, index) => ({ name: index ? `${title} · tiếp` : title, value, inline: false }));
+  const visible = chunks.slice(0, 12);
+  if (chunks.length > visible.length) {
+    const hiddenItems = Math.max(1, owned.length - lines.slice(0, visible.join('\n').split('\n').length).length);
+    visible[visible.length - 1] = `${visible.at(-1).slice(0, 930)}\n…và các trang bị khác trong run (${hiddenItems}+ món chưa hiển thị).`;
+  }
+  return visible.map((value, index) => ({ name: index ? `${title} · tiếp` : title, value, inline: false }));
+}
+function modifierText(state) {
+  const active = [...new Set(Array.isArray(state.modifiers) ? state.modifiers : [])];
+  if (!active.length) return 'Chưa có modifier; modifier đầu tiên xuất hiện sau tầng 10.';
+  return active.map(key => {
+    const definition = MODIFIERS[key] || { name: key, description: 'Hiệu ứng Rift không xác định.' };
+    const stacks = modifierStacks(state, key);
+    return `• **${definition.name}${stacks > 1 ? ` x${stacks}` : ''}** — ${definition.description}`;
+  }).join('\n').slice(0, 1024);
 }
 function hardcoreEmbed(state, userId, result, classes, sessionId = null, itemCatalog = {}) {
   const classInfo = classes[state.classKey]; const payout = potentialPayout(state);
-  const classIcon = { barbarian: icon('axe'), assassin: icon('dagger_knife'), sorceress: icon('crystal_ball') }[state.classKey] || classInfo.emoji;
+  const region = regionForFloor(state.floor);
+  const classIcon = { amazon: icon('bow_and_arrow', '🏹'), barbarian: icon('axe', '🪓'), assassin: icon('dagger_knife', '🗡️'), druid: icon('wolf', '🐺'), necromancer: icon('skull', '💀'), paladin: icon('fleur_de_lis', '⚜️'), sorceress: icon('crystal_ball', '🔮') }[state.classKey] || classInfo.emoji;
   const embed = new EmbedBuilder().setColor(result ? (result.outcome === 'win' ? 0x2ECC71 : 0xE74C3C) : state.floor > 100 ? 0x9B59B6 : 0xE67E22)
     .setTitle(`${classIcon} SINH TỒN · TẦNG ${state.floor}${state.floor > 100 ? ' · OVERRUN' : ''}`)
-    .setDescription(`${icon('bust_in_silhouette')} <@${userId}>\n\n**${icon('warning')} Tình huống hiện tại**\n${encounterText(state)}`)
+    .setDescription(`${icon('bust_in_silhouette')} <@${userId}> · **${region.name}**\n\n**${icon('warning')} Tình huống hiện tại**\n${encounterText(state)}`)
     .addFields(
       { name: `${icon('bar_chart')} Chỉ số · thay đổi trong lượt vừa rồi`, value: statLine(state), inline: false },
       { name: `${icon('compass')} Tiến trình`, value: `Đã vượt ${state.cleared} · Boss ${state.bosses} · ${icon('test_tube')} ${state.potions}${change(state, 'potions')} · ${icon('mirror')} ${state.escapeTokens}${change(state, 'escapeTokens')} · ${chaosLabel(state)}`, inline: false },
-      { name: `${icon('moneybag')} Rút thưởng`, value: state.cleared ? `**${formatCoins(payout)} :coin:** · x${baseMultiplier(state).toFixed(2)}` : 'Chưa thể rút', inline: false },
+      { name: '🌀 Rift Modifier đang hoạt động', value: modifierText(state), inline: false },
+      { name: `${icon('moneybag')} Rút thưởng`, value: state.cleared ? `**${formatCoins(payout)} :coin:** · x${baseMultiplier(state).toFixed(2)}${state.payoutSpent ? ` · đã dùng ${formatCoins(state.payoutSpent)} xu cho sự kiện` : ''}` : 'Chưa thể rút', inline: false },
       ...itemFields(state, itemCatalog),
       { name: `${icon('scroll')} Diễn biến`, value: String(state.lastLog || '—').slice(0, 1024), inline: false },
     );
@@ -112,7 +145,12 @@ function hardcoreRows(sessionId, state, disabled, classes) {
   if (type === 'combat') return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'attack', 'Tấn công', 'crossed_swords', ButtonStyle.Primary), button(sessionId, turn, 'defend', 'Phòng thủ', 'shield', ButtonStyle.Secondary), button(sessionId, turn, 'skill', classes[state.classKey].skill, 'sparkles', ButtonStyle.Success, state.energy < 2), button(sessionId, turn, 'potion', `Bình máu (${state.potions})`, 'test_tube', ButtonStyle.Secondary, state.potions <= 0), retreat)];
   if (type === 'chest') return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'open', 'Mở hòm', 'unlock', ButtonStyle.Primary), button(sessionId, turn, 'inspect', 'Kiểm tra', 'eye', ButtonStyle.Secondary, state.encounter.inspected), button(sessionId, turn, 'sell', 'Bán hòm', 'dollar', ButtonStyle.Success), button(sessionId, turn, 'leave', 'Tránh Mimic', 'door', ButtonStyle.Secondary, !state.encounter.revealed), retreat)];
   if (type === 'shrine') return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'touch', 'Chạm Shrine', 'moyai', ButtonStyle.Primary), button(sessionId, turn, 'ignore', 'Bỏ qua', 'walking', ButtonStyle.Secondary), retreat)];
-  if (type === 'rngesus') return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'fight', 'Chiến đấu', 'crossed_swords', ButtonStyle.Danger), button(sessionId, turn, 'flee', 'Bỏ chạy 65%', 'running', ButtonStyle.Primary), button(sessionId, turn, 'bribe', 'Hối lộ −40%', 'money_with_wings', ButtonStyle.Secondary), button(sessionId, turn, 'pray', 'Cầu nguyện 10%', 'pray', ButtonStyle.Success), button(sessionId, turn, 'escape_token', `Vé (${state.escapeTokens})`, 'mirror', ButtonStyle.Secondary, state.escapeTokens <= 0))];
+  if (type === 'rngesus') return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'fight', 'Chiến đấu', 'crossed_swords', ButtonStyle.Danger), button(sessionId, turn, 'flee', 'Bỏ chạy 75%', 'running', ButtonStyle.Primary), button(sessionId, turn, 'bribe', 'Hối lộ −40%', 'money_with_wings', ButtonStyle.Secondary), button(sessionId, turn, 'pray', 'Cầu nguyện 10%', 'pray', ButtonStyle.Success), button(sessionId, turn, 'escape_token', `Vé (${state.escapeTokens})`, 'mirror', ButtonStyle.Secondary, state.escapeTokens <= 0))];
+  if (type === 'surprise') {
+    const action = state.encounter.kind === 'blacksmith' ? 'forge' : state.encounter.kind === 'purifier' ? 'purify' : 'event_accept';
+    const label = state.encounter.kind === 'blacksmith' ? 'Rèn +1 cấp' : state.encounter.kind === 'purifier' ? 'Giải nguyền' : state.encounter.kind === 'wandering_healer' ? 'Nhận hồi phục' : 'Đuổi theo';
+    return [new ActionRowBuilder().addComponents(button(sessionId, turn, action, label, state.encounter.kind === 'blacksmith' ? 'hammer' : state.encounter.kind === 'purifier' ? 'sparkles' : state.encounter.kind === 'wandering_healer' ? 'heart' : 'moneybag', ButtonStyle.Success), button(sessionId, turn, 'event_skip', 'Bỏ qua', 'walking', ButtonStyle.Secondary), retreat)];
+  }
   return [new ActionRowBuilder().addComponents(button(sessionId, turn, 'continue', type === 'trap' ? 'Chấp nhận số phận' : 'Đi tiếp', 'arrow_right', ButtonStyle.Primary), retreat)];
 }
 module.exports = { rankLabel, encounterText, chaosLabel, hardcoreEmbed, hardcoreRows };

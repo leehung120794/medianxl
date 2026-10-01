@@ -1,4 +1,5 @@
 const RARITY_TIERS = Object.freeze({ common: 'R', rare: 'SR', legendary: 'SSR', cursed: 'UR' });
+const EFFECT_KEYS = Object.freeze(['attack', 'defense', 'maxHp', 'resistance', 'critChance', 'luck', 'heal', 'potions', 'escapeTokens', 'defenseSet', 'bonusPenalty', 'curseDefenseLost']);
 
 function rarityLabel(rarity) {
   const tier = RARITY_TIERS[rarity] || rarity || 'R';
@@ -14,7 +15,15 @@ function normalizeEquipment(items) {
     if (previous) {
       previous.level += level;
       if (item.text) previous.text = item.text;
-    } else merged.set(item.name, { name: item.name, rarity: item.rarity || 'common', text: item.text || null, level });
+      if (item.typeCode) previous.typeCode = item.typeCode;
+      for (const key of EFFECT_KEYS) if (item[key] !== undefined) previous[key] = item[key];
+      if (item.purified) previous.purified = true;
+    } else {
+      const normalized = { name: item.name, rarity: item.rarity || 'common', typeCode: item.typeCode || null, text: item.text || null, level };
+      for (const key of EFFECT_KEYS) if (item[key] !== undefined) normalized[key] = item[key];
+      if (item.purified) normalized.purified = true;
+      merged.set(item.name, normalized);
+    }
   }
   return [...merged.values()];
 }
@@ -37,4 +46,4 @@ function effectText(item, level) {
   return effects.join(' · ') || item.text || 'Không rõ tác dụng';
 }
 
-module.exports = { RARITY_TIERS, rarityLabel, normalizeEquipment, effectText };
+module.exports = { RARITY_TIERS, EFFECT_KEYS, rarityLabel, normalizeEquipment, effectText };

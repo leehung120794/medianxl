@@ -24,11 +24,13 @@ function ratesEmbed() {
   return new EmbedBuilder().setColor(0xE67E22).setTitle('🎰 SINH TỒN · TỶ LỆ RNG')
     .setDescription('Tỷ lệ được roll và lưu khi encounter xuất hiện; restart bot không đổi kết quả.')
     .addFields(
-      { name: 'Hòm', value: 'Trước tiên: 12% Mimic · 3% Ancient Mimic.\nNếu không phải Mimic: 20% rỗng · 5% đồ giả · 40% R · 22% SR · 10% SSR · 3% UR (Nguyền). Nhặt lại cùng trang bị sẽ tăng cấp và cộng thêm hiệu ứng.' },
-      { name: 'RNGesus · Chaos', value: 'Base theo tầng: 5–9 là 0,3% · 10–19 là 0,6% · 20+ là 1%. Mỗi tầng nhân ngẫu nhiên x0,25–x3, tích Chaos khi lâu không gặp và có 2,5% khả năng Chaos Spike; xác suất cuối bị chặn ở 12%.\nBỏ chạy: 65% · Cầu nguyện: 10% · Boss không thể bị đánh bại.' },
+      { name: 'Hòm', value: 'Trước tiên: 12% Mimic · 3% Ancient Mimic.\nNếu không phải Mimic: 20% rỗng · 5% đồ giả · 40% TU · 22% Runeword · 10% SU/Set · 3% SU Nguyền. Unstable Rift tăng cả tỷ lệ hòm tốt và Mimic. Nhặt lại cùng trang bị sẽ tăng cấp.' },
+      { name: 'RNGesus · Chaos', value: 'Base theo tầng: 5–9 là 0,3% · 10–19 là 0,6% · 20+ là 1%. Mỗi tầng nhân ngẫu nhiên x0,25–x3, tích Chaos khi lâu không gặp và có 2,5% khả năng Chaos Spike; xác suất cuối bị chặn ở 12%.\nBỏ chạy: 75%; thất bại tự dùng Vé làm bảo hiểm nếu có · Cầu nguyện: 10% nhận SSR trở lên · Boss không thể bị đánh bại.' },
+      { name: 'Sự kiện bất ngờ', value: '4% encounter thường là Thợ rèn, Tu sĩ giải nguyền, Người chữa trị hoặc Treasure Goblin. Thợ rèn và Tu sĩ trừ chi phí trực tiếp từ payout của run.' },
       { name: 'Sự kiện xấu', value: '6% encounter thường là Tax Collector, trộm bình máu hoặc Wrong Portal. Tax mất 15% payout; Wrong Portal giữ nguyên tầng và roll lại encounter.' },
       { name: 'Pity', value: '5 hòm không có SR trở lên sẽ đảm bảo tối thiểu SR. Sau 10 hòm không có SSR, mỗi hòm cộng thêm 2% tỷ lệ SSR.' },
-      { name: 'Giới hạn', value: 'Tầng 100 hoàn thành chính thức · Overrun đến 999 · Payout ngừng tăng theo tầng sau 100 · Tối đa 10.000.000 xu.' },
+      { name: 'Rift Modifier', value: 'Mỗi 10 tầng thêm một trong 8 modifier. Sau khi có đủ tám loại, modifier tiếp tục lặp và cộng dồn hiệu lực.' },
+      { name: 'Giới hạn', value: 'Tầng 100 hoàn thành chính thức · Overrun đến 999 · tầng 999 phải hạ Deimoss cuối. Mô phỏng bằng item thật được cân bằng để tỷ lệ hoàn thành **dưới 0,5%**. Hệ số tầng ngừng tăng sau 100 nhưng bonus từ hòm/sự kiện vẫn được cộng · tối đa 10.000.000 xu.' },
     );
 }
 
@@ -37,7 +39,9 @@ module.exports = {
     .addSubcommand(command => command.setName('batdau').setDescription('Bắt đầu một lượt Sinh tồn')
       .addIntegerOption(option => option.setName('xu').setDescription(`Tiền cược (${MIN_BET}–${MAX_BET})`).setRequired(true).setMinValue(MIN_BET).setMaxValue(MAX_BET))
       .addStringOption(option => option.setName('class').setDescription('Class nhân vật').setRequired(true).addChoices(
-        { name: 'Barbarian', value: 'barbarian' }, { name: 'Assassin', value: 'assassin' }, { name: 'Sorceress', value: 'sorceress' },
+        { name: 'Amazon', value: 'amazon' }, { name: 'Assassin', value: 'assassin' }, { name: 'Barbarian', value: 'barbarian' },
+        { name: 'Druid', value: 'druid' }, { name: 'Necromancer', value: 'necromancer' }, { name: 'Paladin', value: 'paladin' },
+        { name: 'Sorceress', value: 'sorceress' },
       )))
     .addSubcommand(command => command.setName('hoso').setDescription('Xem thành tích Sinh tồn').addUserOption(option => option.setName('user').setDescription('Người chơi cần xem')))
     .addSubcommand(command => command.setName('top').setDescription('Xem bảng xếp hạng tầng cao nhất'))
