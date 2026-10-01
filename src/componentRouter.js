@@ -7,7 +7,7 @@ const { handlePokerButton, handlePokerPrivateButton, handlePokerModal } = requir
 const { handleHorseButton, handleHorseModal } = require('./services/horseRaceService');
 const { handleMinesButton } = require('./services/minesService');
 const { handleCoquayButton } = require('./services/coquayService');
-const { handleHardcoreButton } = require('./services/hardcoreService');
+const { handleHardcoreButton, handleHardcoreItemsButton } = require('./services/hardcoreService');
 const { handleCoinRequestButton } = require('./services/coinRequestService');
 const { handleRpsDuelButton } = require('./services/rpsDuelService');
 const { handleReplayButton } = require('./services/replayService');
@@ -51,6 +51,7 @@ const ROUTES = Object.freeze([
   { kind: 'button', prefix: 'bjduel:', handle: handleBlackjackDuelButton },
   { kind: 'button', prefix: 'poker-private:', handle: handlePokerPrivateButton },
   { kind: 'button', prefix: 'poker:', handle: handlePokerButton },
+  { kind: 'button', prefix: 'hardcore-items:', handle: handleHardcoreItemsButton },
   { kind: 'button', prefix: 'hardcore:', handle: handleHardcoreButton },
   { kind: 'button', prefix: 'mines:', handle: handleMinesButton },
   { kind: 'button', prefix: 'coquay:', handle: handleCoquayButton },
@@ -73,19 +74,40 @@ function interactionKind(interaction) {
   return null;
 }
 
+async function ephemeralResponse(interaction, content) {
+  const payload = { content, flags: MessageFlags.Ephemeral };
+  if (interaction.deferred || interaction.replied) return interaction.followUp(payload);
+  return interaction.reply(payload);
+}
+
 async function routeComponentInteraction(interaction, logger) {
   const kind = interactionKind(interaction);
   if (!kind) return false;
   const route = ROUTES.find(item => item.kind === kind && interaction.customId.startsWith(item.prefix));
   if (!route) return false;
+  // Sinh tồn có nhiều nút và embed lớn. ACK ngay trước mọi truy vấn/lock chung để
+  // Discord không hết cửa sổ phản hồi 3 giây khi server hoặc SQLite đang bận.
+  if (kind === 'button' && interaction.customId.startsWith('hardcore:') && !interaction.deferred && !interaction.replied) {
+    try {
+      await interaction.deferUpdate();
+      const acknowledgementDelayMs = Date.now() - (interaction.createdTimestamp || Date.now());
+      if (acknowledgementDelayMs > 1_500) logger?.warn({ interactionId: interaction.id, acknowledgementDelayMs }, 'slow hardcore interaction acknowledgement');
+    } catch (error) {
+      logger?.warn({ err: error, code: error?.code, interactionId: interaction.id }, 'could not acknowledge hardcore interaction in router');
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: 'Nút đã hết thời gian phản hồi. Hãy bấm lại trên bảng Sinh tồn mới nhất.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+      return true;
+    }
+  }
   const gameAction = /^(replay:|rpsbot:|chinchiro:|rpsduel:|bjduel:|poker:|poker-private:|hardcore:|mines:|coquay:|horserace:|blackjack:|gamebet:|gamebet-modal:|poker-modal:|poker-private-modal:|horserace-modal:)/.test(interaction.customId);
   if (gameAction && interaction.guildId && !interaction.customId.startsWith('blackjack-table:')
     && getBlackjackTableLock(interaction.guildId, interaction.user.id)) {
-    await interaction.reply({ content: 'Bạn đang ở bàn Xì dách và chỉ có thể thao tác tại bàn đó cho đến khi ván kết thúc.', flags: MessageFlags.Ephemeral });
+    await ephemeralResponse(interaction, 'Bạn đang ở bàn Xì dách và chỉ có thể thao tác tại bàn đó cho đến khi ván kết thúc.');
     return true;
   }
   await route.handle(interaction, logger);
   return true;
 }
 
-module.exports = { ROUTES, interactionKind, routeComponentInteraction };
+module.exports = { ROUTES, interactionKind, ephemeralResponse, routeComponentInteraction };

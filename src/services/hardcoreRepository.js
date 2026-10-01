@@ -5,6 +5,10 @@ function getByUser(guildId, userId) { return db.prepare('SELECT * FROM hardcore_
 function parseState(session) { return JSON.parse(session.state_json); }
 function saveState(session, state, now = Date.now()) { db.prepare('UPDATE hardcore_sessions SET state_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(state), now, session.id); }
 function setMessageId(id, messageId, now = Date.now()) { db.prepare('UPDATE hardcore_sessions SET message_id = ?, updated_at = ? WHERE id = ?').run(String(messageId), now, String(id)); }
+function relocateSession(id, guildId, userId, channelId, messageId, now = Date.now()) {
+  return db.prepare('UPDATE hardcore_sessions SET channel_id=?, message_id=?, updated_at=? WHERE id=? AND guild_id=? AND user_id=?')
+    .run(String(channelId), String(messageId), now, String(id), String(guildId), String(userId)).changes;
+}
 function insertSession(session, state) { db.prepare('INSERT INTO hardcore_sessions (id,guild_id,user_id,channel_id,message_id,state_json,created_at,updated_at) VALUES (?,?,?,?,NULL,?,?,?)')
   .run(session.id, session.guild_id, session.user_id, session.channel_id, JSON.stringify(state), session.created_at, session.updated_at); }
 function deleteSession(id) { return db.prepare('DELETE FROM hardcore_sessions WHERE id=?').run(String(id)).changes; }
@@ -18,4 +22,4 @@ function upsertRecord(guildId, userId, values, now = Date.now()) {
 }
 function getRecord(guildId, userId) { return db.prepare('SELECT * FROM hardcore_records WHERE guild_id=? AND user_id=?').get(String(guildId), String(userId)) || null; }
 function getTop(guildId, limit) { return db.prepare('SELECT * FROM hardcore_records WHERE guild_id=? ORDER BY best_floor DESC,completions DESC,updated_at ASC LIMIT ?').all(String(guildId), limit); }
-module.exports = { getSession, getActiveSession, getByUser, parseState, saveState, setMessageId, insertSession, deleteSession, listStale, upsertRecord, getRecord, getTop };
+module.exports = { getSession, getActiveSession, getByUser, parseState, saveState, setMessageId, relocateSession, insertSession, deleteSession, listStale, upsertRecord, getRecord, getTop };

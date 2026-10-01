@@ -14,6 +14,7 @@ Chọn một trong 7 class Median XL, đặt cược và bước vào hành trì
 - Hòm sử dụng TU, Runeword, Set và SU thật từ dữ liệu item của bot.
 - Thợ rèn nâng cấp item bằng payout; Tu sĩ giải lời nguyền và hoàn tác hiệu ứng phạt.
 - Boss hiển thị rõ sát thương vật lý hoặc phép; Phòng thủ nay chặn ổn định 40% sát thương còn lại và miễn chí mạng.
+- Battle card mới có thanh HP, màu cảnh báo và ý định đòn kế tiếp; chỉ số chi tiết cùng thông tin quái được mở bằng nút riêng tư.
 - Mimic, Shrine, bẫy, hòm rỗng và RNGesus có thể phá hỏng một run đang đẹp.
 - Tầng 100 là mốc hoàn thành chính thức; tầng 999 bắt buộc đánh bại Deimoss.
 
@@ -30,5 +31,7 @@ Hoặc dùng prefix:
 `!sinhton <số xu> <class>`
 
 Xem luật chi tiết bằng `/luat trochoi:Sinh tồn`, xem tỷ lệ bằng `/choi sinhton tyle`, xem hồ sơ bằng `/choi sinhton hoso` và xem top tầng bằng `/choi sinhton xephang`.
+
+Nếu bảng game bị mất hoặc Discord báo interaction lỗi, dùng `/choi sinhton tieptuc` để mở lại run đang lưu mà không mất tiến trình.
 
 **Biết dừng đúng lúc cũng là một kỹ năng. Deimoss thì không quan tâm.**

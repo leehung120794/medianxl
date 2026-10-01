@@ -201,6 +201,47 @@ async function run() {
   const survivalTopEmbed = survivalTop.replies[0].embeds[0].toJSON();
   assert.match(survivalTopEmbed.title, /SINH TỒN/);
   assert(survivalTopEmbed.description.indexOf('<@alice>') < survivalTopEmbed.description.indexOf('<@bob>'));
+  const hardcoreService = require('../src/services/hardcoreService');
+  const routedRun = hardcoreService.startHardcore({ guildId: 'command-guild', channelId: 'channel', userId: 'router-user', stake: 10,
+    classKey: 'barbarian', forcedEncounter: { type: 'empty' } });
+  const routerEvents = [];
+  const routedButton = suffix => ({
+    id: `hardcore-route-${suffix}`, createdTimestamp: Date.now(), customId: `hardcore:${routedRun.session.id}:0:continue`,
+    guildId: 'command-guild', channelId: 'channel', user: { id: 'router-user' }, deferred: false, replied: false,
+    isButton: () => true, isStringSelectMenu: () => false, isModalSubmit: () => false,
+    deferUpdate: async function deferUpdate() { this.deferred = true; routerEvents.push(`ack-${suffix}`); },
+    editReply: async payload => { routerEvents.push(`edit-${suffix}`); return payload; },
+    followUp: async payload => { routerEvents.push(`follow-${suffix}`); return payload; },
+    reply: async function reply(payload) { this.replied = true; routerEvents.push(`reply-${suffix}`); return payload; },
+    message: { id: routedRun.session.message_id },
+  });
+  const componentRouter = require('../src/componentRouter');
+  await Promise.all([
+    componentRouter.routeComponentInteraction(routedButton('a'), console),
+    componentRouter.routeComponentInteraction(routedButton('b'), console),
+  ]);
+  assert(routerEvents.includes('ack-a') && routerEvents.includes('ack-b'), 'mọi nút Sinh tồn phải được ACK ngay trong router');
+  assert.equal(JSON.parse(require('../src/services/hardcoreRepository').getSession(routedRun.session.id).state_json).cleared, 1,
+    'hai lượt bấm đồng thời chỉ được xử lý hành động một lần');
+  const routedState = JSON.parse(require('../src/services/hardcoreRepository').getSession(routedRun.session.id).state_json);
+  hardcoreService.playHardcore({ sessionId: routedRun.session.id, userId: 'router-user', expectedTurn: routedState.turn, action: 'retreat' });
+  require('../src/services/gameChannelService').setGameChannel('command-guild', 'hardcore', 'channel');
+  const resumeRun = hardcoreService.startHardcore({ guildId: 'command-guild', channelId: 'old-channel', userId: 'resume-user', stake: 10,
+    classKey: 'paladin', forcedEncounter: { type: 'empty' } });
+  hardcoreService.setMessageId(resumeRun.session.id, 'old-panel');
+  const resumeReplies = [];
+  await require('../src/commands/hardcore').execute({
+    guildId: 'command-guild', channelId: 'channel', user: { id: 'resume-user' },
+    options: { getSubcommand: () => 'tieptuc', getUser: () => null, getInteger: () => null, getString: () => null },
+    reply: async payload => { resumeReplies.push(payload); return { resource: { message: { id: 'resumed-panel' } } }; },
+  });
+  assert.equal(resumeReplies.length, 1);
+  assert.equal(resumeReplies[0].components.length, 2);
+  const resumedRow = require('../src/services/hardcoreRepository').getSession(resumeRun.session.id);
+  assert.equal(resumedRow.channel_id, 'channel');
+  assert.equal(resumedRow.message_id, 'resumed-panel');
+  assert.equal(JSON.parse(resumedRow.state_json).turn, 0, 'lệnh tiếp tục không được làm thay đổi state');
+  hardcoreService.playHardcore({ sessionId: resumeRun.session.id, userId: 'resume-user', expectedTurn: 0, action: 'retreat' });
   const assetUpdates = [];
   await leaderboard.handleSelect({
     customId: 'xephang:alice', values: ['assets'], guildId: 'command-guild', user: { id: 'alice' },

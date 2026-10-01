@@ -2,7 +2,7 @@ const { EmbedBuilder, MessageFlags, SlashCommandBuilder } = require('discord.js'
 const { requireGameChannel } = require('../utils/gameChannel');
 const { economyError, formatCoins } = require('../utils/economy');
 const {
-  MIN_BET, MAX_BET, CLASSES, startHardcore, setMessageId, hardcoreEmbed, hardcoreRows,
+  MIN_BET, MAX_BET, CLASSES, startHardcore, resumeHardcore, setMessageId, hardcoreEmbed, hardcoreRows,
   getHardcoreRecord, getHardcoreTop,
 } = require('../services/hardcoreService');
 
@@ -43,6 +43,7 @@ module.exports = {
         { name: 'Druid', value: 'druid' }, { name: 'Necromancer', value: 'necromancer' }, { name: 'Paladin', value: 'paladin' },
         { name: 'Sorceress', value: 'sorceress' },
       )))
+    .addSubcommand(command => command.setName('tieptuc').setDescription('Mở lại bảng điều khiển của lượt Sinh tồn đang chơi'))
     .addSubcommand(command => command.setName('hoso').setDescription('Xem thành tích Sinh tồn').addUserOption(option => option.setName('user').setDescription('Người chơi cần xem')))
     .addSubcommand(command => command.setName('top').setDescription('Xem bảng xếp hạng tầng cao nhất'))
     .addSubcommand(command => command.setName('rates').setDescription('Xem tỷ lệ gacha và sự kiện')),
@@ -62,6 +63,18 @@ module.exports = {
     }
     if (subcommand === 'rates') return interaction.reply({ embeds: [ratesEmbed()], flags: MessageFlags.Ephemeral });
     if (!await requireGameChannel(interaction, 'hardcore')) return null;
+    if (subcommand === 'tieptuc') {
+      let resumed;
+      try { resumed = resumeHardcore({ guildId: interaction.guildId, userId: interaction.user.id, channelId: interaction.channelId }); }
+      catch (error) {
+        if (error.message === 'NO_ACTIVE_SESSION') return interaction.reply({ content: 'Bạn không có lượt Sinh tồn nào đang diễn ra.', flags: MessageFlags.Ephemeral });
+        throw error;
+      }
+      const response = await interaction.reply({ embeds: [hardcoreEmbed(resumed.state, interaction.user.id, null, resumed.session.id)], components: hardcoreRows(resumed.session.id, resumed.state), withResponse: true });
+      const message = response?.resource?.message;
+      if (message?.id) setMessageId(resumed.session.id, message.id);
+      return resumed;
+    }
     const stake = interaction.options.getInteger('xu', true);
     const classKey = interaction.options.getString('class', true);
     let started;

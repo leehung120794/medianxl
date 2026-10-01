@@ -78,7 +78,7 @@ function help(prefix, command) {
   if (command === 'chinchiro') return `Cách dùng: \`${prefix}chinchiro <số xu>\``;
   if (command === 'coquay') return `Cách dùng: \`${prefix}coquay <số xu>\``;
   if (command === 'mines') return `Cách dùng: \`${prefix}domin <số xu> <số mìn 2–7>\``;
-  if (command === 'hardcore') return `Cách dùng: \`${prefix}sinhton <số xu> <amazon|assassin|barbarian|druid|necromancer|paladin|sorceress>\` hoặc \`${prefix}sinhton <hoso|xephang|tyle>\``;
+  if (command === 'hardcore') return `Cách dùng: \`${prefix}sinhton <số xu> <amazon|assassin|barbarian|druid|necromancer|paladin|sorceress>\` hoặc \`${prefix}sinhton <tieptuc|hoso|xephang|tyle>\``;
   if (command === 'vuatiengviet') return `Cách dùng: \`${prefix}vtv <batdau|boqua|ketthuc>\``;
   return `Cách dùng: \`${prefix}${command}\``;
 }
@@ -201,9 +201,9 @@ async function handleGamePrefix(message) {
     options = { integers: { xu: amount, min: mineCount } };
   } else if (name === 'hardcore') {
     const first = normalizeSearch(parts[0] || '');
-    if (['hoso', 'profile', 'top', 'xephang', 'rates', 'tyle'].includes(first)) {
+    if (['tieptuc', 'continue', 'hoso', 'profile', 'top', 'xephang', 'rates', 'tyle'].includes(first)) {
       const subcommand = first === 'profile' ? 'hoso' : first === 'tyle' ? 'rates' : first === 'xephang' ? 'top' : first;
-      options = { subcommand };
+      options = { subcommand: subcommand === 'continue' ? 'tieptuc' : subcommand };
     } else {
       const amount = Number(parts[0]);
       const classKey = normalizeSearch(parts[1] || '');

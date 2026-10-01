@@ -56,6 +56,18 @@ const ITEMS = Object.freeze({
 });
 
 const fairStateContext = new AsyncLocalStorage();
+const hardcoreInteractionQueues = new Map();
+
+function queueHardcoreInteraction(sessionId, task) {
+  const key = String(sessionId);
+  const previous = hardcoreInteractionQueues.get(key) || Promise.resolve();
+  const current = previous.catch(() => {}).then(task);
+  hardcoreInteractionQueues.set(key, current);
+  current.finally(() => {
+    if (hardcoreInteractionQueues.get(key) === current) hardcoreInteractionQueues.delete(key);
+  }).catch(() => {});
+  return current;
+}
 function nextFair(maximum, context) {
   const state = fairStateContext.getStore();
   if (!state?.fair?.serverSeed) return null;
@@ -77,6 +89,11 @@ function resolvePhysicalAttack(attacker, defender, level, options = {}) {
   const crit = critRoll < clamp((attacker.critChance || 0) - (defender.critResistance || 0), 0, 0.75);
   const raw = Math.floor(base * multiplier * (crit ? attacker.critDamage || 1.75 : 1));
   return { hit: true, crit, raw, damage: physicalAfterDefense(raw, defender.defense, level) };
+}
+
+function rollEnemyAttackType(enemy) {
+  if (enemy.damageType === 'physical' || enemy.damageType === 'magic') return enemy.damageType;
+  return randomFloat() < (enemy.magicChance || 0) ? 'magic' : 'physical';
 }
 
 
@@ -115,6 +132,7 @@ function makeEnemy(floor, rank = 'normal', forcedName = null, state = null) {
     if (boss.mechanic === 'abyssal_spires') enemy.damageReduction = 0.25;
     if (boss.mechanic === 'frenzy') enemy.frenzyStacks = 0;
   }
+  enemy.nextAttackType = rollEnemyAttackType(enemy);
   return enemy;
 }
 
@@ -423,6 +441,18 @@ const startTx = db.transaction(({ guildId, userId, channelId, stake, classKey, f
 
 function startHardcore(args) { return startTx(args); }
 
+const resumeTx = db.transaction(({ guildId, userId, channelId }) => {
+  const session = getHardcoreByUser(guildId, userId);
+  if (!session) throw new Error('NO_ACTIVE_SESSION');
+  const state = parseState(session);
+  const pendingMessageId = `pending:${Date.now()}:${crypto.randomBytes(3).toString('hex')}`;
+  const changed = hardcoreRepository.relocateSession(session.id, guildId, userId, channelId, pendingMessageId);
+  if (!changed) throw new Error('NO_ACTIVE_SESSION');
+  return { session: { ...session, channel_id: String(channelId), message_id: pendingMessageId }, state };
+});
+
+function resumeHardcore(args) { return resumeTx(args); }
+
 function finishRun(session, state, reason) {
   let payout = reason === 'cashout' || reason === 'summit' ? potentialPayout(state) : 0;
   const outcome = payout > state.stake ? 'win' : payout === state.stake ? 'draw' : 'loss';
@@ -446,7 +476,8 @@ function forceEndHardcoreSession(id, guildId, adminId, { label = 'admin-refund',
 
 function enemyTurn(state, defend = false, dodge = false) {
   const enemy = state.encounter;
-  if (dodge) return '💨 Bạn né hoàn toàn đòn phản công.';
+  const finishTurn = text => { enemy.nextAttackType = rollEnemyAttackType(enemy); return text; };
+  if (dodge) return finishTurn('💨 Bạn né hoàn toàn đòn phản công.');
   const bloodlust = enemy.hp <= enemy.maxHp / 2 ? modifierStacks(state, 'bloodlust') : 0;
   const frenzy = enemy.mechanic === 'frenzy' ? Math.min(5, enemy.frenzyStacks || 0) : 0;
   const damageMultiplier = 1 + bloodlust * 0.08 + frenzy * 0.08;
@@ -468,24 +499,24 @@ function enemyTurn(state, defend = false, dodge = false) {
     return effects.length ? ` ${effects.join(' · ')}.` : '';
   };
   const addFrenzy = () => { if (enemy.mechanic === 'frenzy') enemy.frenzyStacks = frenzy + 1; };
-  const useMagic = attacker.damageType === 'magic' || (attacker.damageType !== 'physical' && randomFloat() < attacker.magicChance);
+  const useMagic = (enemy.nextAttackType || rollEnemyAttackType(enemy)) === 'magic';
   if (useMagic) {
-    if (randomFloat() >= hitChance(attacker.accuracy, state.evasion)) { addFrenzy(); return '💨 Phép của quái đánh trượt.'; }
+    if (randomFloat() >= hitChance(attacker.accuracy, state.evasion)) { addFrenzy(); return finishTurn('💨 Phép của quái đánh trượt.'); }
     const raw = randomInt(attacker.damageMin, attacker.damageMax);
     const effectiveResistance = state.resistance - modifierStacks(state, 'cursed_ground') * 4;
     let damage = magicAfterResistance(raw, effectiveResistance);
     if (defend) damage = Math.max(1, Math.floor(damage * 0.6));
     state.hp = Math.max(0, state.hp - damage);
     const effects = afterHit(damage); addFrenzy();
-    return `🔮 Bạn nhận **${damage} sát thương phép**${defend ? ' sau khi đỡ 40%' : ''}.${effects}`;
+    return finishTurn(`🔮 Bạn nhận **${damage} sát thương phép**${defend ? ' sau khi đỡ 40%' : ''}.${effects}`);
   }
   const hit = resolvePhysicalAttack(attacker, defender, state.floor);
-  if (!hit.hit) { addFrenzy(); return '💨 Quái đánh trượt.'; }
+  if (!hit.hit) { addFrenzy(); return finishTurn('💨 Quái đánh trượt.'); }
   let damage = hit.damage;
   if (defend) damage = Math.max(1, Math.floor(damage * 0.6));
   state.hp = Math.max(0, state.hp - damage);
   const effects = afterHit(damage); addFrenzy();
-  return `${hit.crit ? '💢 Critical! ' : ''}Bạn nhận **${damage} sát thương vật lý**${defend ? ' sau khi đỡ 40%' : ''}.${effects}`;
+  return finishTurn(`${hit.crit ? '💢 Critical! ' : ''}Bạn nhận **${damage} sát thương vật lý**${defend ? ' sau khi đỡ 40%' : ''}.${effects}`);
 }
 
 function playerAttack(state, action) {
@@ -730,14 +761,38 @@ async function showHardcoreTurn(interaction, sessionId, state, result = null, se
 
 async function handleHardcoreButton(interaction, logger) {
   const [, sessionId, rawTurn, action] = interaction.customId.split(':');
-  await interaction.deferUpdate();
+  if (!interaction.deferred && !interaction.replied) {
+    try {
+      await interaction.deferUpdate();
+    } catch (error) {
+      logger?.warn({ err: error, code: error?.code, sessionId, interactionId: interaction.id,
+        acknowledgementDelayMs: Date.now() - (interaction.createdTimestamp || Date.now()) }, 'could not acknowledge hardcore interaction');
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ content: 'Nút đã hết thời gian phản hồi. Hãy bấm lại trên bảng Sinh tồn mới nhất.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+      return null;
+    }
+  }
+  return queueHardcoreInteraction(sessionId, async () => {
   try {
     const session = getSession(sessionId);
     if (!session || session.guild_id !== interaction.guildId || session.channel_id !== interaction.channelId) {
       return interaction.followUp({ content: 'Lượt Sinh tồn đã kết thúc hoặc nút không còn hợp lệ.', flags: MessageFlags.Ephemeral });
     }
+    if (session.message_id && session.message_id !== interaction.message?.id) {
+      return interaction.followUp({ content: 'Đây là bảng Sinh tồn cũ. Dùng `/choi sinhton tieptuc` để mở lại bảng mới nhất.', flags: MessageFlags.Ephemeral });
+    }
     if (session.user_id !== interaction.user.id) {
       return interaction.followUp({ content: 'Đây là lượt Sinh tồn của người chơi khác.', flags: MessageFlags.Ephemeral });
+    }
+    if (action === 'items') {
+      const state = parseState(session);
+      return interaction.followUp({ embeds: [hardcoreView.equipmentEmbed(state, ITEMS, 0)], components: hardcoreView.equipmentRows(session.id, state, 0), flags: MessageFlags.Ephemeral });
+    }
+    if (action === 'stats' || action === 'enemy_info') {
+      const state = parseState(session);
+      const embed = action === 'stats' ? hardcoreView.statsDetailEmbed(state) : hardcoreView.enemyDetailEmbed(state);
+      return interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
     const played = playHardcore({ sessionId, userId: interaction.user.id, expectedTurn: Number(rawTurn), action });
     return showHardcoreTurn(interaction, sessionId, played.state, played.result, played.settled, logger);
@@ -757,7 +812,40 @@ async function handleHardcoreButton(interaction, logger) {
               : error.message === 'NO_TOKEN' ? 'Bạn không có Vé Thoát Hiểm.'
                 : error.message === 'NOT_ENOUGH_PAYOUT' ? 'Payout hiện tại không đủ trả chi phí này.'
                   : error.message === 'ITEM_NOT_FOUND' ? 'Item của sự kiện không còn hợp lệ.' : 'Không thể thực hiện lựa chọn này.';
-    return interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+    if (!['NO_ENERGY', 'NO_POTION', 'FULL_HP', 'ALREADY_INSPECTED', 'NO_TOKEN', 'NOT_ENOUGH_PAYOUT', 'ITEM_NOT_FOUND', 'INVALID_ACTION', 'INVALID_SESSION'].includes(error.message)) {
+      logger?.error({ err: error, code: error?.code, sessionId, action, interactionId: interaction.id }, 'hardcore interaction failed after acknowledgement');
+    }
+    return interaction.followUp({ content, flags: MessageFlags.Ephemeral }).catch(responseError => {
+      logger?.warn({ err: responseError, code: responseError?.code, sessionId, interactionId: interaction.id }, 'could not send hardcore interaction error');
+      return null;
+    });
+  }
+  });
+}
+
+async function handleHardcoreItemsButton(interaction, logger) {
+  const [, sessionId, rawPage] = interaction.customId.split(':');
+  if (!interaction.deferred && !interaction.replied) {
+    try { await interaction.deferUpdate(); }
+    catch (error) {
+      logger?.warn({ err: error, code: error?.code, sessionId, interactionId: interaction.id }, 'could not acknowledge hardcore equipment page');
+      return null;
+    }
+  }
+  try {
+    const session = getSession(sessionId);
+    if (!session || session.guild_id !== interaction.guildId) {
+      return interaction.followUp({ content: 'Run Sinh tồn này đã kết thúc.', flags: MessageFlags.Ephemeral });
+    }
+    if (session.user_id !== interaction.user.id) {
+      return interaction.followUp({ content: 'Bạn không thể xem trang bị trong run của người khác.', flags: MessageFlags.Ephemeral });
+    }
+    const state = parseState(session);
+    const page = Math.max(0, Number(rawPage) || 0);
+    return interaction.editReply({ embeds: [hardcoreView.equipmentEmbed(state, ITEMS, page)], components: hardcoreView.equipmentRows(session.id, state, page) });
+  } catch (error) {
+    logger?.error({ err: error, code: error?.code, sessionId, interactionId: interaction.id }, 'hardcore equipment page failed');
+    return interaction.followUp({ content: 'Không thể tải danh sách trang bị lúc này.', flags: MessageFlags.Ephemeral }).catch(() => null);
   }
 }
 
@@ -779,10 +867,10 @@ function cleanupStaleHardcoreSessions(now = Date.now()) {
 module.exports = {
   MIN_BET, MAX_BET, MAX_PAYOUT, MAX_FLOOR, COMPLETION_FLOOR, CLASSES, ITEMS,
   hitChance, defenseReduction, physicalAfterDefense, magicAfterResistance, resolvePhysicalAttack,
-  enemyScale, makeEnemy, medianItemForRarity, addRiftModifier, rngesusChance, rollRngesus, chaosLabel, baseMultiplier, potentialPayout, generateEncounter,
+  enemyScale, makeEnemy, rollEnemyAttackType, medianItemForRarity, addRiftModifier, rngesusChance, rollRngesus, chaosLabel, baseMultiplier, potentialPayout, generateEncounter,
   applyItem, forgeItem, purifyItem, makeSurpriseEvent,
-  startHardcore, playHardcore, getHardcoreByUser, setMessageId, hardcoreEmbed, hardcoreRows, forceEndHardcoreSession,
-  handleHardcoreButton, getHardcoreRecord, getHardcoreTop, cleanupStaleHardcoreSessions,
+  startHardcore, resumeHardcore, playHardcore, getHardcoreByUser, setMessageId, hardcoreEmbed, hardcoreRows, forceEndHardcoreSession,
+  handleHardcoreButton, handleHardcoreItemsButton, getHardcoreRecord, getHardcoreTop, cleanupStaleHardcoreSessions,
 };
 
 

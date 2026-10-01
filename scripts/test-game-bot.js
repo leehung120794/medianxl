@@ -36,6 +36,7 @@ assert.deepEqual(require('../src/commands/poker').data.toJSON().options.map(opti
 assert.equal(require('../src/commands/use').data.toJSON().options.length, 0);
 assert.deepEqual(require('../src/commands/choi').data.toJSON().options.map(option => option.name),
   ['baucua', 'taixiu', 'chinchiro', 'oantuti', 'xidach', 'poker', 'duangua', 'domin', 'coquay', 'sinhton', 'vtv']);
+assert(require('../src/commands/choi').data.toJSON().options.find(option => option.name === 'sinhton').options.some(option => option.name === 'tieptuc'));
 assert.deepEqual(require('../src/commands/vatpham').data.toJSON().options.map(option => option.name),
   ['cuahang', 'mua', 'tui', 'sudung', 'tang', 'quay', 'chitiet']);
 assert.equal(require('../src/commands/quantri').data.toJSON().options.length, 25);
@@ -136,6 +137,7 @@ assert(Math.abs(Object.values(raceMarket.horses).reduce((sum, quote) => sum + qu
 assert(Object.values(raceMarket.horses).every(quote => quote.multiplier >= 1.5 && quote.multiplier <= 30));
 const hardcore = require('../src/services/hardcoreService');
 const hardcoreWorld = require('../src/services/hardcoreWorld');
+const hardcoreView = require('../src/services/hardcoreView');
 assert.equal(typeof hardcore.startHardcore, 'function');
 assert.equal(hardcore.COMPLETION_FLOOR, 100);
 assert.equal(hardcore.MAX_FLOOR, 999);
@@ -146,6 +148,8 @@ const finalBoss = hardcore.makeEnemy(999, 'final_boss', null, { modifiers: [] })
 assert.equal(finalBoss.name, 'Deimoss the Fleshweaver');
 assert.equal(finalBoss.rank, 'final_boss');
 assert.equal(finalBoss.damageType, 'physical');
+assert.equal(finalBoss.nextAttackType, 'physical');
+assert.equal(hardcoreView.hpBar(50, 100), '█████░░░░░');
 assert.match(JSON.stringify(hardcore.hardcoreEmbed({ classKey: 'barbarian', floor: 999, cleared: 998, encounter: finalBoss, modifiers: [], items: [], bosses: 19, stake: 10, bonus: 0, payoutFactor: 1, payoutSpent: 0, hp: 100, maxHp: 100, damageMin: 10, damageMax: 20, defense: 10, energy: 3, maxEnergy: 3, potions: 0, luck: 0, critChance: 0.1, evasion: 5, resistance: 5, escapeTokens: 0, turn: 0, lastLog: 'test' }, 'alice').toJSON()), /Vật lý/);
 assert.equal(hardcoreWorld.bossForFloor(50).damageType, 'physical');
 assert.equal(hardcoreWorld.bossForFloor(100).damageType, 'magic');
@@ -178,13 +182,34 @@ const hardcoreStarted = hardcore.startHardcore({ guildId: 'hardcore-structure', 
   classKey: 'barbarian', forcedEncounter: { type: 'empty' } });
 assert.doesNotThrow(() => hardcore.hardcoreEmbed(hardcoreStarted.state, 'alice').toJSON());
 assert.equal(hardcore.hardcoreRows(hardcoreStarted.session.id, hardcoreStarted.state)[0].components.length, 2);
+assert.equal(hardcore.hardcoreRows(hardcoreStarted.session.id, hardcoreStarted.state).length, 2);
+assert.match(hardcore.hardcoreRows(hardcoreStarted.session.id, hardcoreStarted.state)[1].components[0].data.custom_id, /:items$/);
 const crowdedState = { ...hardcoreStarted.state, items: Array.from({ length: 200 }, (_, index) => ({
   name: `Median Item ${index}`, rarity: 'legendary', typeCode: index % 2 ? 'SU' : 'SET', level: 1,
   text: '+10 sát thương, +10 Defense, +10 Resistance và một dòng mô tả đủ dài để kiểm tra giới hạn embed',
 })) };
 assert(hardcore.hardcoreEmbed(crowdedState, 'alice').toJSON().fields.length <= 25, 'run nhiều item không được vượt giới hạn field của Discord');
+const crowdedEmbed = hardcore.hardcoreEmbed(crowdedState, 'alice').toJSON();
+assert.equal(crowdedEmbed.fields.filter(field => /Trang bị/.test(field.name)).length, 1, 'embed chính chỉ được có một dòng tóm tắt trang bị');
+assert.doesNotMatch(crowdedEmbed.fields.find(field => /Trang bị/.test(field.name)).value, /Median Item 0/, 'embed chính không nhét danh sách item');
+const equipmentPage = hardcoreView.equipmentEmbed(crowdedState, hardcore.ITEMS, 0).toJSON();
+assert.match(equipmentPage.description, /Median Item 0/);
+assert.doesNotMatch(equipmentPage.description, /Median Item 8/);
+assert.equal(hardcoreView.equipmentRows('session', crowdedState, 0)[0].components[1].data.disabled, false);
 const hardcoreEnded = hardcore.playHardcore({ sessionId: hardcoreStarted.session.id, userId: 'alice', expectedTurn: 0, action: 'retreat' });
 assert.equal(hardcoreEnded.settled, true);
+channelSettings.setGameChannel('hardcore-resume', 'hardcore', 'new-channel');
+const resumable = hardcore.startHardcore({ guildId: 'hardcore-resume', userId: 'alice', channelId: 'old-channel', stake: 10,
+  classKey: 'barbarian', forcedEncounter: { type: 'empty' } });
+hardcore.setMessageId(resumable.session.id, 'old-panel');
+const resumed = hardcore.resumeHardcore({ guildId: 'hardcore-resume', userId: 'alice', channelId: 'new-channel' });
+hardcore.setMessageId(resumed.session.id, 'new-panel');
+const resumedSession = require('../src/services/hardcoreRepository').getSession(resumable.session.id);
+assert.equal(resumedSession.channel_id, 'new-channel');
+assert.equal(resumedSession.message_id, 'new-panel');
+assert.equal(JSON.parse(resumedSession.state_json).turn, 0, 'tiếp tục không được làm thay đổi trạng thái run');
+const resumedTurn = hardcore.playHardcore({ sessionId: resumable.session.id, userId: 'alice', expectedTurn: 0, action: 'continue' });
+hardcore.playHardcore({ sessionId: resumable.session.id, userId: 'alice', expectedTurn: resumedTurn.state.turn, action: 'retreat' });
 const hardcoreRepository = require('../src/services/hardcoreRepository');
 const insuredRun = hardcore.startHardcore({ guildId: 'hardcore-rng-insurance', userId: 'alice', channelId: 'channel', stake: 10,
   classKey: 'paladin', forcedEncounter: { type: 'rngesus', fleeSuccess: false, prayerSuccess: false, prayerRarity: 'legendary' } });
@@ -220,6 +245,10 @@ shieldBoss.damageMin = 1;
 shieldBoss.damageMax = 1;
 const shieldRun = hardcore.startHardcore({ guildId: 'hardcore-boss-mechanic', userId: 'sorceress', channelId: 'channel', stake: 10,
   classKey: 'sorceress', forcedEncounter: shieldBoss });
+const battlePanel = hardcore.hardcoreEmbed(shieldRun.state, 'sorceress').toJSON();
+assert.match(battlePanel.description, /Đòn kế tiếp/);
+assert.match(battlePanel.description, /█|░/);
+assert.equal(hardcore.hardcoreRows(shieldRun.session.id, shieldRun.state)[1].components.length, 3);
 const shieldedHit = hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 0, action: 'skill' });
 assert.equal(shieldedHit.state.encounter.hp, shieldBoss.maxHp, 'Rift Shield phải chặn đòn đầu tiên đánh vào boss');
 assert.equal(shieldedHit.state.encounter.attackAttempts, 1);

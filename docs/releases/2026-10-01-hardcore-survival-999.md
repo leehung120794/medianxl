@@ -13,13 +13,17 @@ Tầng 100 là mốc hoàn thành chính thức. Sau mốc này, người chơi 
 ## Cách bắt đầu
 
 - Slash command: `/choi sinhton batdau xu:<số xu> nhanvat:<class>`
+- Khôi phục bảng đang chơi: `/choi sinhton tieptuc`
 - Prefix command: `!sinhton <số xu> <class>`
+- Prefix khôi phục: `!sinhton tieptuc`
 - Xem luật: `/luat trochoi:Sinh tồn`
 - Xem tỷ lệ: `/choi sinhton tyle`
 - Xem hồ sơ: `/choi sinhton hoso`
 - Xem bảng xếp hạng: `/choi sinhton xephang`
 
 Tiền cược hợp lệ từ **10 đến 100.000 xu**, đồng thời chịu giới hạn cược riêng do server thiết lập. Tiền được giữ ngay khi bắt đầu. Mỗi người chỉ có một run Sinh tồn đang hoạt động trong cùng server.
+
+Nếu Discord báo interaction thất bại, bảng bị xóa hoặc bot vừa khởi động lại, lệnh `tieptuc` đọc nguyên trạng thái từ SQLite và đăng một bảng điều khiển mới. HP, tầng, payout, item, modifier và kết quả RNG đã roll không thay đổi. Bảng cũ bị vô hiệu hóa để tránh xử lý cùng một lượt hai lần.
 
 ## Bảy class nhân vật
 
@@ -99,6 +103,9 @@ Tại tầng 999, Deimoss xuất hiện dưới dạng **Boss cuối** với lư
 
 ## Giao tranh
 
+- Battle card hiển thị thanh HP 10 ô của hai bên, damage range, loại sát thương và ý định đòn kế tiếp.
+- Màu bảng đổi theo mức HP; boss dùng màu tím và Deimoss dùng màu đỏ sẫm.
+- Nút **Chỉ số** mở toàn bộ stat cùng Rift Modifier; nút **Thông tin quái** mở Defense, Resistance, Evasion và cơ chế riêng. Hai nút không tiêu tốn lượt.
 - **Tấn công:** đánh thường và hồi 1 Energy. Quái phản công nếu còn sống.
 - **Phòng thủ:** hồi 1 Energy, nhân đôi Defense, chặn thêm 40% sát thương còn lại và miễn chí mạng trong đòn kế tiếp.
 - **Kỹ năng:** dùng kỹ năng riêng của class, tốn 2 Energy.
@@ -106,6 +113,8 @@ Tại tầng 999, Deimoss xuất hiện dưới dạng **Boss cuối** với lư
 - **Rút thưởng:** kết thúc run và nhận payout đang hiển thị. Không thể rút khi đối mặt RNGesus.
 
 Defense giảm sát thương vật lý nhưng có giới hạn tối đa 75%. Resistance áp dụng cho sát thương phép, nằm trong khoảng −50% đến 75%. Accuracy và Evasion quyết định xác suất đánh trúng, với giới hạn từ 20% đến 95%.
+
+Ý định sát thương được roll và lưu cùng state trước khi người chơi hành động. Sau mỗi lần quái phản công hoặc bị né, bot roll ý định cho lượt kế tiếp. Vì vậy người chơi có thể quyết định Phòng thủ dựa trên thông tin thật đang được lưu, kể cả sau khi bot khởi động lại.
 
 ## Hòm và item Median XL thật
 
@@ -119,6 +128,8 @@ Hòm lấy tên, base item và stat từ bảng `items` hiện có của bot. It
 | UR · Nguyền | Sacred Unique (SU), kèm giảm payout |
 
 Các stat Median XL được quy đổi thành Attack, Defense, Resistance, HP hoặc Critical Chance. Nếu item không có stat phù hợp để quy đổi, item nhận Attack mặc định theo độ hiếm. Nhặt lại cùng item sẽ tăng cấp và cộng hiệu ứng thêm một lần.
+
+Bảng Sinh tồn chính chỉ hiển thị tổng số item, tổng level và số item còn bị nguyền. Nút **Trang bị** mở một bảng riêng tư gồm 8 món mỗi trang, cho phép xem đầy đủ tên, loại, level và hiệu ứng mà không làm nặng embed chính hoặc tiêu tốn lượt chơi.
 
 Tỷ lệ encounter cơ bản, sau khi đã vượt qua lần roll RNGesus:
 
