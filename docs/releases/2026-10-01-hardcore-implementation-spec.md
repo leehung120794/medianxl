@@ -877,7 +877,7 @@ Pool cơ bản gồm `wandering_healer`, `treasure_goblin`, `altar_of_sacrifice`
 - **Cursed Gambler:** một kết quả 50/50 pre-roll dùng chung cho lựa chọn cược 10% hoặc 25% payout.
 - **Lost Adventurer:** cứu bằng một potion để nhận R/SR; cướp nhận R hoặc UR với 25% nguy cơ UR.
 - **Blood Fountain:** 60% hồi đầy, 25% +15 Max HP, 15% chuyển sang Blood Mimic.
-- **Horadric Forge:** nghiền một level item đã khóa; hiệu ứng cũ giữ nguyên; đổi lấy damage, Defense, HP hoặc vé nếu item SSR/UR.
+- **Horadric Forge:** nghiền một level item đã khóa. Item giảm một level; nếu đang Lv.1 thì bị xóa khỏi danh sách. Chỉ số mà level đó từng cộng vào state không bị trừ và tồn tại tới cuối run. Sau đó người chơi chọn đúng một phần thưởng: +3 damage, +4 Defense, +10 Max HP/HP hiện tại, hoặc +1 Vé Thoát Hiểm nếu item là SSR/UR.
 - **Rift Merchant:** pre-roll ba trong năm mặt hàng; mua đúng một bằng payout rồi hoàn tất tầng.
 - **Mirror of Fate:** chọn build tấn công/phòng thủ, hoặc 20% nhận Luck và 80% đấu Mirror Clone.
 - **Treasure Room:** một trong ba hòm là Mimic; inspect tiết lộ một hòm an toàn hoặc Mimic; mỗi màu có reward riêng.

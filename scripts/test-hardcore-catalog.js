@@ -10,6 +10,7 @@ process.env.DB_PATH = testDb;
 const hardcore = require('../src/services/hardcoreService');
 const { ITEMS, validateItems } = require('../src/hardcore/item');
 const { effectText } = require('../src/services/hardcoreEquipment');
+const { equipmentSummary, encounterText } = require('../src/services/hardcoreView');
 
 assert.equal(validateItems(), true);
 assert.deepEqual(Object.fromEntries(Object.entries(ITEMS).map(([rarity, items]) => [rarity, items.length])), {
@@ -36,6 +37,8 @@ hardcore.applyItem(run, lens, 'common');
 assert.equal(run.accuracy, hardcore.CLASSES.barbarian.accuracy + 2);
 assert.equal(run.mimicDetection, 0.02);
 assert.match(effectText(run.items[0], 1), /Accuracy/);
+assert.match(equipmentSummary(run), /ACC \+2/);
+assert.match(equipmentSummary(run), /Dò Mimic \+2%/);
 
 run = state();
 const chains = ITEMS.cursed.find(item => item.id === 'berserker_chains');
@@ -69,6 +72,14 @@ hardcore.applyItem(run, cannon, 'cursed');
 assert.equal(run.defense, 0);
 hardcore.purifyItem(run, cannon.name, 1);
 assert.equal(run.defense, hardcore.CLASSES.barbarian.defense, 'Purifier phải khôi phục đúng Defense đã mất');
+
+const forgeText = encounterText({ encounter: { type: 'surprise', kind: 'horadric_forge', itemName: 'Rusted Edge', itemLevel: 1, itemRarity: 'common' } });
+assert.match(forgeText, /biến mất khỏi danh sách trang bị/);
+assert.match(forgeText, /vẫn được giữ đến hết run/);
+
+const absorbedSummary = equipmentSummary({ items: [], absorbedItemStats: { levels: 1, effects: { attack: 2 }, payoutFactor: 1, defenseSet: false } });
+assert.match(absorbedSummary, /ATK \+2/);
+assert.match(absorbedSummary, /1 cấp đã nghiền/);
 
 require('../src/db').db.close();
 for (const suffix of ['', '-wal', '-shm']) fs.rmSync(`${testDb}${suffix}`, { force: true });

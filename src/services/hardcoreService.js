@@ -471,6 +471,26 @@ function consumeEquipmentLevel(state, itemName) {
   const index = state.items.findIndex(item => item.name === itemName);
   if (index < 0) throw new Error('ITEM_NOT_FOUND');
   const item = state.items[index];
+  state.absorbedItemStats ||= { levels: 0, effects: {}, payoutFactor: 1, defenseSet: false };
+  const absorbed = state.absorbedItemStats;
+  const sets = [itemEffects(item)];
+  if (!item.purified && item.curse?.effects) sets.push(item.curse.effects);
+  for (const effects of sets) for (const [key, raw] of Object.entries(effects || {})) {
+    const value = Number(raw);
+    if (!Number.isFinite(value)) continue;
+    if (key === 'bonusPenalty') absorbed.payoutFactor *= 1 - value;
+    else if (key === 'defenseSet') absorbed.defenseSet = true;
+    else absorbed.effects[key] = (absorbed.effects[key] || 0) + value;
+  }
+  absorbed.levels += 1;
+  if (item.rarity === 'cursed' && !item.purified) absorbed.cursedLevels = (absorbed.cursedLevels || 0) + 1;
+  if (item.curseApplied && item.level > 0) {
+    for (const [key, total] of Object.entries(item.curseApplied)) {
+      item.curseApplied[key] = total - total / item.level;
+      if (Math.abs(item.curseApplied[key]) < 1e-9) delete item.curseApplied[key];
+    }
+  }
+  if (item.curseDefenseLost && item.level > 0) item.curseDefenseLost -= item.curseDefenseLost / item.level;
   if (item.level > 1) item.level -= 1; else state.items.splice(index, 1);
   return item;
 }
@@ -595,7 +615,8 @@ const startTx = db.transaction(({ guildId, userId, channelId, stake, classKey, f
     luck: 0, pityRare: 0, pityLegendary: 0, bosses: 0, bonus: 0, payoutFactor: 1, payoutSpent: 0,
     potionPower: 0, bossDamage: 0, eliteDamage: 0, mimicDetection: 0, goblinChance: 0,
     legendaryFind: 0, floorHpLoss: 0, mimicChance: 0, damageTaken: 0,
-    escapeTokens: 0, items: [], modifiers: [], contract: null, classBlessing: null, completed: false, turn: 0, phase: 'encounter', lastLog: 'Run bắt đầu.',
+    escapeTokens: 0, items: [], absorbedItemStats: { levels: 0, effects: {}, payoutFactor: 1, defenseSet: false, cursedLevels: 0 },
+    modifiers: [], contract: null, classBlessing: null, completed: false, turn: 0, phase: 'encounter', lastLog: 'Run bắt đầu.',
     rngesusDry: 0, lastChaosChance: 0, lastChaosSpike: false, fair: createFairness(), fairCounter: 0,
   };
   state.encounter = forcedEncounter || fairStateContext.run(state, () => generateEncounter(state));

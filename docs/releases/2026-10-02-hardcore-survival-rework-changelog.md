@@ -206,7 +206,7 @@ Surprise chiếm 4% encounter cơ bản. Event chọn đều trong pool hợp l�
 | Cursed Gambler | Kết quả 50/50 pre-roll; cược 10% hoặc 25%, thắng nhận lại gấp đôi |
 | Lost Adventurer | Cứu bằng 1 bình nhận R/SR; cướp có 25% nguy cơ nhận UR |
 | Blood Fountain | 60% hồi đầy; 25% +15 Max HP; 15% Blood Mimic |
-| Horadric Forge | Nghiền 1 level lấy +3 damage, +4 Defense, +10 HP hoặc +1 Vé với SSR/UR |
+| Horadric Forge | Nghiền 1 level: item giảm một level hoặc biến mất nếu đang Lv.1; chỉ số cấp đó đã cộng vào nhân vật vẫn giữ đến hết run. Sau đó nhận thêm +3 damage, +4 Defense, +10 Max HP/HP hiện tại hoặc +1 Vé nếu là SSR/UR |
 | Rift Merchant | Bán ngẫu nhiên 3/5 offer, trả bằng payout |
 | Mirror of Fate | Đổi 10% HP lấy 10% damage; hoặc +8 Defense/−2 damage; đập gương 20% +2 Luck, 80% đấu clone |
 | Treasure Room | Một trong ba hòm là Mimic; đỏ +5 damage, xanh +6 Defense/+5 Resistance, vàng +50% stake/+1 Luck |
@@ -291,6 +291,8 @@ Giới hạn:
 | Damage Taken | 0..50% |
 
 Chỉ **Goblin’s Debt** (−15%) và **Crown of Ruin** (−10%) giảm payout. 14 UR còn lại dùng curse chiến đấu hoặc tài nguyên. Purifier hoàn đúng phần phạt thực tế đã áp dụng, kể cả khi chỉ số từng chạm 0 hoặc trần, và không xóa buff.
+
+Battle card không còn chỉ ghi số món. Ô **Trang bị** cộng toàn bộ level đang sở hữu và cả chỉ số item đã hấp thụ qua Horadric Forge, rồi hiển thị tổng HP, ATK, Defense, Resistance, Accuracy, Evasion, Crit, Luck, Energy cùng các modifier đặc biệt. Bình, vé và lượng hồi khi nhặt được tách thành dòng lịch sử cấp tài nguyên để tránh nhầm với chỉ số còn lại hiện tại. Curse của UR bị nghiền được đánh dấu riêng vì vẫn tồn tại đến hết run.
 
 ## 11. Payout
 

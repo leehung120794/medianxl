@@ -65,6 +65,8 @@ const forge = start({ type: 'surprise', kind: 'horadric_forge', itemName: 'Ruste
 assertRows(forge.state);
 result = play(forge, 'salvage_attack');
 assert(!result.state.items.some(item => item.name === 'Rusted Edge'));
+assert.equal(result.state.absorbedItemStats.levels, 1);
+assert.equal(result.state.absorbedItemStats.effects.attack, ITEMS.common[0].effects.attack);
 cleanup(forge, result.state);
 
 const merchant = start({ type: 'surprise', kind: 'rift_merchant', offers: [

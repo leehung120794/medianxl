@@ -135,7 +135,7 @@ Catalog có đúng **100 món**: 32 R, 28 SR, 24 SSR và 16 UR. Mỗi món khai 
 
 Hiệu ứng không chỉ cộng HP, sát thương và Defense mà còn hỗ trợ Accuracy, Evasion, Energy, bình máu, damage lên Boss/Elite, phát hiện Mimic, bắt Treasure Goblin và cơ hội SSR. UR tách rõ **hiệu ứng có lợi** với **lời nguyền**, nên Tu sĩ giải nguyền chỉ hoàn tác phần phạt và giữ nguyên sức mạnh của món đồ. Chỉ **2/16 UR** giảm payout; 14 lời nguyền còn lại tác động đến chiến đấu hoặc tài nguyên để tránh chồng quá nhiều cơ chế mất payout.
 
-Bảng Sinh tồn chính chỉ hiển thị tổng số item, tổng level và số item còn bị nguyền. Nút **Trang bị** mở một bảng riêng tư gồm 8 món mỗi trang, cho phép xem đầy đủ tên, loại, level và hiệu ứng mà không làm nặng embed chính hoặc tiêu tốn lượt chơi.
+Bảng Sinh tồn chính hiển thị số item, tổng level và tổng chỉ số do trang bị tạo ra: HP, ATK, Defense, Resistance, Accuracy, Evasion, Crit, Luck, Energy cùng các modifier đặc biệt. Tổng này bao gồm chỉ số item đã hấp thụ qua Horadric Forge. Nút **Trang bị** mở bảng riêng tư gồm 8 món mỗi trang để xem từng item mà không tiêu tốn lượt chơi.
 
 Tỷ lệ encounter cơ bản, sau khi đã vượt qua lần roll RNGesus:
 
@@ -163,7 +163,7 @@ Người chơi có thể kiểm tra hòm một lần, mở hòm, bán hòm để
 - **Cursed Gambler:** cược 10% hoặc 25% payout với tỷ lệ thắng 50%.
 - **Lost Adventurer:** dùng một bình để cứu lấy R/SR, hoặc cướp item với 25% nguy cơ nhận UR.
 - **Blood Fountain:** hồi máu, tăng Max HP hoặc biến thành Blood Mimic.
-- **Horadric Forge:** nghiền một cấp trang bị để lấy damage, Defense, HP hoặc Vé Thoát Hiểm.
+- **Horadric Forge:** nghiền một cấp trang bị; item giảm một level hoặc biến mất nếu đang Lv.1, nhưng chỉ số cấp đã nghiền vẫn được nhân vật giữ đến hết run. Người chơi còn nhận thêm +3 damage, +4 Defense, +10 Max HP/HP hiện tại hoặc một Vé Thoát Hiểm nếu item là SSR/UR.
 - **Rift Merchant:** bán ngẫu nhiên ba món hỗ trợ, thanh toán từ payout.
 - **Mirror of Fate:** đổi HP/damage, đổi damage/Defense hoặc đánh cược với Mirror Clone.
 - **Treasure Room:** chọn hòm đỏ, xanh hoặc vàng; một hòm là Mimic và được kiểm tra một lần.

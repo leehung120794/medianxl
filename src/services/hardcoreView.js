@@ -3,7 +3,7 @@ const { formatCoins } = require('../utils/economy');
 const { baseMultiplier, potentialPayout, payoutLoss } = require('./hardcoreEngine');
 const { resultBlock, coins } = require('../utils/rewardText');
 const emojiMap = require('../discordEmojiMap');
-const { rarityLabel, normalizeEquipment, effectText } = require('./hardcoreEquipment');
+const { rarityLabel, itemEffects, normalizeEquipment, effectText } = require('./hardcoreEquipment');
 const { MODIFIERS, regionForFloor, modifierStacks } = require('./hardcoreWorld');
 
 const icon = (name, fallback = '•') => emojiMap[`:${name}:`] || fallback;
@@ -75,8 +75,8 @@ function encounterText(state) {
     return `**${names[encounter.kind]}**\nChọn **Chấp nhận số phận** để xử lý: ${detail}${luck}`;
   }
   if (encounter.type === 'surprise') {
-    if (encounter.kind === 'blacksmith') return `🔨 **THỢ RÈN LANG THANG**\nNâng **${encounter.itemName} Lv.${encounter.itemLevel}** thêm 1 cấp với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Cấp mới cộng lại hiệu ứng của item.`;
-    if (encounter.kind === 'purifier') return `✨ **TU SĨ GIẢI NGUYỀN**\nGiải lời nguyền của **${encounter.itemName} Lv.${encounter.itemLevel}** với giá **${formatCoins(encounter.cost)} xu từ payout hiện tại**. Item giữ hiệu ứng có lợi và trở thành SSR; các hiệu ứng phạt được hoàn tác.`;
+    if (encounter.kind === 'blacksmith') return `🔨 **THỢ RÈN LANG THANG**\nTrả **${formatCoins(encounter.cost)} xu payout** để tăng **${encounter.itemName} Lv.${encounter.itemLevel} → Lv.${encounter.itemLevel + 1}**. Bot áp lại toàn bộ chỉ số có lợi của item thêm một lần. Nếu đây là UR chưa giải nguyền, lời nguyền cũng cộng thêm một lần.`;
+    if (encounter.kind === 'purifier') return `✨ **TU SĨ GIẢI NGUYỀN**\nTrả **${formatCoins(encounter.cost)} xu payout** để giải toàn bộ lời nguyền đang cộng dồn trên **${encounter.itemName} Lv.${encounter.itemLevel}**. Bot hoàn lại phần chỉ số thực tế đã bị phạt, giữ nguyên mọi buff và đổi item thành SSR; các lần rèn sau chỉ cộng buff.`;
     if (encounter.kind === 'wandering_healer') return `🧙 **NGƯỜI CHỮA TRỊ LANG THANG**\nNhận miễn phí tối đa **${formatCoins(encounter.heal)} HP** và 1 bình máu, hoặc bỏ qua.`;
     if (encounter.kind === 'treasure_goblin') {
       const chance = Math.round((encounter.successChance ?? 0.6) * 1000) / 10;
@@ -86,7 +86,12 @@ function encounterText(state) {
     if (encounter.kind === 'cursed_gambler') return `🎲 **CURSED GAMBLER**\nChọn cược 10% hoặc 25% payout. Tỷ lệ thắng **50%**; thắng nhận lại gấp đôi tiền đã đặt, thua mất toàn bộ khoản cược.`;
     if (encounter.kind === 'lost_adventurer') return `🧭 **LOST ADVENTURER**\nDùng 1 bình máu để cứu và nhận trang bị R/SR, hoặc cướp đồ ngay để nhận R nhưng có **25%** khả năng dính UR bị nguyền.`;
     if (encounter.kind === 'blood_fountain') return '🩸 **BLOOD FOUNTAIN**\nUống máu: 60% hồi đầy HP · 25% nhận +15 HP tối đa · 15% đánh thức Blood Mimic.';
-    if (encounter.kind === 'horadric_forge') return `⚒️ **HORADRIC FORGE**\nNghiền 1 cấp **${encounter.itemName} Lv.${encounter.itemLevel}** để đổi lấy chỉ số. Hiệu ứng item đã hấp thụ trước đó vẫn được giữ.`;
+    if (encounter.kind === 'horadric_forge') {
+      const after = encounter.itemLevel > 1 ? `item còn **Lv.${encounter.itemLevel - 1}**` : 'item **biến mất khỏi danh sách trang bị**';
+      const token = ['legendary', 'cursed'].includes(encounter.itemRarity) ? ' hoặc **+1 Vé Thoát Hiểm**' : '';
+      const curseWarning = encounter.itemRarity === 'cursed' ? ' ⚠️ Nếu UR chưa giải nguyền, **curse của cấp bị nghiền cũng tồn tại đến hết run và không còn giải được nếu item biến mất**.' : '';
+      return `⚒️ **HORADRIC FORGE**\nNghiền 1 cấp **${encounter.itemName} Lv.${encounter.itemLevel}**; sau đó ${after}. **Buff mà cấp bị nghiền đã cộng vào nhân vật vẫn được giữ đến hết run** và được tính ở mục “đã hấp thụ”. Bạn còn nhận thêm đúng một bonus: **+3 Damage**, **+4 Defense**, **+10 Max HP và HP hiện tại**${token}.${curseWarning}`;
+    }
     if (encounter.kind === 'rift_merchant') return `🛒 **RIFT MERCHANT**\nChọn mua đúng một món bằng payout:\n${encounter.offers.map((offer, index) => `**${index + 1}. ${offer.name}:** ${formatCoins(offer.cost)} xu`).join('\n')}`;
     if (encounter.kind === 'mirror_of_fate') return '🪞 **MIRROR OF FATE**\nSức mạnh: tăng 10% damage nhưng mất 10% HP tối đa. Phòng thủ: +8 Defense, −2 damage. Đập gương: 20% nhận +2 Luck, còn lại phải đấu Mirror Clone.';
     if (encounter.kind === 'treasure_room') {
@@ -151,10 +156,60 @@ function equipmentLines(state, itemCatalog) {
 }
 function equipmentSummary(state) {
   const owned = normalizeEquipment(state.items);
-  if (!owned.length) return 'Chưa có trang bị.';
+  const absorbed = state.absorbedItemStats || {};
+  if (!owned.length && !absorbed.levels) return 'Chưa có trang bị.';
   const levels = owned.reduce((sum, item) => sum + item.level, 0);
   const cursed = owned.filter(item => item.rarity === 'cursed' && !item.purified).length;
-  return `**${owned.length} món · ${levels} tổng cấp**${cursed ? ` · ${cursed} đang bị nguyền` : ''}\nBấm **Trang bị** để xem công dụng và chuyển trang.`;
+  const totals = { ...(absorbed.effects || {}) };
+  let payoutFactor = Number.isFinite(absorbed.payoutFactor) ? absorbed.payoutFactor : 1;
+  let defenseSet = Boolean(absorbed.defenseSet);
+  for (const item of owned) {
+    const level = Math.max(1, item.level || 1);
+    const sets = [itemEffects(item)];
+    if (!item.purified && item.curse?.effects) sets.push(item.curse.effects);
+    for (const effects of sets) for (const [key, raw] of Object.entries(effects || {})) {
+      const value = Number(raw);
+      if (!Number.isFinite(value)) continue;
+      if (key === 'bonusPenalty') payoutFactor *= (1 - value) ** level;
+      else if (key === 'defenseSet') defenseSet = true;
+      else totals[key] = (totals[key] || 0) + value * level;
+    }
+  }
+  const number = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${formatCoins(Math.abs(value))}`;
+  const percent = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.round(Math.abs(value) * 100)}%`;
+  const main = [
+    totals.maxHp ? `❤️ HP ${number(totals.maxHp)}` : null,
+    totals.attack ? `⚔️ ATK ${number(totals.attack)}` : null,
+    totals.defense ? `🛡️ DEF ${number(totals.defense)}` : null,
+    totals.resistance ? `🔮 RES ${number(totals.resistance)}` : null,
+    totals.accuracy ? `🎯 ACC ${number(totals.accuracy)}` : null,
+    totals.evasion ? `💨 EVA ${number(totals.evasion)}` : null,
+    totals.critChance ? `💢 CRIT ${percent(totals.critChance)}` : null,
+    totals.luck ? `🍀 Luck ${number(totals.luck)}` : null,
+    totals.maxEnergy ? `✨ Energy ${number(totals.maxEnergy)}` : null,
+  ].filter(Boolean);
+  const special = [
+    totals.potionPower ? `Bình ${percent(totals.potionPower)}` : null,
+    totals.bossDamage ? `Boss DMG ${percent(totals.bossDamage)}` : null,
+    totals.eliteDamage ? `Elite DMG ${percent(totals.eliteDamage)}` : null,
+    totals.mimicDetection ? `Dò Mimic ${percent(totals.mimicDetection)}` : null,
+    totals.goblinChance ? `Bắt Goblin ${percent(totals.goblinChance)}` : null,
+    totals.legendaryFind ? `SSR ${percent(totals.legendaryFind)}` : null,
+    totals.floorHpLoss ? `HP/tầng −${Math.round(Math.abs(totals.floorHpLoss) * 100)}%` : null,
+    totals.mimicChance ? `Mimic ${percent(totals.mimicChance)}` : null,
+    totals.damageTaken ? `Damage nhận ${percent(totals.damageTaken)}` : null,
+    payoutFactor < 1 ? `Payout −${Math.round((1 - payoutFactor) * 100)}%` : null,
+    defenseSet ? 'Có lời nguyền đặt DEF khi nhặt' : null,
+  ].filter(Boolean);
+  const granted = [totals.potions ? `🧪 ${number(totals.potions)} bình` : null, totals.escapeTokens ? `🎫 ${number(totals.escapeTokens)} vé` : null,
+    totals.heal ? `❤️ đã hồi ${number(totals.heal)} HP khi nhặt` : null].filter(Boolean);
+  return [
+    `**${owned.length} món · ${levels} tổng cấp**${absorbed.levels ? ` · ${absorbed.levels} cấp đã nghiền` : ''}${cursed ? ` · ${cursed} đang bị nguyền` : ''}${absorbed.cursedLevels ? ` · ⚠️ ${absorbed.cursedLevels} curse đã hấp thụ` : ''}`,
+    main.length ? `**Tổng chỉ số item:** ${main.join(' · ')}` : null,
+    special.length ? `**Hiệu ứng đặc biệt:** ${special.join(' · ')}` : null,
+    granted.length ? `**Đã cấp khi nhặt:** ${granted.join(' · ')}` : null,
+    'Bấm **Trang bị** để xem từng món.',
+  ].filter(Boolean).join('\n').slice(0, 1024);
 }
 function temporaryEffectText(state) {
   const parts = [];
@@ -317,10 +372,10 @@ function hardcoreRows(sessionId, state, disabled, classes) {
     if (kind === 'blood_fountain') return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'blood_drink', 'Uống máu', 'drop_of_blood', ButtonStyle.Danger), skip, retreat)]);
     if (kind === 'horadric_forge') {
       const rewards = new ActionRowBuilder().addComponents(
-        button(sessionId, turn, 'salvage_attack', '+3 Damage', 'crossed_swords', ButtonStyle.Primary),
-        button(sessionId, turn, 'salvage_defense', '+4 Defense', 'shield', ButtonStyle.Secondary),
-        button(sessionId, turn, 'salvage_hp', '+10 HP', 'heart', ButtonStyle.Success),
-        button(sessionId, turn, 'salvage_token', '+1 Vé', 'mirror', ButtonStyle.Success, !['legendary', 'cursed'].includes(state.encounter.itemRarity)));
+        button(sessionId, turn, 'salvage_attack', 'Nghiền → +3 Damage', 'crossed_swords', ButtonStyle.Primary),
+        button(sessionId, turn, 'salvage_defense', 'Nghiền → +4 Defense', 'shield', ButtonStyle.Secondary),
+        button(sessionId, turn, 'salvage_hp', 'Nghiền → +10 HP', 'heart', ButtonStyle.Success),
+        button(sessionId, turn, 'salvage_token', 'Nghiền → +1 Vé', 'mirror', ButtonStyle.Success, !['legendary', 'cursed'].includes(state.encounter.itemRarity)));
       return withEquipment([rewards, new ActionRowBuilder().addComponents(skip, retreat)]);
     }
     if (kind === 'rift_merchant') return withEquipment([new ActionRowBuilder().addComponents(
