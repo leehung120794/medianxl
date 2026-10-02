@@ -1,5 +1,7 @@
 # Sinh tồn: Hành trình 999 tầng
 
+> Changelog đầy đủ của đợt rework ngày 02/10/2026: [`2026-10-02-hardcore-survival-rework-changelog.md`](./2026-10-02-hardcore-survival-rework-changelog.md)
+
 **Ngày phát hành:** 01/10/2026  
 **Trạng thái:** Sẵn sàng phát hành  
 **Phiên bản bot:** 2.0.0
@@ -14,7 +16,7 @@ Tầng 100 là mốc hoàn thành chính thức. Sau mốc này, người chơi 
 
 ## Cách bắt đầu
 
-- Slash command: `/choi sinhton batdau xu:<số xu> nhanvat:<class>`
+- Slash command: `/choi sinhton batdau`, sau đó chọn nhân vật và nhập cược trên bảng riêng tư
 - Khôi phục bảng đang chơi: `/choi sinhton tieptuc`
 - Prefix command: `!sinhton <số xu> <class>`
 - Prefix khôi phục: `!sinhton tieptuc`
@@ -23,7 +25,7 @@ Tầng 100 là mốc hoàn thành chính thức. Sau mốc này, người chơi 
 - Xem hồ sơ: `/choi sinhton hoso`
 - Xem bảng xếp hạng: `/choi sinhton xephang`
 
-Tiền cược hợp lệ từ **10 đến 100.000 xu**, đồng thời chịu giới hạn cược riêng do server thiết lập. Tiền được giữ ngay khi bắt đầu. Mỗi người chỉ có một run Sinh tồn đang hoạt động trong cùng server.
+Tiền cược hợp lệ từ **10 đến 100.000 xu**, đồng thời chịu giới hạn cược riêng do server thiết lập. Chọn nhân vật hoặc nhập cược chưa trừ xu; tiền chỉ được giữ khi bấm **Bắt đầu**. Bảng chuẩn bị hết hạn sau 5 phút. Mỗi người chỉ có một run Sinh tồn đang hoạt động trong cùng server.
 
 Nếu Discord báo interaction thất bại, bảng bị xóa hoặc bot vừa khởi động lại, lệnh `tieptuc` đọc nguyên trạng thái từ SQLite và đăng một bảng điều khiển mới. HP, tầng, payout, item, modifier và kết quả RNG đã roll không thay đổi. Bảng cũ bị vô hiệu hóa để tránh xử lý cùng một lượt hai lần.
 
@@ -118,18 +120,20 @@ Defense giảm sát thương vật lý nhưng có giới hạn tối đa 75%. Re
 
 Ý định sát thương được roll và lưu cùng state trước khi người chơi hành động. Sau mỗi lần quái phản công hoặc bị né, bot roll ý định cho lượt kế tiếp. Vì vậy người chơi có thể quyết định Phòng thủ dựa trên thông tin thật đang được lưu, kể cả sau khi bot khởi động lại.
 
-## Hòm và item Median XL thật
+## Hòm và trang bị riêng của Sinh tồn
 
-Hòm lấy tên, base item và stat từ bảng `items` hiện có của bot. Item chỉ tồn tại trong run, không đi vào kho đồ chung và biến mất khi run kết thúc.
+Hòm lấy trang bị từ `src/hardcore/item.js`, hoàn toàn không truy vấn bảng `items` của tính năng tra cứu Median XL. Trang bị chỉ tồn tại trong run, không đi vào kho đồ chung và biến mất khi run kết thúc.
 
-| Độ hiếm trong Sinh tồn | Nguồn item |
+| Độ hiếm trong Sinh tồn | Nguồn |
 | --- | --- |
-| R | Tiered Unique (TU) |
-| SR | Runeword (RW) |
-| SSR | Sacred Unique (SU) hoặc Set |
-| UR · Nguyền | Sacred Unique (SU), kèm giảm payout |
+| R | Catalog `common` |
+| SR | Catalog `rare` |
+| SSR | Catalog `legendary` |
+| UR · Nguyền | Catalog `cursed` |
 
-Các stat Median XL được quy đổi thành Attack, Defense, Resistance, HP hoặc Critical Chance. Nếu item không có stat phù hợp để quy đổi, item nhận Attack mặc định theo độ hiếm. Nhặt lại cùng item sẽ tăng cấp và cộng hiệu ứng thêm một lần.
+Catalog có đúng **100 món**: 32 R, 28 SR, 24 SSR và 16 UR. Mỗi món khai báo tên, mã, nhóm trang bị, tag build và khối `effects` riêng. Nhặt lại cùng item sẽ tăng cấp và cộng hiệu ứng thêm một lần. Có thể thêm hoặc cân bằng item trong file này mà không ảnh hưởng `/item` hay dữ liệu đồng bộ Median XL.
+
+Hiệu ứng không chỉ cộng HP, sát thương và Defense mà còn hỗ trợ Accuracy, Evasion, Energy, bình máu, damage lên Boss/Elite, phát hiện Mimic, bắt Treasure Goblin và cơ hội SSR. UR tách rõ **hiệu ứng có lợi** với **lời nguyền**, nên Tu sĩ giải nguyền chỉ hoàn tác phần phạt và giữ nguyên sức mạnh của món đồ. Chỉ **2/16 UR** giảm payout; 14 lời nguyền còn lại tác động đến chiến đấu hoặc tài nguyên để tránh chồng quá nhiều cơ chế mất payout.
 
 Bảng Sinh tồn chính chỉ hiển thị tổng số item, tổng level và số item còn bị nguyền. Nút **Trang bị** mở một bảng riêng tư gồm 8 món mỗi trang, cho phép xem đầy đủ tên, loại, level và hiệu ứng mà không làm nặng embed chính hoặc tiêu tốn lượt chơi.
 
@@ -141,20 +145,31 @@ Tỷ lệ encounter cơ bản, sau khi đã vượt qua lần roll RNGesus:
 Tỷ lệ bên trong hòm khi chưa có Unstable Rift:
 
 - 3% Ancient Mimic và 12% Mimic.
-- Nếu hòm thường không phải Mimic: 20% hòm rỗng, 5% đồ giả, 40% TU, 22% Runeword, 10% SU/Set và 3% SU Nguyền.
-- Nếu hòm kho báu không phải Mimic: 65% Runeword và 35% SU/Set.
+- Nếu hòm thường không phải Mimic: 20% hòm rỗng, 5% đồ giả, 40% R, 22% SR, 10% SSR và 3% UR Nguyền.
+- Nếu hòm kho báu không phải Mimic: 65% SR và 35% SSR.
 - Sau 5 hòm không nhận SR trở lên, hòm kế tiếp bảo đảm tối thiểu SR.
 - Sau 10 hòm không nhận SSR, mỗi hòm tiếp theo cộng thêm 2% cơ hội SSR, tối đa theo giới hạn hệ thống.
-- Luck tăng khả năng phát hiện Mimic và tăng cơ hội SSR.
+- Luck và hiệu ứng trang bị có thể tăng khả năng phát hiện Mimic, bắt Treasure Goblin hoặc tăng cơ hội SSR.
 
 Người chơi có thể kiểm tra hòm một lần, mở hòm, bán hòm để cộng 15% tiền cược vào payout, hoặc tránh Mimic nếu đã phát hiện thành công.
 
 ## Sự kiện bất ngờ
 
 - **Thợ rèn lang thang:** đề nghị nâng item được chọn thêm một cấp. Chi phí bằng 12% payout hiện tại và được trừ trực tiếp khỏi payout của run. Cấp mới cộng lại hiệu ứng của item.
-- **Tu sĩ giải nguyền:** dùng 20% payout hiện tại để giải lời nguyền. Item giữ hiệu ứng có lợi, trở thành SSR và hoàn tác giảm payout, giảm HP hoặc mất Defense do lời nguyền gây ra.
+- **Tu sĩ giải nguyền:** dùng 20% payout hiện tại để giải lời nguyền. Item giữ hiệu ứng có lợi, trở thành SSR và hoàn tác đúng phần phạt của item: payout, HP, Defense, Resistance, Accuracy/Evasion, Energy, bình máu hoặc các hệ số nguy hiểm.
 - **Người chữa trị lang thang:** hồi 30% HP tối đa và tặng một bình máu miễn phí.
 - **Treasure Goblin:** 60% bắt thành công để tăng payout; nếu thất bại sẽ mất 10% payout.
+- **Altar of Sacrifice:** đổi HP lấy damage hoặc payout lấy Defense.
+- **Cursed Gambler:** cược 10% hoặc 25% payout với tỷ lệ thắng 50%.
+- **Lost Adventurer:** dùng một bình để cứu lấy R/SR, hoặc cướp item với 25% nguy cơ nhận UR.
+- **Blood Fountain:** hồi máu, tăng Max HP hoặc biến thành Blood Mimic.
+- **Horadric Forge:** nghiền một cấp trang bị để lấy damage, Defense, HP hoặc Vé Thoát Hiểm.
+- **Rift Merchant:** bán ngẫu nhiên ba món hỗ trợ, thanh toán từ payout.
+- **Mirror of Fate:** đổi HP/damage, đổi damage/Defense hoặc đánh cược với Mirror Clone.
+- **Treasure Room:** chọn hòm đỏ, xanh hoặc vàng; một hòm là Mimic và được kiểm tra một lần.
+- **Rift Contract:** giữ một hạn chế trong ba tầng để nhận SSR, payout hoặc damage.
+- **Class Shrine:** cấp hiệu ứng riêng cho class trong tối đa ba tầng.
+- **The Door That Should Not Exist:** chọn cửa sáng, vàng hoặc đen với phần thưởng và nguy cơ riêng.
 
 Người chơi luôn có thể bỏ qua các sự kiện này và tiếp tục.
 
@@ -168,9 +183,9 @@ RNGesus bắt đầu có thể xuất hiện từ tầng 5 và không thể bị
 - **Vé Thoát Hiểm:** tiêu thụ một vé để đi tiếp an toàn.
 - **Chiến đấu:** chết ngay.
 
-Các bẫy khác gồm Tax Collector làm giảm 15% payout, kẻ trộm lấy bình máu và Wrong Portal. Portal có 25% dẫn tới Healing Sanctuary, Treasure Vault hoặc Rift Blessing rồi hoàn thành tầng an toàn. 75% còn lại gây mất HP, cạn Energy, mất bình máu, giảm payout hoặc giảm Defense/Resistance; sau đó người chơi vẫn ở nguyên tầng, phải đấu Rift Ambusher cấp Elite và chịu một đòn phủ đầu.
+Các bẫy khác gồm Tax Collector làm giảm 15% payout, kẻ trộm lấy bình máu và Wrong Portal. Portal có tỷ lệ cố định 50% dẫn tới Healing Sanctuary, Treasure Vault hoặc Rift Blessing rồi hoàn thành tầng an toàn. 50% còn lại gây mất HP, cạn Energy, mất bình máu, giảm payout hoặc giảm Defense/Resistance; sau đó người chơi vẫn ở nguyên tầng, phải đấu Rift Ambusher cấp Elite và chịu một đòn phủ đầu.
 
-Luck ngoài tăng SSR và khả năng phát hiện Mimic còn tăng 0,5 điểm phần trăm cơ hội Portal tốt, 1 điểm phần trăm cơ hội bắt Treasure Goblin và 1,5 điểm phần trăm Lucky Break cho mỗi điểm. Lucky Break vô hiệu hóa Tax Collector hoặc Potion Thief. Các giới hạn lần lượt là 40% Portal tốt, 80% bắt Goblin và 30% Lucky Break.
+Luck ngoài tăng SSR và khả năng phát hiện Mimic còn tăng 1 điểm phần trăm cơ hội bắt Treasure Goblin và 1,5 điểm phần trăm Lucky Break cho mỗi điểm. Lucky Break vô hiệu hóa Tax Collector hoặc Potion Thief. Các giới hạn lần lượt là 80% bắt Goblin và 30% Lucky Break. Wrong Portal luôn giữ tỷ lệ 50/50 và không chịu ảnh hưởng của Luck.
 
 ## Payout và điều kiện hoàn thành
 

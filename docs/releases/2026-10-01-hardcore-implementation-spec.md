@@ -1,5 +1,7 @@
 # Đặc tả kỹ thuật — Sinh tồn Median XL 999 tầng
 
+> Các thay đổi của release 02/10/2026, gồm event mới, item rework và công thức hiện hành: [`2026-10-02-hardcore-survival-rework-changelog.md`](./2026-10-02-hardcore-survival-rework-changelog.md)
+
 **Ngày chốt đặc tả:** 01/10/2026  
 **Phiên bản tham chiếu:** bot 2.0.0  
 **Mục đích:** tài liệu bàn giao để một lập trình viên hoặc AI khác có thể dựng lại chế độ Sinh tồn với cùng luật, cùng công thức và cùng hành vi lưu phiên.  
@@ -41,7 +43,7 @@ Trang bị nhận trong Sinh tồn chỉ tồn tại trong run. Nó không đi v
 Các đường vào tương đương:
 
 ```text
-/choi sinhton batdau xu:<10..100000> nhanvat:<class>
+/choi sinhton batdau
 /choi sinhton tieptuc
 /choi sinhton hoso [nguoidung]
 /choi sinhton xephang
@@ -54,6 +56,8 @@ Các đường vào tương đương:
 Tên class nội bộ: `amazon`, `assassin`, `barbarian`, `druid`, `necromancer`, `paladin`, `sorceress`.
 
 Giá trị cược hợp lệ còn phải nhỏ hơn hoặc bằng giới hạn `hardcore` riêng của server. Lệnh bắt đầu chỉ dùng trong channel đã cấu hình cho Sinh tồn. Lệnh hồ sơ, bảng xếp hạng và tỷ lệ có thể là response riêng tư.
+
+Slash `batdau` mở bảng chuẩn bị riêng tư. Người chơi chọn class bằng select menu, nhập cược bằng modal rồi bấm **Bắt đầu**. Chỉ thao tác cuối mới trừ xu và tạo session. Bảng hết hạn sau 5 phút. Prefix `!sinhton <xu> <class>` tiếp tục là đường bắt đầu nhanh.
 
 ---
 
@@ -745,11 +749,11 @@ Ngoài `+0,2%` SSR và `+3%` phát hiện Mimic mỗi điểm, Luck còn dùng b
 
 ```text
 luckyBreakChance    = min(0.30, luck*0.015)
-portalGoodChance    = min(0.40, 0.25 + luck*0.005)
+portalGoodChance    = 0.50
 treasureGoblinChance= min(0.80, 0.60 + luck*0.010)
 ```
 
-Lucky Break chỉ vô hiệu hóa Tax Collector và Potion Thief. Wrong Portal dùng trực tiếp `portalGoodChance`, không roll thêm Lucky Break. Treasure Goblin dùng `treasureGoblinChance`. Cả ba kết quả phải được pre-roll khi encounter được tạo và lưu kèm xác suất đã dùng.
+Lucky Break chỉ vô hiệu hóa Tax Collector và Potion Thief. Wrong Portal dùng tỷ lệ cố định 50% tốt / 50% xấu, không chịu ảnh hưởng của Luck và không roll thêm Lucky Break. Treasure Goblin dùng `treasureGoblinChance`. Cả ba kết quả phải được pre-roll khi encounter được tạo và lưu kèm xác suất đã dùng.
 
 ### 15.6. Kiểm tra và action hòm
 
@@ -768,52 +772,22 @@ detectionChance = min(0.85, 0.25 + luck*0.03)
 
 ---
 
-## 16. Item Median XL thật
+## 16. Trang bị riêng của Sinh tồn
 
-### 16.1. Mapping rarity sang database
+### 16.1. Catalog độc lập
 
-| Rarity game | Nhãn UI | `items.type_code` |
+Toàn bộ định nghĩa nằm trong `src/hardcore/item.js`. Engine Sinh tồn không query bảng SQLite `items`; bảng đó chỉ phục vụ lệnh tra cứu Median XL.
+
+| Rarity game | Nhãn UI | Mảng catalog |
 | --- | --- | --- |
-| `common` | R | `TU` |
-| `rare` | SR | `RW` |
-| `legendary` | SSR | `SU`, `SET` |
-| `cursed` | UR · Nguyền | `SU` |
+| `common` | R | `ITEMS.common` |
+| `rare` | SR | `ITEMS.rare` |
+| `legendary` | SSR | `ITEMS.legendary` |
+| `cursed` | UR · Nguyền | `ITEMS.cursed` |
 
-Query tối thiểu:
+Catalog có đúng 100 item: 32 `common`, 28 `rare`, 24 `legendary` và 16 `cursed`. Mỗi item phải có `id`, `name`, `rarity`, `typeCode`, `category`, `tags`, `text` và một object `effects`. UR còn phải có object `curse` gồm `id`, `text` và `effects`. `id` và `name` không được trùng. Module tự kiểm tra catalog lúc khởi động để cấu hình sai không âm thầm đi vào run.
 
-```sql
-SELECT id, type_code, name, base_type, stats_json
-FROM items
-WHERE type_code = ?
-ORDER BY id;
-```
-
-Pool có thể cache theo `type_code`. Khi database không có item phù hợp, dùng catalog dự phòng ở mục 16.4.
-
-### 16.2. Quy đổi stat Median XL
-
-Nối `stats_json` thành một chuỗi và kiểm tra regex không phân biệt hoa thường. Gọi tier R/SR/SSR/UR lần lượt là 1/2/3/4.
-
-| Regex | Hiệu ứng Sinh tồn |
-| --- | --- |
-| `enhanced damage`, `weapon physical`, hoặc `adds ... damage` | Attack `2 + tier*2` |
-| `defense`, `damage reduced`, `physical resist` | Defense `1 + tier*2` |
-| `resist`, `absorb` | Resistance `2 + tier*2` |
-| `life`, `vitality` | Max HP và heal `6 + tier*6` |
-| `critical`, `deadly strike` | Crit `0.01 + tier*0.01` |
-| Không regex nào khớp | Attack `1 + tier*2` |
-
-Một item có thể nhận nhiều hiệu ứng nếu nhiều regex khớp. Item cursed luôn thêm `bonusPenalty=0.10`.
-
-Tên hiển thị:
-
-```text
-<item.name> · <base_type>
-```
-
-Chỉ thêm ` · base_type` khi `base_type` có giá trị.
-
-### 16.3. Áp item và level
+### 16.2. Áp item và level
 
 Item được merge theo tên chính xác. Nhặt lần đầu tạo level 1; nhặt lại hoặc rèn tăng level và áp lại toàn bộ hiệu ứng một lần.
 
@@ -824,43 +798,27 @@ Thứ tự áp:
 3. `defenseSet` lưu lượng Defense bị mất vào `curseDefenseLost`, rồi đặt Defense về giá trị chỉ định.
 4. Resistance cộng và clamp `[-50,75]`.
 5. Crit cộng và clamp tối đa 75%.
-6. Luck, potion và escape token cộng trực tiếp.
+6. Luck, Accuracy, Evasion, potion và escape token cộng trực tiếp trong giới hạn tương ứng.
 7. Max HP không được xuống dưới 20; HP hiện tại thay đổi theo `heal` hoặc phần Max HP dương.
-8. `bonusPenalty` nhân vào `payoutFactor`.
-9. Tăng level.
+8. Energy, hiệu lực bình máu, damage Boss/Elite, phát hiện Mimic, bắt Goblin và tỉ lệ SSR cập nhật các modifier của run.
+9. `floorHpLoss`, `mimicChance` và `damageTaken` cập nhật modifier nguyền của run.
+10. `bonusPenalty` nhân vào `payoutFactor`.
+11. Tăng level.
 
 Item đã `purified=true` không áp lại phần phạt của rarity cursed khi lên cấp, nhưng vẫn nhận hiệu ứng có lợi.
 
-### 16.4. Catalog dự phòng
+### 16.3. Catalog mặc định
 
-#### R
+| Rarity | Số lượng | Vai trò chính |
+| --- | ---: | --- |
+| R | 32 | Chỉ số nhỏ, hồi phục và utility cơ bản |
+| SR | 28 | Item định hình hướng build ở giai đoạn giữa |
+| SSR | 24 | Hiệu ứng mạnh cho Boss, Elite, rương, Energy và sinh tồn |
+| UR · Nguyền | 16 | Buff rất mạnh đi kèm một nhược điểm độc lập |
 
-- Rusted Edge: +2 damage.
-- Dented Plate: +2 Defense.
-- Red Potion Belt: +1 potion.
-- Rabbit Foot: +1 Luck.
+UR tách `effects` có lợi khỏi `curse.effects`. Chỉ **Goblin’s Debt** và **Crown of Ruin** dùng `bonusPenalty`, tương ứng giảm payout 15% và 10% mỗi cấp. 14 UR còn lại dùng lời nguyền chiến đấu hoặc tài nguyên: giảm HP/Defense/Resistance/Energy/Accuracy/Evasion, làm bình yếu đi, mất HP sau mỗi tầng, tăng Mimic hoặc tăng damage nhận vào. Việc này tránh chồng quá nhiều nguồn giảm payout vốn đã xuất hiện trong event.
 
-#### SR
-
-- Hunter’s Fang: +4 damage, +4% Crit.
-- Runed Carapace: +5 Defense, +5 Resistance.
-- Heart of the Wild: +22 Max HP và hồi 22.
-- Lucky Coin: +3 Luck.
-
-#### SSR
-
-- One More Hit: +15 Max HP, hồi 15, +1 Vé Thoát Hiểm.
-- The Last Bad Decision: +9 damage, +8% Crit, −15 Max HP.
-- Warden’s Bulwark: +10 Defense, +12 Resistance.
-- Eye of RNGesus: +7 Luck, +3 damage.
-
-#### UR · Nguyền
-
-- Glass Cannon: +14 damage, đặt Defense về 0.
-- Schrödinger’s Armor: +12 Defense, −20 Max HP.
-- Goblin’s Debt: +10 Luck, giảm payout hiện tại 15%.
-
-### 16.5. Rèn và giải nguyền
+### 16.4. Rèn và giải nguyền
 
 Chi phí được khóa lúc tạo event:
 
@@ -905,16 +863,27 @@ Ba loại xác suất bằng nhau:
 
 - `tax_collector`: `payoutFactor *= 0.85`, rồi vượt tầng.
 - `potion_thief`: mất 1 potion nếu có, rồi vượt tầng.
-- `wrong_portal`: khi tạo trap, pre-roll `portalOutcome` rồi lưu vào encounter. Xác suất `good` là `min(0.40,0.25+luck*0.005)`, phần còn lại là `bad`. Nhánh tốt chọn đều: `healing_sanctuary` cho +10 Max HP, hồi đầy và +1 bình tối đa 5; `treasure_vault` cộng `max(1,floor(stake*0.5))` vào bonus; `rift_blessing` cho +4 Defense, +5 Resistance tối đa 75 và +1 Luck. Nhánh tốt hoàn tất tầng an toàn với reward multiplier 0. Nhánh xấu pre-roll một penalty trong pool hợp lệ: `blood_loss` gây tối đa `floor(maxHp*0.15)` damage nhưng không trực tiếp hạ HP dưới 1; `energy_drain` đặt Energy về 0; `supply_loss` lấy tối đa 2 bình; `payout_corruption` nhân `payoutFactor` với 0,9; `dimensional_curse` trừ tối đa 5 Defense và trừ 5 Resistance, không thấp hơn −50. Chỉ đưa Energy/Potion vào pool khi người chơi còn tài nguyên tương ứng. Sau penalty, giữ nguyên floor, tạo `Rift Ambusher` rank Elite và lập tức gọi một lượt tấn công của quái. Nếu người chơi sống, encounter chuyển thành combat bình thường; nếu đòn phủ đầu làm HP về 0, run kết thúc với `death`. Session cũ chưa có `portalOutcome` được xử lý như nhánh xấu với mặc định `blood_loss` để không roll lại sau restart.
+- `wrong_portal`: khi tạo trap, pre-roll `portalOutcome` rồi lưu vào encounter. Xác suất cố định là 50% `good` và 50% `bad`; Luck không tác động. Nhánh tốt chọn đều: `healing_sanctuary` cho +10 Max HP, hồi đầy và +1 bình tối đa 5; `treasure_vault` cộng `max(1,floor(stake*0.5))` vào bonus; `rift_blessing` cho +4 Defense, +5 Resistance tối đa 75 và +1 Luck. Nhánh tốt hoàn tất tầng an toàn với reward multiplier 0. Nhánh xấu pre-roll một penalty trong pool hợp lệ: `blood_loss` gây tối đa `floor(maxHp*0.15)` damage nhưng không trực tiếp hạ HP dưới 1; `energy_drain` đặt Energy về 0; `supply_loss` lấy tối đa 2 bình; `payout_corruption` nhân `payoutFactor` với 0,9; `dimensional_curse` trừ tối đa 5 Defense và trừ 5 Resistance, không thấp hơn −50. Chỉ đưa Energy/Potion vào pool khi người chơi còn tài nguyên tương ứng. Sau penalty, giữ nguyên floor, tạo `Rift Ambusher` rank Elite và lập tức gọi một lượt tấn công của quái. Nếu người chơi sống, encounter chuyển thành combat bình thường; nếu đòn phủ đầu làm HP về 0, run kết thúc với `death`. Session cũ chưa có `portalOutcome` được xử lý như nhánh xấu với mặc định `blood_loss` để không roll lại sau restart.
 
 ### 17.3. Surprise
 
-Pool cơ bản: `wandering_healer`, `treasure_goblin`. Chỉ thêm `blacksmith` khi có item rèn được và payout > 0; chỉ thêm `purifier` khi có item cursed chưa giải và payout > 0. Chọn đều trong pool hiện tại.
+Pool cơ bản gồm `wandering_healer`, `treasure_goblin`, `altar_of_sacrifice`, `lost_adventurer`, `blood_fountain`, `mirror_of_fate`, `treasure_room` và `strange_doors`. Thêm `rift_contract` hoặc `class_shrine` khi chưa có hiệu ứng cùng loại. Chỉ thêm `blacksmith` khi có item rèn được và payout > 0; `purifier` khi có item cursed; `horadric_forge` khi có item; `cursed_gambler` và `rift_merchant` khi có payout. Chọn đều trong pool hợp lệ.
 
 - **Wandering Healer:** hồi tối đa `max(20,floor(maxHp*0.30))`, +1 potion nhưng tổng potion tối đa 5.
 - **Treasure Goblin:** pre-roll 60% thành công. Thắng cộng `max(1,floor(stake*0.25))` vào bonus; thua `payoutFactor *= 0.90`.
 - **Blacksmith:** rèn item đã khóa trong encounter với giá 12% payout.
 - **Purifier:** giải item đã khóa trong encounter với giá 20% payout.
+- **Altar:** hiến 20% Max HP nhưng không xuống dưới 1 để nhận +3 damage, hoặc dùng 10% payout nhận +3 Defense.
+- **Cursed Gambler:** một kết quả 50/50 pre-roll dùng chung cho lựa chọn cược 10% hoặc 25% payout.
+- **Lost Adventurer:** cứu bằng một potion để nhận R/SR; cướp nhận R hoặc UR với 25% nguy cơ UR.
+- **Blood Fountain:** 60% hồi đầy, 25% +15 Max HP, 15% chuyển sang Blood Mimic.
+- **Horadric Forge:** nghiền một level item đã khóa; hiệu ứng cũ giữ nguyên; đổi lấy damage, Defense, HP hoặc vé nếu item SSR/UR.
+- **Rift Merchant:** pre-roll ba trong năm mặt hàng; mua đúng một bằng payout rồi hoàn tất tầng.
+- **Mirror of Fate:** chọn build tấn công/phòng thủ, hoặc 20% nhận Luck và 80% đấu Mirror Clone.
+- **Treasure Room:** một trong ba hòm là Mimic; inspect tiết lộ một hòm an toàn hoặc Mimic; mỗi màu có reward riêng.
+- **Rift Contract:** thử thách không potion, không skill hoặc không defend trong ba tầng tiếp theo. Vi phạm hủy reward nhưng không hủy run.
+- **Class Shrine:** hiệu ứng riêng của class kéo dài tối đa ba tầng hoặc hết khi hiệu ứng một lần được tiêu thụ.
+- **Strange Doors:** ba cửa có kết quả tốt/xấu được pre-roll riêng.
 - `event_skip`: bỏ qua, vượt tầng với reward multiplier 0.
 
 ---
@@ -1293,11 +1262,11 @@ Khi thay đổi bất kỳ phần nào sau đây phải chạy lại mô phỏng
 - checkpoint;
 - class/skill;
 - tỷ lệ chest/item;
-- mapping stat item thật;
+- catalog và hiệu ứng item Sinh tồn;
 - boss multiplier hoặc mechanic;
 - cách bot mô phỏng chọn upgrade, potion, chest và cashout.
 
-Mẫu 100 run chỉ phù hợp smoke test. Để tuyên bố tỷ lệ dưới 0,5%, nên chạy ít nhất hàng chục nghìn run theo nhiều seed và báo confidence interval, class, policy chơi và snapshot database item đã dùng.
+Mẫu 100 run chỉ phù hợp smoke test. Để tuyên bố tỷ lệ dưới 0,5%, nên chạy ít nhất hàng chục nghìn run theo nhiều seed và báo confidence interval, class, policy chơi và phiên bản `src/hardcore/item.js` đã dùng.
 
 ---
 
@@ -1311,7 +1280,7 @@ Mẫu 100 run chỉ phù hợp smoke test. Để tuyên bố tỷ lệ dưới 0
 6. Cài năm boss và test riêng từng mechanic.
 7. Cài `completeFloor`, checkpoint, upgrade và modifier.
 8. Cài encounter generator, chest, pity, event và RNGesus.
-9. Cài adapter đọc item Median XL và catalog fallback.
+9. Cài catalog `src/hardcore/item.js`, validation và logic áp trang bị.
 10. Cài payout/settlement/record.
 11. Cài Discord view, custom id, ACK, queue và resume.
 12. Chạy unit/integration test, sau đó mô phỏng cân bằng.

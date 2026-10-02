@@ -11,7 +11,7 @@
     "register": "node scripts/register-commands.js",
     "sync": "node scripts/sync.js",
     "announce": "node scripts/post-announcement.js",
-    "test": "node scripts/test-game-bot.js && node scripts/test-operations.js && node scripts/test-item-effects.js && node scripts/test-session-lifecycle.js && node scripts/test-blackjack-sim.js && node scripts/test-poker-bot.js && node scripts/test-coquay.js && node scripts/test-reward-text.js && node scripts/test-command-handlers.js && node scripts/test-median-item.js && node scripts/audit-command-security.js",
+    "test": "node scripts/test-game-bot.js && node scripts/test-operations.js && node scripts/test-item-effects.js && node scripts/test-session-lifecycle.js && node scripts/test-hardcore-setup.js && node scripts/test-hardcore-events.js && node scripts/test-hardcore-catalog.js && node scripts/test-blackjack-sim.js && node scripts/test-poker-bot.js && node scripts/test-coquay.js && node scripts/test-reward-text.js && node scripts/test-command-handlers.js && node scripts/test-median-item.js && node scripts/audit-command-security.js",
     "test:coverage": "c8 --check-coverage --lines 60 --functions 48 --branches 71 --statements 60 npm test",
     "test:stress": "node scripts/stress-economy.js",
     "simulate:hardcore": "node scripts/simulate-hardcore.js",

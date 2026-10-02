@@ -8,6 +8,7 @@ const { handleHorseButton, handleHorseModal } = require('./services/horseRaceSer
 const { handleMinesButton } = require('./services/minesService');
 const { handleCoquayButton } = require('./services/coquayService');
 const { handleHardcoreButton, handleHardcoreItemsButton } = require('./services/hardcoreService');
+const { handleSetupClass, handleSetupButton, handleSetupModal } = require('./services/hardcoreSetupService');
 const { handleCoinRequestButton } = require('./services/coinRequestService');
 const { handleRpsDuelButton } = require('./services/rpsDuelService');
 const { handleReplayButton } = require('./services/replayService');
@@ -52,6 +53,8 @@ const ROUTES = Object.freeze([
   { kind: 'button', prefix: 'poker-private:', handle: handlePokerPrivateButton },
   { kind: 'button', prefix: 'poker:', handle: handlePokerButton },
   { kind: 'button', prefix: 'hardcore-items:', handle: handleHardcoreItemsButton },
+  { kind: 'select', prefix: 'hardcore-setup-class:', handle: handleSetupClass },
+  { kind: 'button', prefix: 'hardcore-setup-', handle: handleSetupButton },
   { kind: 'button', prefix: 'hardcore:', handle: handleHardcoreButton },
   { kind: 'button', prefix: 'mines:', handle: handleMinesButton },
   { kind: 'button', prefix: 'coquay:', handle: handleCoquayButton },
@@ -64,6 +67,7 @@ const ROUTES = Object.freeze([
   { kind: 'modal', prefix: 'gamebet-modal:', handle: handleBetModal },
   { kind: 'modal', prefix: 'poker-modal:', handle: handlePokerModal },
   { kind: 'modal', prefix: 'poker-private-modal:', handle: handlePokerModal },
+  { kind: 'modal', prefix: 'hardcore-setup-modal:', handle: handleSetupModal },
   { kind: 'modal', prefix: 'game-config-modal:', handle: interaction => gameCommand.handleConfigModal(interaction) },
 ]);
 
@@ -100,7 +104,7 @@ async function routeComponentInteraction(interaction, logger) {
       return true;
     }
   }
-  const gameAction = /^(replay:|rpsbot:|chinchiro:|rpsduel:|bjduel:|poker:|poker-private:|hardcore:|mines:|coquay:|horserace:|blackjack:|gamebet:|gamebet-modal:|poker-modal:|poker-private-modal:|horserace-modal:)/.test(interaction.customId);
+  const gameAction = /^(replay:|rpsbot:|chinchiro:|rpsduel:|bjduel:|poker:|poker-private:|hardcore:|hardcore-setup-|mines:|coquay:|horserace:|blackjack:|gamebet:|gamebet-modal:|poker-modal:|poker-private-modal:|horserace-modal:)/.test(interaction.customId);
   if (gameAction && interaction.guildId && !interaction.customId.startsWith('blackjack-table:')
     && getBlackjackTableLock(interaction.guildId, interaction.user.id)) {
     await ephemeralResponse(interaction, 'Bạn đang ở bàn Xì dách và chỉ có thể thao tác tại bàn đó cho đến khi ván kết thúc.');

@@ -25,4 +25,10 @@ function potentialPayout(state) {
   const cappedGross = Math.min(MAX_PAYOUT, Math.max(0, gross));
   return Math.max(0, cappedGross - (Number(state.payoutSpent) || 0));
 }
-module.exports = { clamp, hitChance, defenseReduction, physicalAfterDefense, magicAfterResistance, enemyScale, baseMultiplier, potentialPayout };
+function payoutLoss(state, remainingFactor) {
+  const before = potentialPayout(state);
+  const factor = clamp(Number(remainingFactor) || 0, 0, 1);
+  const after = potentialPayout({ ...state, payoutFactor: (Number(state.payoutFactor) || 0) * factor });
+  return Math.max(0, before - after);
+}
+module.exports = { clamp, hitChance, defenseReduction, physicalAfterDefense, magicAfterResistance, enemyScale, baseMultiplier, potentialPayout, payoutLoss };

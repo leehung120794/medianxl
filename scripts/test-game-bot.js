@@ -143,6 +143,19 @@ assert.equal(hardcore.COMPLETION_FLOOR, 100);
 assert.equal(hardcore.MAX_FLOOR, 999);
 assert.equal(hardcore.baseMultiplier({ cleared: 100, bosses: 2 }), 12);
 assert.equal(hardcore.baseMultiplier({ cleared: 999, bosses: 19 }), 12, 'payout phải ngừng tăng sau tầng 100');
+const pricedEventState = {
+  classKey: 'barbarian', cleared: 10, stake: 100, bonus: 0, payoutFactor: 1, payoutSpent: 0, turn: 3,
+  items: [], energy: 3, potions: 2, escapeTokens: 0,
+};
+assert.equal(hardcore.payoutLoss(pricedEventState, 0.85), 29);
+const buttonLabel = (state, action) => hardcore.hardcoreRows('priced', state)
+  .flatMap(row => row.components).find(component => component.data.custom_id.endsWith(`:${action}`))?.data.label;
+assert.equal(buttonLabel({ ...pricedEventState, encounter: { type: 'surprise', kind: 'blacksmith', cost: 22 } }, 'forge'), 'Rèn +1 (-22 xu)');
+assert.equal(buttonLabel({ ...pricedEventState, encounter: { type: 'surprise', kind: 'purifier', cost: 38 } }, 'purify'), 'Giải nguyền (-38 xu)');
+assert.equal(buttonLabel({ ...pricedEventState, encounter: { type: 'trap', kind: 'tax_collector' } }, 'continue'), 'Nộp thuế (-29 xu)');
+assert.match(buttonLabel({ ...pricedEventState, encounter: { type: 'trap', kind: 'wrong_portal' } }, 'continue'), /rủi ro -19 xu/);
+assert.match(buttonLabel({ ...pricedEventState, encounter: { type: 'surprise', kind: 'treasure_goblin', penaltyRate: 0.1 } }, 'event_accept'), /rủi ro -19 xu/);
+assert.match(buttonLabel({ ...pricedEventState, encounter: { type: 'rngesus' } }, 'bribe'), /-76 xu/);
 assert(hardcore.enemyScale(999).hp < 100 && hardcore.enemyScale(999).damage < 50, 'quái tầng sâu không được tăng theo cấp số nhân');
 const finalBoss = hardcore.makeEnemy(999, 'final_boss', null, { modifiers: [] });
 assert.equal(finalBoss.name, 'Deimoss the Fleshweaver');
@@ -160,13 +173,40 @@ assert.equal(hardcoreWorld.bossForFloor(50).name, 'The Butcher');
 assert.equal(hardcoreWorld.bossForFloor(250).name, 'Deimoss the Fleshweaver');
 assert.equal(hardcore.luckyBreakChance(0), 0);
 assert.equal(hardcore.luckyBreakChance(20), 0.3);
-assert.equal(hardcore.portalGoodChance(0), 0.25);
-assert.equal(hardcore.portalGoodChance(30), 0.4);
+assert.equal(hardcore.portalGoodChance(0), 0.5);
+assert.equal(hardcore.portalGoodChance(30), 0.5, 'Luck không được thay đổi tỷ lệ 50/50 của Wrong Portal');
 assert.equal(hardcore.treasureGoblinChance(10), 0.7);
 assert.equal(hardcore.treasureGoblinChance(100), 0.8);
-const modifiedEnemy = hardcore.makeEnemy(100, 'normal', 'Modifier Dummy', { modifiers: ['stone_skin', 'fortified', 'swift_horror'] });
+const modifiedEnemy = hardcore.makeEnemy(100, 'normal', 'Modifier Dummy', { modifiers: ['stone_skin', 'fortified', 'swift_horror', 'elemental_dominion'] });
 const plainEnemy = hardcore.makeEnemy(100, 'normal', 'Plain Dummy', { modifiers: [] });
 assert(modifiedEnemy.maxHp > plainEnemy.maxHp && modifiedEnemy.defense > plainEnemy.defense && modifiedEnemy.evasion > plainEnemy.evasion);
+assert(modifiedEnemy.damageMin > plainEnemy.damageMin && modifiedEnemy.magicChance > plainEnemy.magicChance,
+  'Elemental Dominion phải tăng damage và khả năng dùng phép');
+assert.equal(modifiedEnemy.accuracy, plainEnemy.accuracy + 3, 'Swift Horror phải tăng 3 Accuracy mỗi stack');
+assert.equal(modifiedEnemy.evasion, plainEnemy.evasion + 1, 'Swift Horror phải tăng 1 Evasion mỗi stack');
+const riftPanel = hardcoreView.riftDetailEmbed({ modifiers: ['stone_skin', 'stone_skin', 'elemental_dominion', 'bloodlust', 'unstable_rift', 'fortified', 'swift_horror', 'soul_drain', 'cursed_ground'] }).toJSON();
+assert.match(JSON.stringify(riftPanel), /Stone Skin ×2/);
+assert.match(JSON.stringify(riftPanel), /Defense quái.*20%/);
+assert.match(JSON.stringify(riftPanel), /Soul Drain/);
+const allRiftEffects = hardcore.riftModifierEffects({ modifiers: [
+  'stone_skin', 'stone_skin', 'elemental_dominion', 'elemental_dominion', 'bloodlust', 'bloodlust',
+  'unstable_rift', 'unstable_rift', 'fortified', 'fortified', 'swift_horror', 'swift_horror',
+  'soul_drain', 'soul_drain', 'cursed_ground', 'cursed_ground',
+] }, { hp: 50, maxHp: 100 });
+assert.equal(allRiftEffects.stoneSkinMultiplier, 1.2);
+assert.equal(allRiftEffects.elementalDamageMultiplier, 1.08);
+assert.equal(allRiftEffects.magicChanceBonus, 0.08);
+assert.equal(allRiftEffects.bloodlustDamageMultiplier, 1.16);
+assert.equal(allRiftEffects.chestBoost, 0.04);
+assert.equal(allRiftEffects.ancientMimicChance, 0.05);
+assert.equal(allRiftEffects.mimicChance, 0.21);
+assert(Math.abs(allRiftEffects.treasureLegendaryChance - 0.45) < 1e-9);
+assert.equal(allRiftEffects.fortifiedMultiplier, 1.2);
+assert.equal(allRiftEffects.swiftAccuracyBonus, 6);
+assert.equal(allRiftEffects.swiftEvasionBonus, 2);
+assert.equal(allRiftEffects.soulDrainAmount, 1);
+assert.equal(allRiftEffects.cursedResistancePenalty, 8);
+assert.equal(hardcore.riftModifierEffects({ modifiers: Array(5).fill('soul_drain') }).soulDrainAmount, 2);
 assert(hardcore.defenseReduction(100, 10) > 0 && hardcore.defenseReduction(100, 10) < 0.75);
 const forgeState = { cleared: 10, stake: 100, bonus: 0, payoutFactor: 1, payoutSpent: 0, damageMin: 10, damageMax: 15, defense: 5,
   resistance: 0, critChance: 0, luck: 0, potions: 0, escapeTokens: 0, maxHp: 100, hp: 100,
@@ -289,12 +329,14 @@ const shieldRun = hardcore.startHardcore({ guildId: 'hardcore-boss-mechanic', us
 const battlePanel = hardcore.hardcoreEmbed(shieldRun.state, 'sorceress').toJSON();
 assert.match(battlePanel.description, /Đòn kế tiếp/);
 assert.match(battlePanel.description, /█|░/);
-assert.equal(hardcore.hardcoreRows(shieldRun.session.id, shieldRun.state)[1].components.length, 3);
+assert.equal(hardcore.hardcoreRows(shieldRun.session.id, shieldRun.state)[1].components.length, 4);
+assert.match(hardcore.hardcoreRows(shieldRun.session.id, shieldRun.state)[1].components[1].data.custom_id, /:rift_info$/);
 const shieldedHit = hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 0, action: 'skill' });
 assert.equal(shieldedHit.state.encounter.hp, shieldBoss.maxHp, 'Rift Shield phải chặn đòn đầu tiên đánh vào boss');
 assert.equal(shieldedHit.state.encounter.attackAttempts, 1);
 const openHit = hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 1, action: 'attack' });
-assert(openHit.state.encounter.hp < shieldBoss.maxHp, 'đòn thứ hai phải xuyên qua Rift Shield');
+assert.equal(openHit.state.encounter.attackAttempts, 2);
+assert.doesNotMatch(openHit.state.lastLog, /Rift Shield vô hiệu hóa/, 'đòn thứ hai không được kích hoạt lại Rift Shield');
 hardcore.playHardcore({ sessionId: shieldRun.session.id, userId: 'sorceress', expectedTurn: 2, action: 'retreat' });
 const fun = require('../src/services/funGameService');
 const vua = fun.startVuaSession('test-guild', { forceHard: false, now: 1 });
