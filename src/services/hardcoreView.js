@@ -73,12 +73,30 @@ function checkpointPreview(state) {
   const definitions = [
     ['strength', '💪 +5 STR'], ['dexterity', '🎯 +5 DEX'], ['vitality', '❤️ +5 VIT'], ['energy', '🔮 +5 ENE'],
   ];
-  const currentLine = `**Tổng hiện tại**\nHP ${current.maxHp} · ⚔️ ${current.damageMin}–${current.damageMax} · ✨ ${current.spellMin}–${current.spellMax}\nDEF ${current.defense} · ACC ${current.accuracy} · EVA ${current.evasion} · Crit ${numberPercent(current.critChance)} · RES ${current.resistance}% · Mana ${current.maxMana} · Bình ${numberPercent(current.potionRate)}`;
-  const options = definitions.map(([key, label]) => {
+  return definitions.map(([key, label]) => {
     const projected = deriveStats({ ...state, attributes: { ...(state.attributes || {}), [key]: (state.attributes?.[key] || 0) + 5 } });
-    return `**${label}** → HP ${projected.maxHp} · ⚔️ ${projected.damageMin}–${projected.damageMax} · ✨ ${projected.spellMin}–${projected.spellMax} · DEF ${projected.defense} · ACC ${projected.accuracy} · EVA ${projected.evasion} · Crit ${numberPercent(projected.critChance)} · RES ${projected.resistance}% · Mana ${projected.maxMana} · Bình ${numberPercent(projected.potionRate)}`;
-  });
-  return [currentLine, ...options].join('\n');
+    const changes = [];
+    if (projected.maxHp !== current.maxHp) changes.push(`HP ${transition(current.maxHp, projected.maxHp)}`);
+    if (projected.damageMin !== current.damageMin || projected.damageMax !== current.damageMax) changes.push(`⚔️ ${current.damageMin}–${current.damageMax}→**${projected.damageMin}–${projected.damageMax}**`);
+    if (projected.spellMin !== current.spellMin || projected.spellMax !== current.spellMax) changes.push(`✨ ${current.spellMin}–${current.spellMax}→**${projected.spellMin}–${projected.spellMax}**`);
+    if (projected.defense !== current.defense) changes.push(`DEF ${transition(current.defense, projected.defense)}`);
+    if (projected.accuracy !== current.accuracy) changes.push(`ACC ${transition(current.accuracy, projected.accuracy)}`);
+    if (projected.evasion !== current.evasion) changes.push(`EVA ${transition(current.evasion, projected.evasion)}`);
+    if (projected.critChance !== current.critChance) changes.push(`Crit ${transition(current.critChance, projected.critChance, numberPercent)}`);
+    if (projected.resistance !== current.resistance) changes.push(`RES ${transition(current.resistance, projected.resistance, value => `${value}%`)}`);
+    if (projected.maxMana !== current.maxMana) changes.push(`Mana ${transition(current.maxMana, projected.maxMana)}`);
+    if (projected.potionRate !== current.potionRate) changes.push(`Bình ${transition(current.potionRate, projected.potionRate, numberPercent)}`);
+    return `**${label}:** ${changes.join(' · ')}`;
+  }).join('\n');
+}
+function checkpointCurrentStats(state) {
+  if (state.statVersion !== STAT_VERSION) return statLine(state);
+  const stats = deriveStats(state);
+  return [
+    `❤️ HP **${state.hp}/${stats.maxHp}** · ⚔️ **${stats.damageMin}–${stats.damageMax}** · ✨ **${stats.spellMin}–${stats.spellMax}**`,
+    `🛡️ DEF **${stats.defense}** · ACC **${stats.accuracy}** · EVA **${stats.evasion}** · Crit **${numberPercent(stats.critChance)}**`,
+    `🔮 RES **${stats.resistance}%** · Mana **${state.energy}/${stats.maxMana}** · Bình **${numberPercent(stats.potionRate)}**`,
+  ].join('\n');
 }
 function shrineCatalogText(state) {
   if (state.statVersion !== STAT_VERSION) return [
@@ -465,7 +483,10 @@ function hardcoreEmbed(state, userId, result, classes, sessionId = null, itemCat
       { name: `${icon('scroll')} Lượt vừa rồi`, value: String(state.lastLog || 'Run bắt đầu.').slice(0, 1024), inline: false },
     );
   else embed.addFields(
-      ...(state.phase === 'upgrade' ? [{ name: `${icon('bar_chart')} Chọn thuộc tính · chỉ số sau nâng cấp`, value: checkpointPreview(state), inline: false }] : []),
+      ...(state.phase === 'upgrade' ? [
+        { name: `${icon('bar_chart')} Chỉ số hiện tại`, value: checkpointCurrentStats(state), inline: false },
+        { name: `${icon('gift')} Tăng điểm · chỉ hiển thị thay đổi`, value: checkpointPreview(state), inline: false },
+      ] : []),
       ...(state.encounter?.type === 'shrine' ? [{ name: `${icon('moyai')} Các Shrine có thể gặp`, value: shrineCatalogText(state), inline: false }] : []),
       { name: `${icon('compass')} Tiến trình & Chaos`, value: `Đã vượt ${state.cleared} · Boss ${state.bosses} · ${icon('test_tube')} ${state.potions}${change(state, 'potions')} · ${icon('mirror')} ${state.escapeTokens}${change(state, 'escapeTokens')}${temporaryEffectText(state)}\n${chaosExplanation(state)}`, inline: false },
       { name: '🌀 Rift Modifier đang hoạt động', value: modifierText(state), inline: false },
@@ -583,4 +604,4 @@ function hardcoreRows(sessionId, state, disabled, classes) {
   if (type === 'trap' && state.encounter.kind === 'wrong_portal') continueLabel = `Đi vào (rủi ro -${formatCoins(payoutLoss(state, 0.9))} xu)`;
   return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'continue', continueLabel, 'arrow_right', ButtonStyle.Primary), retreat)]);
 }
-module.exports = { hpBar, damageTypeText, battleText, combatIncomingPreview, shrineCatalogText, battleColor, rankLabel, encounterText, chaosLabel, chaosExplanation, equipmentSummary, equipmentEmbed, equipmentRows, modifierEffectText, riftDetailEmbed, statsDetailEmbed, enemyDetailEmbed, hardcoreEmbed, hardcoreRows };
+module.exports = { hpBar, damageTypeText, battleText, combatIncomingPreview, checkpointCurrentStats, shrineCatalogText, battleColor, rankLabel, encounterText, chaosLabel, chaosExplanation, equipmentSummary, equipmentEmbed, equipmentRows, modifierEffectText, riftDetailEmbed, statsDetailEmbed, enemyDetailEmbed, hardcoreEmbed, hardcoreRows };

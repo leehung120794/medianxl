@@ -111,7 +111,7 @@ Critical damage = 175% damage trước giảm trừ
 
 ### 4.1. Dự báo chỉ số và sát thương
 
-- Ở checkpoint, mục dự báo hiển thị toàn bộ chỉ số hiện tại và toàn bộ chỉ số sau từng lựa chọn `+5 STR`, `+5 DEX`, `+5 VIT` hoặc `+5 ENE`: HP, damage vật lý, damage phép, DEF, ACC, EVA, Crit, RES, Max Mana và hiệu lực bình máu.
+- Ở checkpoint, **Chỉ số hiện tại** là một khối riêng gồm HP, damage vật lý, damage phép, DEF, ACC, EVA, Crit, RES, Mana và hiệu lực bình máu. Khối **Tăng điểm** chỉ liệt kê những giá trị thực sự đổi sau từng lựa chọn `+5 STR`, `+5 DEX`, `+5 VIT` hoặc `+5 ENE`; chỉ số không đổi do công thức hoặc chưa chạm mốc làm tròn sẽ không xuất hiện.
 - Ở combat, dòng **Dự báo nhận** dùng đúng quái và loại đòn kế tiếp đang hiển thị. Dự báo tính tỷ lệ trúng, Defense hoặc Resistance, Rift Modifier, curse tăng damage nhận, Bloodlust/Frenzy và Class Shrine đang hoạt động.
 - Khoảng damage dự báo là lượng HP mất nếu đòn đánh trúng, **chưa tính Critical và chưa dùng nút Phòng thủ**. Vì vậy Critical thực tế có thể cao hơn con số này; bấm Phòng thủ sẽ thấp hơn.
 
