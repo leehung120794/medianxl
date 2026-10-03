@@ -75,7 +75,8 @@ module.exports = {
     const classKey = interaction.options.getString?.('class') ?? null;
     if (stake === null || classKey === null) return openHardcoreSetup(interaction);
     let started;
-    try { started = startHardcore({ guildId: interaction.guildId, userId: interaction.user.id, channelId: interaction.channelId, stake, classKey }); }
+    try { started = startHardcore({ guildId: interaction.guildId, userId: interaction.user.id, playerName: interaction.user.globalName || interaction.user.displayName || interaction.user.username,
+      channelId: interaction.channelId, stake, classKey }); }
     catch (error) {
       if (error.message === 'ACTIVE_SESSION') return interaction.reply({ content: 'Bạn đang có một lượt Sinh tồn chưa kết thúc trong server này.', flags: MessageFlags.Ephemeral });
       if (error.message === 'INVALID_CLASS') return interaction.reply({ content: 'Class không hợp lệ.', flags: MessageFlags.Ephemeral });

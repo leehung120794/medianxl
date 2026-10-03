@@ -315,9 +315,10 @@ for (const classKey of Object.keys(hardcore.CLASSES)) {
   trainingDummy.maxHp = 999;
   const started = hardcore.startHardcore({ guildId: 'hardcore-classes', userId, channelId: 'channel', stake: 10,
     classKey, forcedEncounter: trainingDummy });
+  const manaBeforeSkill = started.state.energy;
   const usedSkill = hardcore.playHardcore({ sessionId: started.session.id, userId, expectedTurn: 0, action: 'skill' });
   assert.equal(usedSkill.settled, false, `${classKey} phải dùng được kỹ năng riêng`);
-  assert.equal(usedSkill.state.energy, hardcore.CLASSES[classKey].energy - 2);
+  assert.equal(usedSkill.state.energy, manaBeforeSkill - 2);
   hardcore.playHardcore({ sessionId: started.session.id, userId, expectedTurn: 1, action: 'retreat' });
 }
 const shieldBoss = hardcore.makeEnemy(100, 'boss', null, { modifiers: [] });

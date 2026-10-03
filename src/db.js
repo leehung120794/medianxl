@@ -385,6 +385,25 @@ CREATE TABLE IF NOT EXISTS hardcore_records (
 );
 CREATE INDEX IF NOT EXISTS idx_hardcore_leaderboard ON hardcore_records(guild_id, best_floor DESC, completions DESC);
 
+CREATE TABLE IF NOT EXISTS hardcore_grave_echoes (
+  id TEXT PRIMARY KEY,
+  guild_id TEXT NOT NULL,
+  owner_user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  class_key TEXT NOT NULL,
+  death_floor INTEGER NOT NULL,
+  level INTEGER NOT NULL DEFAULT 1,
+  kills INTEGER NOT NULL DEFAULT 0,
+  is_nemesis INTEGER NOT NULL DEFAULT 0,
+  snapshot_json TEXT NOT NULL,
+  claimed_by TEXT,
+  claimed_until INTEGER,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_hardcore_echo_available ON hardcore_grave_echoes(guild_id,expires_at,is_nemesis,death_floor);
+
 CREATE TABLE IF NOT EXISTS player_progress (
   guild_id TEXT NOT NULL,
   user_id TEXT NOT NULL,

@@ -9,6 +9,7 @@ const {
 const { getAccount } = require('./economyService');
 const { getGameBetLimit } = require('./gameBetLimitService');
 const { formatCoins } = require('../utils/economy');
+const { CLASS_V2 } = require('./hardcoreStats');
 const {
   MIN_BET, MAX_BET, CLASSES, startHardcore, getHardcoreByUser, setMessageId, hardcoreEmbed, hardcoreRows,
 } = require('./hardcoreService');
@@ -31,11 +32,11 @@ function touchSetup(setup) {
   setup.timer.unref?.();
   return setup;
 }
-function createSetup({ guildId, channelId, userId }) {
+function createSetup({ guildId, channelId, userId, userName = null }) {
   const key = setupKey(guildId, userId);
   removeSetup(setups.get(setupByUser.get(key)));
   const setup = {
-    token: crypto.randomBytes(6).toString('hex'), guildId: String(guildId), channelId: String(channelId), userId: String(userId),
+    token: crypto.randomBytes(6).toString('hex'), guildId: String(guildId), channelId: String(channelId), userId: String(userId), userName: String(userName || userId).slice(0, 80),
     classKey: null, stake: null, createdAt: Date.now(), expiresAt: 0,
   };
   setups.set(setup.token, setup); setupByUser.set(key, setup.token);
@@ -47,7 +48,8 @@ function getSetup(token) {
   return setup || null;
 }
 function classLine([key, value]) {
-  return `${value.emoji} **${value.name}** · ${value.hp} HP · ${value.damageMin}–${value.damageMax} sát thương · ${value.defense} Defense · ${value.skill}`;
+  const stats = CLASS_V2[key].attributes;
+  return `${value.emoji} **${value.name}** · STR ${stats.strength} · DEX ${stats.dexterity} · VIT ${stats.vitality} · ENE ${stats.energy} · ${value.skill}`;
 }
 function setupPanel(setup, status = null) {
   const balance = getAccount(setup.guildId, setup.userId).balance;
@@ -65,7 +67,7 @@ function setupPanel(setup, status = null) {
       { name: '🎟️ Cược đã chọn', value: setup.stake ? `${formatCoins(setup.stake)} xu` : 'Chưa nhập', inline: true },
       { name: '📏 Giới hạn cược', value: `${formatCoins(MIN_BET)}–${formatCoins(maxBet)} xu`, inline: true },
       { name: selectedClass ? `${selectedClass.emoji} Nhân vật đã chọn` : '🧙 Chọn một trong 7 nhân vật', value: selectedClass ? classLine([setup.classKey, selectedClass]) : Object.entries(CLASSES).map(classLine).join('\n'), inline: false },
-      { name: '📖 Ký hiệu', value: '❤️ HP · ⚔️ sát thương · 🛡️ phòng thủ · 🎯 chính xác · 💨 né · 💢 chí mạng · 🔮 kháng phép', inline: false },
+      { name: '📖 Thuộc tính', value: '💪 STR: vật lý/Defense · 🎯 DEX: đánh trúng/né/Crit · ❤️ VIT: HP/bình máu · 🔮 ENE: phép/kháng/Mana', inline: false },
     )
     .setFooter({ text: 'Bảng chuẩn bị hết hạn sau 5 phút không thao tác.' });
 
@@ -73,7 +75,7 @@ function setupPanel(setup, status = null) {
     .setPlaceholder('Chọn nhân vật và xem kỹ năng')
     .addOptions(Object.entries(CLASSES).map(([key, value]) => new StringSelectMenuOptionBuilder()
       .setLabel(value.name).setValue(key).setEmoji(value.emoji)
-      .setDescription(`${value.hp} HP · ${value.damageMin}–${value.damageMax} damage · ${value.skill}`)
+      .setDescription(`STR ${CLASS_V2[key].attributes.strength} · DEX ${CLASS_V2[key].attributes.dexterity} · VIT ${CLASS_V2[key].attributes.vitality} · ENE ${CLASS_V2[key].attributes.energy}`)
       .setDefault(key === setup.classKey)));
   const ready = Boolean(setup.classKey && setup.stake);
   const buttons = new ActionRowBuilder().addComponents(
@@ -98,7 +100,8 @@ async function openHardcoreSetup(interaction) {
   if (getHardcoreByUser(interaction.guildId, interaction.user.id)) {
     return interaction.reply({ content: 'Bạn đang có một lượt Sinh tồn chưa kết thúc. Dùng `/choi sinhton tieptuc`.', flags: MessageFlags.Ephemeral });
   }
-  const setup = createSetup({ guildId: interaction.guildId, channelId: interaction.channelId, userId: interaction.user.id });
+  const setup = createSetup({ guildId: interaction.guildId, channelId: interaction.channelId, userId: interaction.user.id,
+    userName: interaction.user.globalName || interaction.user.displayName || interaction.user.username });
   return interaction.reply({ ...setupPanel(setup), flags: MessageFlags.Ephemeral });
 }
 async function handleSetupClass(interaction) {
@@ -130,7 +133,7 @@ async function handleSetupButton(interaction) {
   setup.starting = true;
   try {
     await interaction.deferUpdate();
-    const started = startHardcore({ guildId: setup.guildId, channelId: setup.channelId, userId: setup.userId, stake: setup.stake, classKey: setup.classKey });
+    const started = startHardcore({ guildId: setup.guildId, channelId: setup.channelId, userId: setup.userId, playerName: setup.userName, stake: setup.stake, classKey: setup.classKey });
     removeSetup(setup);
     await interaction.editReply({ embeds: [hardcoreEmbed(started.state, setup.userId, null, started.session.id)], components: hardcoreRows(started.session.id, started.state), content: null });
     if (interaction.message?.id) setMessageId(started.session.id, interaction.message.id);

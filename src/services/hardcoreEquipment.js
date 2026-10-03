@@ -29,6 +29,8 @@ function normalizeEquipment(items) {
       for (const key of ['id', 'text', 'typeCode', 'category', 'curseText']) if (item[key] !== undefined) previous[key] = item[key];
       if (Array.isArray(item.tags)) previous.tags = [...item.tags];
       if (item.effects) previous.effects = { ...item.effects };
+      if (item.attributes) previous.attributes = { ...item.attributes };
+      if (item.catalogVersion) previous.catalogVersion = item.catalogVersion;
       if (item.curse) previous.curse = { ...item.curse, effects: { ...(item.curse.effects || {}) } };
       if (item.curseApplied) {
         previous.curseApplied ||= {};
@@ -43,6 +45,8 @@ function normalizeEquipment(items) {
         text: item.text || null, curseText: item.curseText || null, level,
       };
       if (item.effects) normalized.effects = { ...item.effects };
+      if (item.attributes) normalized.attributes = { ...item.attributes };
+      if (item.catalogVersion) normalized.catalogVersion = item.catalogVersion;
       if (item.curse) normalized.curse = { ...item.curse, effects: { ...(item.curse.effects || {}) } };
       if (item.curseApplied) normalized.curseApplied = { ...item.curseApplied };
       for (const key of EFFECT_KEYS) if (item[key] !== undefined) normalized[key] = item[key];

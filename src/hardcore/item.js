@@ -1,13 +1,41 @@
 'use strict';
 
 const TYPE_CODES = Object.freeze({ common: 'R', rare: 'SR', legendary: 'SSR', cursed: 'UR' });
+const A = (strength = 0, dexterity = 0, vitality = 0, energy = 0) => Object.freeze({ strength, dexterity, vitality, energy });
+const V2_ATTRIBUTES = Object.freeze({
+  rusted_edge: A(5), iron_dagger: A(1, 4), cracked_wand: A(0, 0, 0, 5), hunter_bow: A(0, 5), militia_spear: A(3, 2), bone_club: A(6, -1),
+  dented_plate: A(3, 0, 2), wooden_buckler: A(2, 0, 2, 1), worn_boots: A(0, 4), copper_ring: A(0, 0, 1, 4), minor_life_charm: A(0, 0, 5), rabbit_foot: A(),
+  red_potion_belt: A(), scout_lens: A(0, 2), mana_fragment: A(0, 0, 0, 2), battle_token: A(2, 0, 2), silver_thread: A(0, 2, 0, 3), traveler_map: A(0, 2),
+  small_ward: A(2, 0, 3), sharpening_stone: A(5), ember_bead: A(1, 0, 0, 4), fox_mask: A(0, 5), oak_talisman: A(0, 0, 6), glass_bead: A(0, 4), field_bandage: A(),
+  iron_nail: A(3, 0, 2), hawk_feather: A(0, 5), smoke_vial: A(0, 5), cold_ash: A(0, 0, 0, 5), goblin_hook: A(), chest_chalk: A(), faded_clover: A(0, 0, 2),
+
+  hunters_fang: A(4, 6), runed_carapace: A(5, 0, 4, 3), heart_of_the_wild: A(0, 0, 10), lucky_coin: A(0, 0, 2), vanguard_spear: A(6, 6), shadowstep_boots: A(0, 10),
+  bone_talisman: A(0, 0, 7, 5), bloodstone: A(6, 0, 6), rift_compass: A(0, 3), alchemist_belt: A(0, 0, 3), guardian_seal: A(5, 0, 7), mana_prism: A(0, 0, 0, 10),
+  goblin_snare: A(0, 3), wardens_chain: A(9, -2, 5), moonlit_blade: A(5, 0, 0, 7), assassins_ribbon: A(0, 11), lionheart_emblem: A(5, 0, 8), stormglass: A(5, 8),
+  saints_ward: A(4, 0, 3, 7), riftwalkers_boots: A(0, 10), executioners_mark: A(5, 4), boss_hunters_badge: A(3, 0, 6), golden_monocle: A(0, 2), deep_flask: A(0, 0, 4),
+  war_drums: A(5, 4, 3), spirit_lantern: A(0, 0, 0, 10), steel_lotus: A(4, 6, 3), fortune_dice: A(0, 6),
+
+  one_more_hit: A(0, 0, 12), last_bad_decision: A(12, 12, -5), wardens_bulwark: A(10, 0, 8, 8), eye_of_rngesus: A(5, 5, 0, 5), phoenix_blood: A(0, 0, 16, 8),
+  riftbreaker: A(12, 8), living_armor: A(10, 0, 16), mimic_crown: A(0, 6, 0, 6), endless_flask: A(0, 0, 10, 8), chrono_shard: A(0, 20),
+  seraphic_aegis: A(10, 0, 6, 12), doomwhisper: A(14, 12), worldroot_seed: A(4, 0, 22), void_lens: A(0, 8, 0, 8), angelic_engine: A(0, 0, 6, 18),
+  predators_instinct: A(6, 14), deimoss_scar: A(14, 0, 6), golden_goblet: A(0, 6, 6), astral_mail: A(6, 8, 6, 8), blood_moon_edge: A(14, 0, 12),
+  oracle_mask: A(0, 12, 0, 10), eternal_clover: A(0, 4, 4), titan_heart: A(6, 0, 22), sevenfold_sigil: A(7, 7, 7, 7),
+
+  glass_cannon: A(35, 15), schrodingers_armor: A(20, 0, 30), goblins_debt: A(0, 20, 15), crown_of_ruin: A(20, 0, 15), blood_pact: A(40, 10),
+  void_heart: A(0, 0, 35, 20), broken_hourglass: A(0, 40), mimics_promise: A(0, 20, 0, 15), berserker_chains: A(40, 10), hollow_crown: A(0, 0, 10, 40),
+  ashen_wings: A(0, 40, 0, 10), soul_leash: A(20, 0, 0, 25), bleeding_star: A(20, 30), null_idol: A(20, 0, 15, 20), black_sun: A(0, 10, 0, 30), oathbreaker: A(25, 15, 10),
+});
+const V2_CURSE_ATTRIBUTES = Object.freeze({
+  schrodingers_armor: A(0, 0, -12), blood_pact: A(0, 0, -15), hollow_crown: A(-15), null_idol: A(0, -15), oathbreaker: A(-10, -10),
+});
 const EFFECT_KEYS = new Set(['attack', 'defense', 'maxHp', 'resistance', 'critChance', 'luck', 'heal', 'potions',
   'escapeTokens', 'defenseSet', 'bonusPenalty', 'accuracy', 'evasion', 'maxEnergy', 'potionPower', 'bossDamage',
   'eliteDamage', 'mimicDetection', 'goblinChance', 'legendaryFind', 'floorHpLoss', 'mimicChance', 'damageTaken']);
 function define(rarity, id, name, category, effects, text, options = {}) {
-  const curse = options.curse ? Object.freeze({ ...options.curse, effects: Object.freeze({ ...options.curse.effects }) }) : null;
+  const curse = options.curse ? Object.freeze({ ...options.curse, effects: Object.freeze({ ...options.curse.effects }),
+    attributes: V2_CURSE_ATTRIBUTES[id] || null }) : null;
   return Object.freeze({ id, name, rarity, typeCode: TYPE_CODES[rarity], category,
-    tags: Object.freeze([...(options.tags || [])]), effects: Object.freeze({ ...effects }), text, curse, curseText: curse?.text || null });
+    tags: Object.freeze([...(options.tags || [])]), effects: Object.freeze({ ...effects }), attributes: V2_ATTRIBUTES[id], text, curse, curseText: curse?.text || null });
 }
 const R = (...args) => define('common', ...args); const SR = (...args) => define('rare', ...args);
 const SSR = (...args) => define('legendary', ...args); const UR = (...args) => define('cursed', ...args);
@@ -105,21 +133,21 @@ const ITEMS = Object.freeze({
   ]),
   cursed: Object.freeze([
     UR('glass_cannon', 'Glass Cannon', 'weapon', { attack: 16, critChance: 0.08 }, '+16 sát thương, +8% Crit', { tags: ['attack', 'cursed'], curse: { id: 'shattered_armor', effects: { defenseSet: 0 }, text: 'Defense bị đặt về 0 khi nhặt' } }),
-    UR('schrodingers_armor', 'Schrödinger’s Armor', 'armor', { defense: 16, maxHp: 35, heal: 35 }, '+16 Defense, +35 HP', { tags: ['defense', 'cursed'], curse: { id: 'frail_body', effects: { maxHp: -25 }, text: '−25 HP tối đa' } }),
+    UR('schrodingers_armor', 'Schrödinger’s Armor', 'armor', { defense: 16, maxHp: 35, heal: 35 }, '+16 Defense, +35 HP', { tags: ['defense', 'cursed'], curse: { id: 'frail_body', effects: { maxHp: -25 }, text: '−12 VIT' } }),
     UR('goblins_debt', 'Goblin’s Debt', 'charm', { luck: 12, goblinChance: 0.2 }, '+12 Luck, +20% bắt Goblin', { tags: ['luck', 'cursed'], curse: { id: 'goblin_tax', effects: { bonusPenalty: 0.15 }, text: 'Mất 15% payout hiện tại' } }),
     UR('crown_of_ruin', 'Crown of Ruin', 'armor', { defense: 15, luck: 8 }, '+15 Defense, +8 Luck', { tags: ['defense', 'cursed'], curse: { id: 'gold_decay', effects: { bonusPenalty: 0.1 }, text: 'Mất 10% payout hiện tại' } }),
-    UR('blood_pact', 'Blood Pact', 'weapon', { attack: 20, critChance: 0.1 }, '+20 sát thương, +10% Crit', { tags: ['attack', 'cursed'], curse: { id: 'blood_price', effects: { maxHp: -30 }, text: '−30 HP tối đa' } }),
+    UR('blood_pact', 'Blood Pact', 'weapon', { attack: 20, critChance: 0.1 }, '+20 sát thương, +10% Crit', { tags: ['attack', 'cursed'], curse: { id: 'blood_price', effects: { maxHp: -30 }, text: '−15 VIT' } }),
     UR('void_heart', 'Void Heart', 'charm', { maxHp: 60, heal: 60, resistance: 15 }, '+60 HP, +15 Resistance', { tags: ['hp', 'cursed'], curse: { id: 'weak_potions', effects: { potionPower: -0.15 }, text: 'Bình máu hồi ít hơn 15%' } }),
     UR('broken_hourglass', 'Broken Hourglass', 'charm', { evasion: 12, luck: 8 }, '+12 Evasion, +8 Luck', { tags: ['evasion', 'cursed'], curse: { id: 'time_bleed', effects: { floorHpLoss: 0.04 }, text: 'Mất 4% HP tối đa sau mỗi tầng' } }),
     UR('mimics_promise', 'Mimic’s Promise', 'utility', { legendaryFind: 0.12, mimicDetection: 0.1 }, '+12% SSR, +10% phát hiện Mimic', { tags: ['chest', 'cursed'], curse: { id: 'mimic_attraction', effects: { mimicChance: 0.12 }, text: 'Tăng 12% tỷ lệ Mimic' } }),
     UR('berserker_chains', 'Berserker Chains', 'weapon', { attack: 22, eliteDamage: 0.2 }, '+22 sát thương, +20% Elite damage', { tags: ['attack', 'cursed'], curse: { id: 'open_wounds', effects: { damageTaken: 0.18 }, text: 'Nhận thêm 18% sát thương' } }),
-    UR('hollow_crown', 'Hollow Crown', 'armor', { maxEnergy: 2, resistance: 18 }, '+2 Energy tối đa, +18 Resistance', { tags: ['energy', 'cursed'], curse: { id: 'paper_armor', effects: { defense: -10 }, text: '−10 Defense' } }),
+    UR('hollow_crown', 'Hollow Crown', 'armor', { maxEnergy: 2, resistance: 18 }, '+2 Energy tối đa, +18 Resistance', { tags: ['energy', 'cursed'], curse: { id: 'paper_armor', effects: { defense: -10 }, text: '−15 STR' } }),
     UR('ashen_wings', 'Ashen Wings', 'armor', { evasion: 15, accuracy: 10 }, '+15 Evasion, +10 Accuracy', { tags: ['evasion', 'cursed'], curse: { id: 'burned_soul', effects: { resistance: -20 }, text: '−20 Resistance' } }),
     UR('soul_leash', 'Soul Leash', 'charm', { bossDamage: 0.35, attack: 8 }, '+35% Boss damage, +8 sát thương', { tags: ['boss', 'cursed'], curse: { id: 'energy_seal', effects: { maxEnergy: -2 }, text: '−2 Energy tối đa' } }),
     UR('bleeding_star', 'Bleeding Star', 'jewelry', { critChance: 0.18, attack: 12 }, '+18% Crit, +12 sát thương', { tags: ['crit', 'cursed'], curse: { id: 'star_bleed', effects: { floorHpLoss: 0.06 }, text: 'Mất 6% HP tối đa sau mỗi tầng' } }),
-    UR('null_idol', 'Null Idol', 'charm', { defense: 18, resistance: 12 }, '+18 Defense, +12 Resistance', { tags: ['defense', 'cursed'], curse: { id: 'blind_faith', effects: { luck: -6, accuracy: -10 }, text: '−6 Luck, −10 Accuracy' } }),
+    UR('null_idol', 'Null Idol', 'charm', { defense: 18, resistance: 12 }, '+18 Defense, +12 Resistance', { tags: ['defense', 'cursed'], curse: { id: 'blind_faith', effects: { luck: -6, accuracy: -10 }, text: '−15 DEX, −6 Luck' } }),
     UR('black_sun', 'Black Sun', 'charm', { legendaryFind: 0.15, luck: 10 }, '+15% SSR, +10 Luck', { tags: ['luck', 'cursed'], curse: { id: 'dead_flask', effects: { potionPower: -0.2 }, text: 'Bình máu hồi ít hơn 20%' } }),
-    UR('oathbreaker', 'Oathbreaker', 'weapon', { bossDamage: 0.25, eliteDamage: 0.25, attack: 10 }, '+25% damage lên Boss/Elite, +10 sát thương', { tags: ['boss', 'elite', 'cursed'], curse: { id: 'broken_guard', effects: { defense: -8, evasion: -6 }, text: '−8 Defense, −6 Evasion' } }),
+    UR('oathbreaker', 'Oathbreaker', 'weapon', { bossDamage: 0.25, eliteDamage: 0.25, attack: 10 }, '+25% damage lên Boss/Elite, +10 sát thương', { tags: ['boss', 'elite', 'cursed'], curse: { id: 'broken_guard', effects: { defense: -8, evasion: -6 }, text: '−10 STR, −10 DEX' } }),
   ]),
 });
 
@@ -128,7 +156,7 @@ function validateItems(catalog = ITEMS) {
   const expectedCounts = { common: 32, rare: 28, legendary: 24, cursed: 16 };
   for (const rarity of ['common', 'rare', 'legendary', 'cursed']) for (const item of catalog[rarity] || []) {
     if (!item.id || !item.name || item.rarity !== rarity || item.typeCode !== TYPE_CODES[rarity] || !item.category ||
-      !item.text || !item.effects || !Object.keys(item.effects).length) {
+      !item.text || !item.effects || !Object.keys(item.effects).length || !item.attributes) {
       throw new Error(`INVALID_HARDCORE_ITEM:${rarity}`);
     }
     if (ids.has(item.id) || names.has(item.name)) throw new Error(`DUPLICATE_HARDCORE_ITEM:${item.id}`);
@@ -146,4 +174,4 @@ function validateItems(catalog = ITEMS) {
   return true;
 }
 validateItems();
-module.exports = { ITEMS, TYPE_CODES, validateItems };
+module.exports = { ITEMS, TYPE_CODES, V2_ATTRIBUTES, V2_CURSE_ATTRIBUTES, validateItems };

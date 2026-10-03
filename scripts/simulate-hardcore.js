@@ -21,6 +21,8 @@ const classFilter = String(process.argv[5] || '').trim().toLowerCase();
 const finalReplays = Math.max(0, Math.min(1000, Number(process.argv[6]) || 0));
 
 function actionFor(state) {
+  if (state.phase === 'paradox') return 'paradox_blood';
+  if (state.phase === 'severance') return 'sever_0';
   if (state.phase === 'upgrade') {
     const checkpoint = Math.max(1, Math.floor(state.cleared / 5));
     if (state.maxHp < state.damageMax * 5) return 'upgrade_hp';
@@ -42,6 +44,8 @@ function actionFor(state) {
   }
   if (encounter.type === 'shrine') return 'ignore';
   if (encounter.type === 'rngesus') return 'bribe';
+  if (encounter.type === 'grave_echo') return 'grave_pray';
+  if (encounter.type === 'karma') return 'karma_resolve';
   if (encounter.type === 'surprise') {
     if (encounter.kind === 'blacksmith') return 'forge';
     if (encounter.kind === 'purifier') return 'purify';
@@ -117,6 +121,17 @@ for (const classKey of Object.keys(hardcore.CLASSES).filter(key => !classFilter 
     finalCalibration,
     meanFloor: +(floors.reduce((sum, floor) => sum + floor, 0) / runs).toFixed(2) };
 }
+const classReports = Object.values(report);
+const totalRuns = classReports.reduce((sum, entry) => sum + entry.runs, 0);
+const totalWins = classReports.reduce((sum, entry) => sum + entry.passedFloor999, 0);
+report._calibration = {
+  totalRuns,
+  totalWins,
+  observedWinRatePercent: totalRuns ? +((totalWins / totalRuns) * 100).toFixed(4) : 0,
+  upper95PercentWhenZeroWins: totalWins === 0 && totalRuns ? +((3 / totalRuns) * 100).toFixed(4) : null,
+  targetPercent: '0.1–0.2',
+  hardMaximumPercent: 0.5,
+};
 console.log(JSON.stringify(report, null, 2));
 db.close();
 fs.rmSync(temporary, { recursive: true, force: true });

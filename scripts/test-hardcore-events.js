@@ -17,6 +17,11 @@ function start(event, overrides = {}) {
   sequence += 1;
   const userId = `event-user-${sequence}`;
   const started = hardcore.startHardcore({ guildId: 'event-guild', userId, channelId: 'event-channel', stake: 100, classKey: overrides.classKey || 'barbarian', forcedEncounter: event });
+  const legacyClass = hardcore.CLASSES[overrides.classKey || 'barbarian'];
+  Object.assign(started.state, { hp: legacyClass.hp, maxHp: legacyClass.hp, damageMin: legacyClass.damageMin, damageMax: legacyClass.damageMax,
+    defense: legacyClass.defense, accuracy: legacyClass.accuracy, evasion: legacyClass.evasion, critChance: legacyClass.critChance,
+    resistance: legacyClass.resistance, energy: legacyClass.energy, maxEnergy: legacyClass.energy });
+  delete started.state.statVersion; delete started.state.attributes; delete started.state.statBonuses; delete started.state._derivedBase;
   Object.assign(started.state, { floor: 11, cleared: 10, bonus: 0, payoutFactor: 1, payoutSpent: 0 }, overrides);
   started.state.encounter = event;
   repository.saveState(started.session, started.state);
