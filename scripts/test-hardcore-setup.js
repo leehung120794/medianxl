@@ -36,6 +36,13 @@ const setupService = require('../src/services/hardcoreSetupService');
   });
   assert.equal(setup.classKey, 'amazon');
   assert.equal(panel.components[1].components[1].data.disabled, true);
+  const selectedClassField = panel.embeds[0].toJSON().fields.find(field => field.name.includes('Nhân vật đã chọn'));
+  assert.match(selectedClassField.value, /Build \*\*DEX\*\*/);
+  assert.match(selectedClassField.value, /Barrage \(2 Mana\)/);
+  assert.match(selectedClassField.value, /Bắn 2 phát độc lập/);
+  assert.match(selectedClassField.value, /Mana 2/);
+  assert.match(selectedClassField.value, /40% Max Mana = 1 Mana/);
+  assert(selectedClassField.value.length <= 1024);
 
   await setupService.handleSetupModal({
     customId: `hardcore-setup-modal:${setup.token}`, guildId, user: { id: userId },

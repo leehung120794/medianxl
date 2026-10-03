@@ -42,4 +42,10 @@ function modifierStacks(state, key) {
   return (Array.isArray(state?.modifiers) ? state.modifiers : []).filter(value => value === key).length;
 }
 
-module.exports = { REGIONS, MODIFIERS, BOSS_SEQUENCE, regionForFloor, bossForFloor, modifierStacks };
+// Ba stack đầu giữ nguyên sức mạnh; stack 4–8 chỉ còn 50%; stack 9+ còn 25% và tổng hiệu lực cap 8.
+function effectiveModifierStacks(stacks) {
+  const count = Math.max(0, Math.floor(Number(stacks) || 0));
+  return Math.min(8, Math.min(count, 3) + Math.min(Math.max(0, count - 3), 5) * 0.5 + Math.max(0, count - 8) * 0.25);
+}
+
+module.exports = { REGIONS, MODIFIERS, BOSS_SEQUENCE, regionForFloor, bossForFloor, modifierStacks, effectiveModifierStacks };

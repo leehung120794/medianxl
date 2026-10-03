@@ -8,10 +8,11 @@ const { createFairness, fairInt } = require('./fairnessService');
 const hardcoreRepository = require('./hardcoreRepository');
 const hardcoreView = require('./hardcoreView');
 const { EFFECT_KEYS, rarityLabel, itemEffects, normalizeEquipment } = require('./hardcoreEquipment');
-const { MODIFIERS, regionForFloor, bossForFloor, modifierStacks } = require('./hardcoreWorld');
+const { MODIFIERS, regionForFloor, bossForFloor, modifierStacks, effectiveModifierStacks } = require('./hardcoreWorld');
 const { ITEMS } = require('../hardcore/item');
 const { spendDiamonds } = require('./playerLevelService');
 const { STAT_VERSION, CLASS_V2, initializeV2State, syncDerived, v2ItemBonuses, equipmentBonuses, v2HitChance, v2DefenseReduction } = require('./hardcoreStats');
+const { SKILL_MANA_COST, basicAttackManaRestore } = require('./hardcoreClassInfo');
 const { formatCoins } = require('../utils/economy');
 const { chaosLabel } = hardcoreView;
 const { clamp, hitChance: legacyHitChance, defenseReduction: legacyDefenseReduction,
@@ -85,20 +86,22 @@ function riftModifierEffects(state, enemy = null) {
   const swift = modifierStacks(state, 'swift_horror');
   const soulDrain = modifierStacks(state, 'soul_drain');
   const cursedGround = modifierStacks(state, 'cursed_ground');
+  const v2 = isV2(state);
+  const power = stacks => v2 ? effectiveModifierStacks(stacks) : stacks;
   return {
-    stoneSkinMultiplier: 1 + stoneSkin * 0.1,
-    elementalDamageMultiplier: 1 + elemental * 0.04,
-    magicChanceBonus: elemental * 0.04,
-    bloodlustDamageMultiplier: enemy && enemy.hp <= enemy.maxHp / 2 ? 1 + bloodlust * 0.08 : 1,
+    stoneSkinMultiplier: 1 + power(stoneSkin) * (v2 ? 0.08 : 0.1),
+    elementalDamageMultiplier: 1 + power(elemental) * (v2 ? 0.03 : 0.04),
+    magicChanceBonus: power(elemental) * (v2 ? 0.03 : 0.04),
+    bloodlustDamageMultiplier: enemy && enemy.hp <= enemy.maxHp / 2 ? 1 + power(bloodlust) * (v2 ? 0.06 : 0.08) : 1,
     chestBoost: Math.min(0.16, unstable * 0.02),
     ancientMimicChance: Math.min(0.08, 0.03 + unstable * 0.01),
     mimicChance: Math.min(0.3, 0.15 + unstable * 0.03),
     treasureLegendaryChance: Math.min(0.7, 0.35 + unstable * 0.05),
-    fortifiedMultiplier: 1 + fortified * 0.1,
-    swiftAccuracyBonus: swift * (isV2(state) ? 4 : 3),
-    swiftEvasionBonus: swift * (isV2(state) ? 2 : 1),
-    soulDrainAmount: isV2(state) ? (soulDrain ? Math.min(3, Math.ceil(soulDrain / 4)) : 0) : (soulDrain ? (soulDrain >= 5 ? 2 : 1) : 0),
-    cursedResistancePenalty: cursedGround * 4,
+    fortifiedMultiplier: 1 + power(fortified) * (v2 ? 0.08 : 0.1),
+    swiftAccuracyBonus: v2 ? Math.round(power(swift) * 3) : swift * 3,
+    swiftEvasionBonus: v2 ? Math.round(power(swift) * 1.5) : swift,
+    soulDrainAmount: v2 ? (soulDrain ? Math.min(3, Math.ceil(soulDrain / 4)) : 0) : (soulDrain ? (soulDrain >= 5 ? 2 : 1) : 0),
+    cursedResistancePenalty: v2 ? Math.round(power(cursedGround) * 3) : cursedGround * 4,
   };
 }
 
@@ -223,8 +226,13 @@ function addRiftModifier(state) {
   const key = pick(unused.length ? unused : keys);
   state.modifiers.push(key);
   const descriptions = isV2(state) ? {
-    swift_horror: 'Quái tăng 4 Accuracy và 2 Evasion mỗi cộng dồn.',
+    stone_skin: 'Tăng Defense quái theo stack giảm dần, tổng hiệu lực tối đa +64%.',
+    elemental_dominion: 'Tăng damage và khả năng dùng phép theo stack giảm dần, tối đa +24%.',
+    bloodlust: 'Dưới 50% HP, damage quái tăng theo stack giảm dần, tối đa +48%.',
+    fortified: 'Tăng HP quái theo stack giảm dần, tổng hiệu lực tối đa +64%.',
+    swift_horror: 'Tăng Accuracy/Evasion theo stack giảm dần.',
     soul_drain: 'Mỗi combat có số lần rút 1 Mana được khóa theo stack, tối đa 3 lần.',
+    cursed_ground: 'Giảm RES hiệu dụng theo stack giảm dần, tối đa 24 điểm.',
   } : null;
   return { key, ...MODIFIERS[key], description: descriptions?.[key] || MODIFIERS[key].description, stacks: modifierStacks(state, key) };
 }
@@ -966,8 +974,8 @@ function playerAttack(state, action) {
   let dodge = false;
   if (action === 'skill') {
     const freeSorceressSkill = activeClassBlessing(state, 'sorceress');
-    if (state.energy < 2 && !freeSorceressSkill) throw new Error('NO_ENERGY');
-    if (!freeSorceressSkill) state.energy -= 2;
+    if (state.energy < SKILL_MANA_COST && !freeSorceressSkill) throw new Error('NO_ENERGY');
+    if (!freeSorceressSkill) state.energy -= SKILL_MANA_COST;
     else state.classBlessing = null;
     if (state.classKey === 'sorceress') {
       const raw = Math.floor(randomInt(state.spellMin || state.damageMin, state.spellMax || state.damageMax) * 2.1);
@@ -1000,7 +1008,7 @@ function playerAttack(state, action) {
     const attacker = isV2(state) && state.activeParadox?.kind === 'reverse'
       ? { ...state, damageMin: Math.max(1, state.defense - 2), damageMax: Math.max(2, state.defense + 3) } : state;
     attack = resolvePhysicalAttack(attacker, enemy, state.floor, { statVersion: state.statVersion });
-    state.energy = Math.min(state.maxEnergy, state.energy + (isV2(state) && ['sorceress', 'necromancer'].includes(state.classKey) ? 2 : 1));
+    state.energy = Math.min(state.maxEnergy, state.energy + basicAttackManaRestore(state));
   }
   const rankBonus = ['boss', 'final_boss'].includes(enemy.rank) ? (state.bossDamage || 0)
     : ['elite', 'ancient_mimic'].includes(enemy.rank) ? (state.eliteDamage || 0) : 0;

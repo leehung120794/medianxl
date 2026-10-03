@@ -13,6 +13,8 @@ const hardcore = require('../src/services/hardcoreService');
 const repository = require('../src/services/hardcoreRepository');
 const { addDiamonds, getPlayerProgression } = require('../src/services/playerLevelService');
 const { ITEMS } = require('../src/hardcore/item');
+const { basicAttackManaRestore, skillDamagePreview } = require('../src/services/hardcoreClassInfo');
+const { effectiveModifierStacks } = require('../src/services/hardcoreWorld');
 
 function save(run) { repository.saveState(run.session, run.state); }
 function play(run, action) {
@@ -64,20 +66,65 @@ const initial = start('initial');
 assert.equal(initial.state.statVersion, 2);
 assert.equal(initial.state.itemCatalogVersion, 2);
 assert.equal(initial.state.energy, initial.state.maxEnergy);
+assert.equal(initial.state.maxEnergy, 3, 'Sorceress 34 ENE phải bắt đầu với 3 Max Mana');
+assert.equal(basicAttackManaRestore(initial.state), 2, 'caster Max Mana 3 hồi floor(70%) = 2');
+assert.equal(basicAttackManaRestore({ ...initial.state, maxEnergy: 10 }), 7, 'caster hồi 70% Max Mana');
 assert.deepEqual(stats.totalAttributes(initial.state), stats.CLASS_V2.sorceress.attributes);
 close(initial);
+const barbarianMana = start('barbarian-mana', { type: 'empty' }, 'barbarian');
+assert.equal(barbarianMana.state.maxEnergy, 2, 'Barbarian ít ENE vẫn bắt đầu với 2 Max Mana');
+assert.equal(basicAttackManaRestore({ ...barbarianMana.state, maxEnergy: 10 }), 4, 'class vật lý hồi 40% Max Mana');
+close(barbarianMana);
+
+assert.equal(effectiveModifierStacks(3), 3);
+assert.equal(effectiveModifierStacks(8), 5.5);
+assert.equal(effectiveModifierStacks(12), 6.5);
+assert.equal(effectiveModifierStacks(100), 8, 'Rift stack hiệu dụng phải có cap');
+const stackedRift = hardcore.riftModifierEffects({ statVersion: 2, modifiers: [
+  ...Array(12).fill('stone_skin'), ...Array(12).fill('elemental_dominion'), ...Array(12).fill('bloodlust'),
+  ...Array(12).fill('fortified'), ...Array(12).fill('swift_horror'), ...Array(12).fill('cursed_ground'),
+] }, { hp: 50, maxHp: 100 });
+assert.equal(stackedRift.stoneSkinMultiplier, 1.52);
+assert.equal(stackedRift.elementalDamageMultiplier, 1.195);
+assert.equal(stackedRift.bloodlustDamageMultiplier, 1.3900000000000001);
+assert.equal(stackedRift.fortifiedMultiplier, 1.52);
+assert.equal(stackedRift.swiftAccuracyBonus, 20);
+assert.equal(stackedRift.swiftEvasionBonus, 10);
+assert.equal(stackedRift.cursedResistancePenalty, 20);
 
 // Checkpoint v2 chỉ cộng thuộc tính; cùng một nút cũ không được cộng lần hai.
 const checkpoint = start('checkpoint');
 Object.assign(checkpoint.state, { floor: 5, cleared: 4, encounter: { type: 'empty' } }); save(checkpoint);
 play(checkpoint, 'continue');
 assert.equal(checkpoint.state.phase, 'upgrade');
+const checkpointJson = hardcore.hardcoreEmbed(checkpoint.state, checkpoint.session.user_id, null, checkpoint.session.id).toJSON();
+const checkpointField = checkpointJson.fields.find(field => field.name.includes('Chọn thuộc tính'));
+assert(checkpointField, 'checkpoint phải thay field thay đổi lượt bằng dự báo thuộc tính');
+assert.match(checkpointField.value, /\+5 STR.*DMG/s);
+assert.match(checkpointField.value, /\+5 VIT.*HP/s);
+assert.match(checkpointField.value, /\+5 ENE.*Mana/s);
 const beforeStrength = checkpoint.state.attributes.strength;
 const expectedTurn = checkpoint.state.turn;
 play(checkpoint, 'upgrade_attack');
 assert.equal(checkpoint.state.attributes.strength, beforeStrength + 5);
 assert.throws(() => hardcore.playHardcore({ sessionId: checkpoint.session.id, userId: checkpoint.session.user_id, expectedTurn, action: 'upgrade_attack' }), /STALE_ACTION/);
 close(checkpoint);
+
+// Battle UI phải giải thích ngắn gọn skill và damage lên đúng quái hiện tại.
+const battleUi = start('battle-ui');
+battleUi.state.encounter = hardcore.makeEnemy(1, 'normal', 'UI Target', battleUi.state); save(battleUi);
+const skillPreview = skillDamagePreview(battleUi.state);
+assert(skillPreview.min > 0 && skillPreview.max >= skillPreview.min);
+const battleJson = hardcore.hardcoreEmbed(battleUi.state, battleUi.session.user_id, null, battleUi.session.id).toJSON();
+assert.match(battleJson.description, /Arcane Burst.*Mana.*damage/s);
+assert.match(battleJson.description, /Phép luôn trúng, không Crit/);
+const battleRows = hardcore.hardcoreRows(battleUi.session.id, battleUi.state);
+const battleLabels = battleRows.flatMap(row => row.components.map(component => component.data.label));
+assert(battleLabels.includes('Tấn công (+2 Mana)'));
+assert(battleLabels.some(label => label.startsWith('Arcane Burst (-2)')));
+battleUi.state.energy = 0; save(battleUi); play(battleUi, 'attack');
+assert.equal(battleUi.state.energy, 2, 'basic attack caster Max Mana 3 phải hồi floor(70%) = 2');
+close(battleUi);
 
 // Rift Paradox bắt buộc ở mốc 25 và kết quả chọn không reroll.
 const paradox = start('paradox');

@@ -1,11 +1,12 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { formatCoins } = require('../utils/economy');
 const { baseMultiplier, potentialPayout: enginePotentialPayout, payoutLoss: enginePayoutLoss } = require('./hardcoreEngine');
-const { STAT_VERSION, totalAttributes, equipmentBonuses } = require('./hardcoreStats');
+const { STAT_VERSION, totalAttributes, equipmentBonuses, deriveStats } = require('./hardcoreStats');
+const { SKILL_MANA_COST, basicAttackManaRestore, skillDamagePreview } = require('./hardcoreClassInfo');
 const { resultBlock, coins } = require('../utils/rewardText');
 const emojiMap = require('../discordEmojiMap');
 const { rarityLabel, itemEffects, normalizeEquipment, effectText } = require('./hardcoreEquipment');
-const { MODIFIERS, regionForFloor, modifierStacks } = require('./hardcoreWorld');
+const { MODIFIERS, regionForFloor, modifierStacks, effectiveModifierStacks } = require('./hardcoreWorld');
 
 const icon = (name, fallback = '•') => emojiMap[`:${name}:`] || fallback;
 function potentialPayout(state) {
@@ -20,6 +21,45 @@ function hpBar(current, maximum, size = 10) {
   return `${'█'.repeat(filled)}${'░'.repeat(size - filled)}`;
 }
 function damageTypeText(type) { return { physical: '⚔️ Vật lý', magic: '🔮 Phép', mixed: '🌓 Hỗn hợp' }[type] || '🌓 Hỗn hợp'; }
+function skillBattleText(state) {
+  const preview = skillDamagePreview(state);
+  if (!preview) return null;
+  const free = state.classKey === 'sorceress' && state.classBlessing && state.cleared >= state.classBlessing.startCleared && state.cleared <= state.classBlessing.targetCleared;
+  const resource = state.statVersion === STAT_VERSION ? 'Mana' : 'Energy';
+  const cost = free ? `0 ${resource} nhờ Shrine` : `${preview.cost} ${resource}`;
+  const shielded = state.encounter.mechanic === 'rift_shield' && (state.encounter.attackAttempts || 0) % 3 === 0;
+  const range = preview.min === preview.max ? formatCoins(preview.min) : `${formatCoins(preview.min)}–${formatCoins(preview.max)}`;
+  const damage = shielded ? '**0 damage** · Rift Shield sẽ chặn đòn kế tiếp'
+    : `**${range} damage**${preview.hits > 1 ? ` nếu đủ ${preview.hits} phát trúng` : ''}${preview.type === 'physical' ? ' · chưa tính Crit' : ''}`;
+  return `✨ **${preview.skill}** (${cost}): ${damage}\n${preview.summary}`;
+}
+
+function transition(before, after, formatter = formatCoins) {
+  return `${formatter(before)}→**${formatter(after)}**`;
+}
+function numberPercent(value) { return `${Math.round(value * 1000) / 10}%`; }
+function checkpointPreview(state) {
+  if (state.statVersion !== STAT_VERSION) return statLine(state);
+  const current = deriveStats(state);
+  const definitions = [
+    ['strength', '💪 +5 STR'], ['dexterity', '🎯 +5 DEX'], ['vitality', '❤️ +5 VIT'], ['energy', '🔮 +5 ENE'],
+  ];
+  return definitions.map(([key, label]) => {
+    const projected = deriveStats({ ...state, attributes: { ...(state.attributes || {}), [key]: (state.attributes?.[key] || 0) + 5 } });
+    const parts = [];
+    if (projected.damageMin !== current.damageMin || projected.damageMax !== current.damageMax) parts.push(`⚔️ DMG ${current.damageMin}–${current.damageMax}→**${projected.damageMin}–${projected.damageMax}**`);
+    if (projected.spellMin !== current.spellMin || projected.spellMax !== current.spellMax) parts.push(`✨ Phép ${current.spellMin}–${current.spellMax}→**${projected.spellMin}–${projected.spellMax}**`);
+    if (projected.maxHp !== current.maxHp) parts.push(`HP ${transition(current.maxHp, projected.maxHp)}`);
+    if (projected.defense !== current.defense) parts.push(`DEF ${transition(current.defense, projected.defense)}`);
+    if (projected.accuracy !== current.accuracy) parts.push(`ACC ${transition(current.accuracy, projected.accuracy)}`);
+    if (projected.evasion !== current.evasion) parts.push(`EVA ${transition(current.evasion, projected.evasion)}`);
+    if (projected.critChance !== current.critChance) parts.push(`Crit ${transition(current.critChance, projected.critChance, numberPercent)}`);
+    if (projected.resistance !== current.resistance) parts.push(`RES ${transition(current.resistance, projected.resistance, value => `${value}%`)}`);
+    if (key === 'vitality') parts.push(`Bình ${transition(current.potionRate, projected.potionRate, numberPercent)}`);
+    if (key === 'energy') parts.push(`Mana ${transition(current.maxMana, projected.maxMana)}`);
+    return `**${label}:** ${parts.join(' · ')}`;
+  }).join('\n');
+}
 function battleText(state) {
   const enemy = state.encounter;
   const classInfo = { amazon: 'Amazon', assassin: 'Assassin', barbarian: 'Barbarian', druid: 'Druid', necromancer: 'Necromancer', paladin: 'Paladin', sorceress: 'Sorceress' }[state.classKey] || state.className;
@@ -35,7 +75,8 @@ function battleText(state) {
     `${icon('heart')} \`${hpBar(state.hp, state.maxHp)}\` **${formatCoins(state.hp)}/${formatCoins(state.maxHp)} HP**`,
     `${icon('sparkles')} ${state.statVersion === STAT_VERSION ? 'Mana' : 'Energy'} **${state.energy}/${state.maxEnergy}** · ${icon('test_tube')} **${state.potions}** bình · ${icon('mirror')} **${state.escapeTokens}** vé`,
     `${icon('crossed_swords')} ${formatCoins(state.damageMin)}–${formatCoins(state.damageMax)} · ${icon('shield')} ${formatCoins(state.defense)} Defense · ${icon('crystal_ball')} ${state.resistance}% Resist`,
-  ].join('\n');
+    skillBattleText(state),
+  ].filter(Boolean).join('\n');
 }
 function battleColor(state, result) {
   if (result) return result.outcome === 'win' ? 0x2ECC71 : 0xE74C3C;
@@ -69,7 +110,7 @@ function encounterText(state) {
     const mechanic = encounter.mechanicDescription ? `\n${icon('warning')} **Cơ chế boss:** ${encounter.mechanicDescription}` : '';
     const damageType = { physical: 'Vật lý', magic: 'Phép', mixed: 'Hỗn hợp' }[encounter.damageType] || 'Hỗn hợp';
     const rules = state.statVersion === STAT_VERSION
-      ? '**Tấn công:** vật lý, hồi 1 Mana (Sorc/Nec hồi 2). **Phòng thủ:** DEF x2 với vật lý, +15 RES với phép, giảm thêm 15%, miễn Crit, hồi 1 Mana. **Kỹ năng:** tốn 2 Mana.'
+      ? '**Tấn công:** vật lý; Sorceress/Necromancer hồi 70% Max Mana, class vật lý hồi 40% (làm tròn xuống, tối thiểu 1). **Phòng thủ:** DEF x2 với vật lý, +15 RES với phép, giảm thêm 15%, miễn Crit, hồi 1 Mana. **Kỹ năng:** tốn 2 Mana.'
       : '**Tấn công:** đánh và hồi 1 năng lượng. **Phòng thủ:** Defense x2, chặn thêm 40% sát thương, miễn chí mạng và hồi 1 năng lượng. **Kỹ năng:** tốn 2 năng lượng.';
     return `${icon('crossed_swords')} **${encounter.name}** · ${rankLabel(encounter.rank)}\n${icon('heart')} ${formatCoins(encounter.hp)}/${formatCoins(encounter.maxHp)} HP · ${icon('crossed_swords')} ${formatCoins(encounter.damageMin)}–${formatCoins(encounter.damageMax)} · **${damageType}** · ${icon('shield')} ${formatCoins(encounter.defense)}${mechanic}\n${rules} — ${skillHint}\n**Bình máu:** hồi ${Math.round((state.potionRate || 0.35) * 100)}% HP tối đa; quái vẫn đánh trả nếu còn sống.`;
   }
@@ -288,13 +329,16 @@ function modifierText(state) {
   return active.map(key => {
     const definition = MODIFIERS[key] || { name: key, description: 'Hiệu ứng Rift không xác định.' };
     const stacks = modifierStacks(state, key);
-    return `• **${definition.name}${stacks > 1 ? ` x${stacks}` : ''}** — ${definition.description}`;
+    return `• **${definition.name}${stacks > 1 ? ` x${stacks}` : ''}** — ${modifierEffectText(key, stacks, state)}`;
   }).join('\n').slice(0, 1024);
 }
 function modifierEffectText(key, stacks, state = null) {
-  if (key === 'stone_skin') return `Defense quái **+${stacks * 10}%** khi encounter được tạo.`;
-  if (key === 'elemental_dominion') return `Damage quái **+${stacks * 4}%** · cơ hội dùng phép **+${stacks * 4} điểm %**.`;
-  if (key === 'bloodlust') return `Quái còn không quá 50% HP gây thêm **${stacks * 8}% damage**.`;
+  const v2 = state?.statVersion === STAT_VERSION;
+  const power = v2 ? effectiveModifierStacks(stacks) : stacks;
+  const rounded = value => Math.round(value * 10) / 10;
+  if (key === 'stone_skin') return `Defense quái **+${rounded(power * (v2 ? 8 : 10))}%** khi encounter được tạo.`;
+  if (key === 'elemental_dominion') return `Damage quái **+${rounded(power * (v2 ? 3 : 4))}%** · cơ hội dùng phép tăng cùng mức.`;
+  if (key === 'bloodlust') return `Quái còn không quá 50% HP gây thêm **${rounded(power * (v2 ? 6 : 8))}% damage**.`;
   if (key === 'unstable_rift') {
     const chestShift = Math.min(16, stacks * 2);
     const mimic = Math.min(30, 15 + stacks * 3);
@@ -302,14 +346,14 @@ function modifierEffectText(key, stacks, state = null) {
     const legendary = Math.min(70, 35 + stacks * 5);
     return `Chuyển **${chestShift}%** encounter quái thường sang hòm · tổng Mimic **${mimic}%** (Ancient **${ancient}%**) · SSR trong hòm kho báu **${legendary}%**.`;
   }
-  if (key === 'fortified') return `HP tối đa của quái mới **+${stacks * 10}%**.`;
+  if (key === 'fortified') return `HP tối đa của quái mới **+${rounded(power * (v2 ? 8 : 10))}%**.`;
   if (key === 'swift_horror') return state?.statVersion === STAT_VERSION
-    ? `Quái mới nhận **+${stacks * 4} Accuracy** và **+${stacks * 2} Evasion**.`
+    ? `Quái mới nhận **+${Math.round(power * 3)} Accuracy** và **+${Math.round(power * 1.5)} Evasion**.`
     : `Quái mới nhận **+${stacks * 3} Accuracy** và **+${stacks} Evasion**.`;
   if (key === 'soul_drain') return state?.statVersion === STAT_VERSION
     ? `Mỗi combat có **${Math.min(3, Math.ceil(stacks / 4))} charge Soul Drain**; mỗi đòn trúng tiêu 1 charge và rút 1 Mana.`
     : `Mỗi đòn quái đánh trúng rút **${stacks >= 5 ? 2 : 1} Energy**.`;
-  if (key === 'cursed_ground') return `Resistance hiệu dụng của bạn giảm **${stacks * 4}** khi nhận damage phép.`;
+  if (key === 'cursed_ground') return `Resistance hiệu dụng của bạn giảm **${v2 ? Math.round(power * 3) : stacks * 4}** khi nhận damage phép.`;
   return 'Không xác định được hiệu ứng.';
 }
 function riftDetailEmbed(state) {
@@ -371,7 +415,7 @@ function hardcoreEmbed(state, userId, result, classes, sessionId = null, itemCat
       { name: `${icon('scroll')} Lượt vừa rồi`, value: String(state.lastLog || 'Run bắt đầu.').slice(0, 1024), inline: false },
     );
   else embed.addFields(
-      { name: `${icon('bar_chart')} Chỉ số · thay đổi trong lượt vừa rồi`, value: statLine(state), inline: false },
+      { name: state.phase === 'upgrade' ? `${icon('bar_chart')} Chọn thuộc tính · chỉ số sau nâng cấp` : `${icon('bar_chart')} Chỉ số · thay đổi trong lượt vừa rồi`, value: state.phase === 'upgrade' ? checkpointPreview(state) : statLine(state), inline: false },
       { name: `${icon('compass')} Tiến trình`, value: `Đã vượt ${state.cleared} · Boss ${state.bosses} · ${icon('test_tube')} ${state.potions}${change(state, 'potions')} · ${icon('mirror')} ${state.escapeTokens}${change(state, 'escapeTokens')} · ${chaosLabel(state)}${temporaryEffectText(state)}`, inline: false },
       { name: '🌀 Rift Modifier đang hoạt động', value: modifierText(state), inline: false },
       { name: `${icon('moneybag')} Rút thưởng`, value: state.cleared ? `**${formatCoins(payout)} :coin:** · x${baseMultiplier(state).toFixed(2)}${state.payoutSpent ? ` · đã dùng ${formatCoins(state.payoutSpent)} xu cho sự kiện` : ''}` : 'Chưa thể rút', inline: false },
@@ -411,7 +455,9 @@ function hardcoreRows(sessionId, state, disabled, classes) {
   const type = state.encounter.type;
   if (type === 'combat') {
     const freeSkill = state.classKey === 'sorceress' && state.classBlessing && state.cleared >= state.classBlessing.startCleared && state.cleared <= state.classBlessing.targetCleared;
-    return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'attack', 'Tấn công', 'crossed_swords', ButtonStyle.Primary), button(sessionId, turn, 'defend', 'Phòng thủ', 'shield', ButtonStyle.Secondary), button(sessionId, turn, 'skill', classes[state.classKey].skill, 'sparkles', ButtonStyle.Success, state.energy < 2 && !freeSkill), button(sessionId, turn, 'potion', `Bình máu (${state.potions})`, 'test_tube', ButtonStyle.Secondary, state.potions <= 0), retreat)]);
+    const attackMana = basicAttackManaRestore(state);
+    const resource = state.statVersion === STAT_VERSION ? 'Mana' : 'Energy';
+    return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'attack', `Tấn công (+${attackMana} ${resource})`, 'crossed_swords', ButtonStyle.Primary), button(sessionId, turn, 'defend', `Phòng thủ (+1 ${resource})`, 'shield', ButtonStyle.Secondary), button(sessionId, turn, 'skill', `${classes[state.classKey].skill} (-${freeSkill ? 0 : SKILL_MANA_COST})`, 'sparkles', ButtonStyle.Success, state.energy < SKILL_MANA_COST && !freeSkill), button(sessionId, turn, 'potion', `Bình máu (${state.potions})`, 'test_tube', ButtonStyle.Secondary, state.potions <= 0), retreat)]);
   }
   if (type === 'chest') return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'open', 'Mở hòm', 'unlock', ButtonStyle.Primary), button(sessionId, turn, 'inspect', 'Kiểm tra', 'eye', ButtonStyle.Secondary, state.encounter.inspected), button(sessionId, turn, 'sell', 'Bán hòm', 'dollar', ButtonStyle.Success), button(sessionId, turn, 'leave', 'Tránh Mimic', 'door', ButtonStyle.Secondary, !state.encounter.revealed), retreat)]);
   if (type === 'shrine') return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'touch', 'Chạm Shrine', 'moyai', ButtonStyle.Primary), button(sessionId, turn, 'ignore', 'Bỏ qua', 'walking', ButtonStyle.Secondary), retreat)]);

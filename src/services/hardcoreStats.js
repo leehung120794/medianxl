@@ -103,7 +103,7 @@ function deriveStats(state) {
   const physical = Math.floor(power * 0.6) + number(items.flatPhysical) + number(bonus.flatPhysical);
   const spell = Math.floor(attributes.energy * 0.75) + number(items.flatSpell) + number(bonus.flatSpell);
   const maxHp = Math.max(20, Math.floor(cls.baseHp + attributes.vitality * 3 + number(items.flatHp) + number(bonus.flatHp)));
-  const maxMana = clamp(Math.floor(cls.baseMana + attributes.energy / 100 + number(items.flatMana) + number(bonus.flatMana)), 1, 10);
+  const maxMana = clamp(Math.floor(cls.baseMana + attributes.energy / 25 + number(items.flatMana) + number(bonus.flatMana)), 1, 10);
   return {
     totalAttributes: attributes,
     maxHp,

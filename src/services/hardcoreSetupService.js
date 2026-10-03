@@ -9,7 +9,8 @@ const {
 const { getAccount } = require('./economyService');
 const { getGameBetLimit } = require('./gameBetLimitService');
 const { formatCoins } = require('../utils/economy');
-const { CLASS_V2 } = require('./hardcoreStats');
+const { CLASS_V2, deriveStats, emptyBonuses } = require('./hardcoreStats');
+const { CLASS_INFO, SKILL_MANA_COST } = require('./hardcoreClassInfo');
 const {
   MIN_BET, MAX_BET, CLASSES, startHardcore, getHardcoreByUser, setMessageId, hardcoreEmbed, hardcoreRows,
 } = require('./hardcoreService');
@@ -47,9 +48,15 @@ function getSetup(token) {
   if (setup && setup.expiresAt <= Date.now()) { removeSetup(setup); return null; }
   return setup || null;
 }
-function classLine([key, value]) {
+function classLine([key, value], detailed = false) {
   const stats = CLASS_V2[key].attributes;
-  return `${value.emoji} **${value.name}** · STR ${stats.strength} · DEX ${stats.dexterity} · VIT ${stats.vitality} · ENE ${stats.energy} · ${value.skill}`;
+  const guide = CLASS_INFO[key];
+  if (!detailed) return `${value.emoji} **${value.name}** · Build ${guide.primary} · ${guide.role}`;
+  const derived = deriveStats({ classKey: key, attributes: {}, eventAttributes: {}, statBonuses: emptyBonuses(), items: [], baseLuck: 0 });
+  const damage = guide.type === 'magic' ? `Phép ${derived.spellMin}–${derived.spellMax}` : `Vật lý ${derived.damageMin}–${derived.damageMax}`;
+  const recoveryRate = guide.type === 'magic' ? 70 : 40;
+  const recovery = Math.max(1, Math.floor(derived.maxMana * recoveryRate / 100));
+  return `${value.emoji} **${value.name}** · Build **${guide.primary}** · ${guide.role}\nSTR ${stats.strength} · DEX ${stats.dexterity} · VIT ${stats.vitality} · ENE ${stats.energy}\n❤️ HP ${derived.maxHp} · ⚔️ ${damage} · 🛡️ DEF ${derived.defense} · ✨ Mana ${derived.maxMana}\n✨ **${guide.skill} (${SKILL_MANA_COST} Mana):** ${guide.summary}\n⚔️ Đòn thường hồi ${recoveryRate}% Max Mana = ${recovery} Mana.`;
 }
 function setupPanel(setup, status = null) {
   const balance = getAccount(setup.guildId, setup.userId).balance;
@@ -66,7 +73,7 @@ function setupPanel(setup, status = null) {
       { name: '💰 Số dư', value: `${formatCoins(balance)} xu`, inline: true },
       { name: '🎟️ Cược đã chọn', value: setup.stake ? `${formatCoins(setup.stake)} xu` : 'Chưa nhập', inline: true },
       { name: '📏 Giới hạn cược', value: `${formatCoins(MIN_BET)}–${formatCoins(maxBet)} xu`, inline: true },
-      { name: selectedClass ? `${selectedClass.emoji} Nhân vật đã chọn` : '🧙 Chọn một trong 7 nhân vật', value: selectedClass ? classLine([setup.classKey, selectedClass]) : Object.entries(CLASSES).map(classLine).join('\n'), inline: false },
+      { name: selectedClass ? `${selectedClass.emoji} Nhân vật đã chọn` : '🧙 Chọn một trong 7 nhân vật', value: selectedClass ? classLine([setup.classKey, selectedClass], true) : Object.entries(CLASSES).map(entry => classLine(entry)).join('\n'), inline: false },
       { name: '📖 Thuộc tính', value: '💪 STR: vật lý/Defense · 🎯 DEX: đánh trúng/né/Crit · ❤️ VIT: HP/bình máu · 🔮 ENE: phép/kháng/Mana', inline: false },
     )
     .setFooter({ text: 'Bảng chuẩn bị hết hạn sau 5 phút không thao tác.' });
@@ -75,7 +82,7 @@ function setupPanel(setup, status = null) {
     .setPlaceholder('Chọn nhân vật và xem kỹ năng')
     .addOptions(Object.entries(CLASSES).map(([key, value]) => new StringSelectMenuOptionBuilder()
       .setLabel(value.name).setValue(key).setEmoji(value.emoji)
-      .setDescription(`STR ${CLASS_V2[key].attributes.strength} · DEX ${CLASS_V2[key].attributes.dexterity} · VIT ${CLASS_V2[key].attributes.vitality} · ENE ${CLASS_V2[key].attributes.energy}`)
+      .setDescription(`Build ${CLASS_INFO[key].primary} · ${CLASS_INFO[key].role}`)
       .setDefault(key === setup.classKey)));
   const ready = Boolean(setup.classKey && setup.stake);
   const buttons = new ActionRowBuilder().addComponents(
