@@ -48,4 +48,29 @@ function effectiveModifierStacks(stacks) {
   return Math.min(8, Math.min(count, 3) + Math.min(Math.max(0, count - 3), 5) * 0.5 + Math.max(0, count - 8) * 0.25);
 }
 
-module.exports = { REGIONS, MODIFIERS, BOSS_SEQUENCE, regionForFloor, bossForFloor, modifierStacks, effectiveModifierStacks };
+function riftModifierEffects(state, enemy = null) {
+  const stacks = key => modifierStacks(state, key);
+  const stoneSkin = stacks('stone_skin'); const elemental = stacks('elemental_dominion');
+  const bloodlust = stacks('bloodlust'); const unstable = stacks('unstable_rift');
+  const fortified = stacks('fortified'); const swift = stacks('swift_horror');
+  const soulDrain = stacks('soul_drain'); const cursedGround = stacks('cursed_ground');
+  const v2 = state?.statVersion === 2;
+  const power = count => v2 ? effectiveModifierStacks(count) : count;
+  return {
+    stoneSkinMultiplier: 1 + power(stoneSkin) * (v2 ? 0.08 : 0.1),
+    elementalDamageMultiplier: 1 + power(elemental) * (v2 ? 0.03 : 0.04),
+    magicChanceBonus: power(elemental) * (v2 ? 0.03 : 0.04),
+    bloodlustDamageMultiplier: enemy && enemy.hp <= enemy.maxHp / 2 ? 1 + power(bloodlust) * (v2 ? 0.06 : 0.08) : 1,
+    chestBoost: Math.min(0.16, unstable * 0.02),
+    ancientMimicChance: Math.min(0.08, 0.03 + unstable * 0.01),
+    mimicChance: Math.min(0.3, 0.15 + unstable * 0.03),
+    treasureLegendaryChance: Math.min(0.7, 0.35 + unstable * 0.05),
+    fortifiedMultiplier: 1 + power(fortified) * (v2 ? 0.08 : 0.1),
+    swiftAccuracyBonus: v2 ? Math.round(power(swift) * 3) : swift * 3,
+    swiftEvasionBonus: v2 ? Math.round(power(swift) * 1.5) : swift,
+    soulDrainAmount: v2 ? (soulDrain ? Math.min(3, Math.ceil(soulDrain / 4)) : 0) : (soulDrain ? (soulDrain >= 5 ? 2 : 1) : 0),
+    cursedResistancePenalty: v2 ? Math.round(power(cursedGround) * 3) : cursedGround * 4,
+  };
+}
+
+module.exports = { REGIONS, MODIFIERS, BOSS_SEQUENCE, regionForFloor, bossForFloor, modifierStacks, effectiveModifierStacks, riftModifierEffects };

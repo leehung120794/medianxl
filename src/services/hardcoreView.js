@@ -1,12 +1,12 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { formatCoins } = require('../utils/economy');
-const { baseMultiplier, potentialPayout: enginePotentialPayout, payoutLoss: enginePayoutLoss } = require('./hardcoreEngine');
-const { STAT_VERSION, totalAttributes, equipmentBonuses, deriveStats } = require('./hardcoreStats');
+const { baseMultiplier, potentialPayout: enginePotentialPayout, payoutLoss: enginePayoutLoss, hitChance: legacyHitChance, defenseReduction: legacyDefenseReduction, magicAfterResistance } = require('./hardcoreEngine');
+const { STAT_VERSION, totalAttributes, equipmentBonuses, deriveStats, v2DefenseReduction, v2HitChance } = require('./hardcoreStats');
 const { SKILL_MANA_COST, basicAttackManaRestore, skillDamagePreview } = require('./hardcoreClassInfo');
 const { resultBlock, coins } = require('../utils/rewardText');
 const emojiMap = require('../discordEmojiMap');
 const { rarityLabel, itemEffects, normalizeEquipment, effectText } = require('./hardcoreEquipment');
-const { MODIFIERS, regionForFloor, modifierStacks, effectiveModifierStacks } = require('./hardcoreWorld');
+const { MODIFIERS, regionForFloor, modifierStacks, effectiveModifierStacks, riftModifierEffects } = require('./hardcoreWorld');
 
 const icon = (name, fallback = '•') => emojiMap[`:${name}:`] || fallback;
 function potentialPayout(state) {
@@ -38,38 +38,81 @@ function transition(before, after, formatter = formatCoins) {
   return `${formatter(before)}→**${formatter(after)}**`;
 }
 function numberPercent(value) { return `${Math.round(value * 1000) / 10}%`; }
+function activeClassBlessing(state, classKey = state.classKey) {
+  const blessing = state.classBlessing;
+  return Boolean(blessing && blessing.classKey === classKey && state.cleared >= blessing.startCleared && state.cleared <= blessing.targetCleared);
+}
+function combatIncomingPreview(state) {
+  const enemy = state.encounter;
+  if (!enemy || enemy.type !== 'combat') return null;
+  const rift = riftModifierEffects(state, enemy);
+  const frenzy = enemy.mechanic === 'frenzy' ? Math.min(5, enemy.frenzyStacks || 0) : 0;
+  const multiplier = rift.bloodlustDamageMultiplier + frenzy * 0.08;
+  const rawMin = Math.max(1, Math.floor(enemy.damageMin * multiplier));
+  const rawMax = Math.max(2, Math.floor(enemy.damageMax * multiplier));
+  const taken = 1 + (Number(state.damageTaken) || 0);
+  const reverse = state.statVersion === STAT_VERSION && state.activeParadox?.kind === 'reverse';
+  const barbarianBonus = activeClassBlessing(state, 'barbarian') && state.hp <= state.maxHp * 0.3 ? 8 : 0;
+  const effectiveDefense = (reverse ? Math.floor((state.damageMin + state.damageMax) / 2) : state.defense) + barbarianBonus;
+  const physicalReduction = state.statVersion === STAT_VERSION
+    ? v2DefenseReduction(effectiveDefense, state.floor)
+    : legacyDefenseReduction(effectiveDefense, state.floor);
+  const physical = [rawMin, rawMax].map(raw => Math.max(1, Math.floor(Math.max(1, Math.floor(raw * (1 - physicalReduction))) * taken)));
+  const effectiveResistance = state.resistance + (activeClassBlessing(state, 'paladin') ? 10 : 0) - rift.cursedResistancePenalty;
+  const magic = [rawMin, rawMax].map(raw => Math.max(1, Math.floor(magicAfterResistance(raw, effectiveResistance) * taken)));
+  const chance = state.statVersion === STAT_VERSION
+    ? v2HitChance(enemy.accuracy, state.evasion)
+    : legacyHitChance(enemy.accuracy, state.evasion);
+  const hit = Math.round(chance * 1000) / 10;
+  const type = enemy.nextAttackType || enemy.damageType || 'physical';
+  return { type, range: type === 'magic' ? magic : physical, hit };
+}
 function checkpointPreview(state) {
   if (state.statVersion !== STAT_VERSION) return statLine(state);
   const current = deriveStats(state);
   const definitions = [
     ['strength', '💪 +5 STR'], ['dexterity', '🎯 +5 DEX'], ['vitality', '❤️ +5 VIT'], ['energy', '🔮 +5 ENE'],
   ];
-  return definitions.map(([key, label]) => {
+  const currentLine = `**Tổng hiện tại**\nHP ${current.maxHp} · ⚔️ ${current.damageMin}–${current.damageMax} · ✨ ${current.spellMin}–${current.spellMax}\nDEF ${current.defense} · ACC ${current.accuracy} · EVA ${current.evasion} · Crit ${numberPercent(current.critChance)} · RES ${current.resistance}% · Mana ${current.maxMana} · Bình ${numberPercent(current.potionRate)}`;
+  const options = definitions.map(([key, label]) => {
     const projected = deriveStats({ ...state, attributes: { ...(state.attributes || {}), [key]: (state.attributes?.[key] || 0) + 5 } });
-    const parts = [];
-    if (projected.damageMin !== current.damageMin || projected.damageMax !== current.damageMax) parts.push(`⚔️ DMG ${current.damageMin}–${current.damageMax}→**${projected.damageMin}–${projected.damageMax}**`);
-    if (projected.spellMin !== current.spellMin || projected.spellMax !== current.spellMax) parts.push(`✨ Phép ${current.spellMin}–${current.spellMax}→**${projected.spellMin}–${projected.spellMax}**`);
-    if (projected.maxHp !== current.maxHp) parts.push(`HP ${transition(current.maxHp, projected.maxHp)}`);
-    if (projected.defense !== current.defense) parts.push(`DEF ${transition(current.defense, projected.defense)}`);
-    if (projected.accuracy !== current.accuracy) parts.push(`ACC ${transition(current.accuracy, projected.accuracy)}`);
-    if (projected.evasion !== current.evasion) parts.push(`EVA ${transition(current.evasion, projected.evasion)}`);
-    if (projected.critChance !== current.critChance) parts.push(`Crit ${transition(current.critChance, projected.critChance, numberPercent)}`);
-    if (projected.resistance !== current.resistance) parts.push(`RES ${transition(current.resistance, projected.resistance, value => `${value}%`)}`);
-    if (key === 'vitality') parts.push(`Bình ${transition(current.potionRate, projected.potionRate, numberPercent)}`);
-    if (key === 'energy') parts.push(`Mana ${transition(current.maxMana, projected.maxMana)}`);
-    return `**${label}:** ${parts.join(' · ')}`;
-  }).join('\n');
+    return `**${label}** → HP ${projected.maxHp} · ⚔️ ${projected.damageMin}–${projected.damageMax} · ✨ ${projected.spellMin}–${projected.spellMax} · DEF ${projected.defense} · ACC ${projected.accuracy} · EVA ${projected.evasion} · Crit ${numberPercent(projected.critChance)} · RES ${projected.resistance}% · Mana ${projected.maxMana} · Bình ${numberPercent(projected.potionRate)}`;
+  });
+  return [currentLine, ...options].join('\n');
+}
+function shrineCatalogText(state) {
+  if (state.statVersion !== STAT_VERSION) return [
+    'Mỗi loại có tỷ lệ xuất hiện ngang nhau:',
+    '💚 **Healing:** hồi đầy HP.',
+    '🛡️ **Armor:** +3 Defense.',
+    '🩸 **Blood:** mất 15 HP, +4 damage.',
+    '✨ **Experience:** payout +25% tiền cược.',
+    '☣️ **Corrupted:** +7 damage, −4 Defense.',
+    '🤡 **Fake:** nhận 30% Max HP damage, tối thiểu 10.',
+  ].join('\n');
+  return [
+    'Mỗi loại có tỷ lệ xuất hiện ngang nhau (**16,7%**):',
+    '💚 **Healing:** hồi đầy HP.',
+    '🛡️ **Armor:** +5 STR hoặc +5 VIT.',
+    '🩸 **Blood:** +8 STR, −5 VIT.',
+    '✨ **Experience:** payout +25% tiền cược.',
+    '☣️ **Corrupted:** +12 STR, −8 VIT.',
+    '🤡 **Fake:** nhận 30% Max HP damage, tối thiểu 10.',
+  ].join('\n');
 }
 function battleText(state) {
   const enemy = state.encounter;
   const classInfo = { amazon: 'Amazon', assassin: 'Assassin', barbarian: 'Barbarian', druid: 'Druid', necromancer: 'Necromancer', paladin: 'Paladin', sorceress: 'Sorceress' }[state.classKey] || state.className;
   const intent = enemy.nextAttackType || enemy.damageType || 'physical';
+  const incoming = combatIncomingPreview(state);
+  const incomingRange = incoming.range[0] === incoming.range[1] ? formatCoins(incoming.range[0]) : `${formatCoins(incoming.range[0])}–${formatCoins(incoming.range[1])}`;
   const mechanic = enemy.mechanicDescription ? `\n${icon('warning')} ${enemy.mechanicDescription}` : '';
   return [
     `### ${icon('japanese_goblin', '👹')} ${enemy.name} · ${rankLabel(enemy.rank)}`,
     `${icon('heart')} \`${hpBar(enemy.hp, enemy.maxHp)}\` **${formatCoins(enemy.hp)}/${formatCoins(enemy.maxHp)} HP**`,
     `${icon('crossed_swords')} ${formatCoins(enemy.damageMin)}–${formatCoins(enemy.damageMax)} · ${damageTypeText(enemy.damageType)} · ${icon('shield')} ${formatCoins(enemy.defense)} Defense`,
     `🎯 **Đòn kế tiếp:** ${damageTypeText(intent)}${mechanic}`,
+    `📉 **Dự báo nhận:** ${incomingRange} HP · ${incoming.hit}% trúng · **chưa tính Crit và chưa Phòng thủ**`,
     '',
     `### ${classInfo}`,
     `${icon('heart')} \`${hpBar(state.hp, state.maxHp)}\` **${formatCoins(state.hp)}/${formatCoins(state.maxHp)} HP**`,
@@ -180,10 +223,17 @@ function encounterText(state) {
 }
 function chaosLabel(state) {
   const chance = state.lastChaosChance || 0;
-  if (!chance) return `${icon('large_green_circle')} Chaos: Yên`;
-  if (chance < 0.01) return `${icon('large_green_circle')} Chaos: Thấp`;
-  if (chance < 0.03) return `${icon('large_yellow_circle')} Chaos: Bất ổn`;
-  return `${icon('red_circle')} Chaos: NGUY HIỂM${state.lastChaosSpike ? ' · SPIKE' : ''}`;
+  const percent = Math.round(chance * 1000) / 10;
+  if (!chance) return `${icon('large_green_circle')} Chaos: Yên · 0%`;
+  if (chance < 0.01) return `${icon('large_green_circle')} Chaos: Thấp · ${percent}%`;
+  if (chance < 0.03) return `${icon('large_yellow_circle')} Chaos: Bất ổn · ${percent}%`;
+  return `${icon('red_circle')} Chaos: NGUY HIỂM · ${percent}%${state.lastChaosSpike ? ' · SPIKE' : ''}`;
+}
+function chaosExplanation(state) {
+  if (state.floor < 5 && !(state.lastChaosChance > 0)) return `${chaosLabel(state)}\nChaos là cảnh báo xác suất gặp RNGesus, không phải debuff. RNGesus chỉ bắt đầu xuất hiện từ tầng 5.`;
+  const dry = Math.max(0, Number(state.rngesusDry) || 0);
+  const base = state.floor < 10 ? 0.3 : state.floor < 20 ? 0.6 : 1;
+  return `${chaosLabel(state)}\n**Bất ổn/Nguy hiểm chỉ là mức cảnh báo, không trừ chỉ số.** Lần roll gần nhất dùng xác suất trên; base tầng này ${base}%, chuỗi chưa gặp ${dry} lượt. Mỗi lượt trượt cộng 0,05 điểm %, còn Chaos Spike có thể cộng 4–10 điểm %; xác suất cuối cap 12%.`;
 }
 function signed(value, percent = false) {
   const amount = percent ? Math.round(value * 100) : value;
@@ -415,8 +465,9 @@ function hardcoreEmbed(state, userId, result, classes, sessionId = null, itemCat
       { name: `${icon('scroll')} Lượt vừa rồi`, value: String(state.lastLog || 'Run bắt đầu.').slice(0, 1024), inline: false },
     );
   else embed.addFields(
-      { name: state.phase === 'upgrade' ? `${icon('bar_chart')} Chọn thuộc tính · chỉ số sau nâng cấp` : `${icon('bar_chart')} Chỉ số · thay đổi trong lượt vừa rồi`, value: state.phase === 'upgrade' ? checkpointPreview(state) : statLine(state), inline: false },
-      { name: `${icon('compass')} Tiến trình`, value: `Đã vượt ${state.cleared} · Boss ${state.bosses} · ${icon('test_tube')} ${state.potions}${change(state, 'potions')} · ${icon('mirror')} ${state.escapeTokens}${change(state, 'escapeTokens')} · ${chaosLabel(state)}${temporaryEffectText(state)}`, inline: false },
+      ...(state.phase === 'upgrade' ? [{ name: `${icon('bar_chart')} Chọn thuộc tính · chỉ số sau nâng cấp`, value: checkpointPreview(state), inline: false }] : []),
+      ...(state.encounter?.type === 'shrine' ? [{ name: `${icon('moyai')} Các Shrine có thể gặp`, value: shrineCatalogText(state), inline: false }] : []),
+      { name: `${icon('compass')} Tiến trình & Chaos`, value: `Đã vượt ${state.cleared} · Boss ${state.bosses} · ${icon('test_tube')} ${state.potions}${change(state, 'potions')} · ${icon('mirror')} ${state.escapeTokens}${change(state, 'escapeTokens')}${temporaryEffectText(state)}\n${chaosExplanation(state)}`, inline: false },
       { name: '🌀 Rift Modifier đang hoạt động', value: modifierText(state), inline: false },
       { name: `${icon('moneybag')} Rút thưởng`, value: state.cleared ? `**${formatCoins(payout)} :coin:** · x${baseMultiplier(state).toFixed(2)}${state.payoutSpent ? ` · đã dùng ${formatCoins(state.payoutSpent)} xu cho sự kiện` : ''}` : 'Chưa thể rút', inline: false },
       { name: `${icon('school_satchel')} Trang bị`, value: equipmentSummary(state), inline: false },
@@ -438,7 +489,8 @@ function hardcoreRows(sessionId, state, disabled, classes) {
   const withEquipment = rows => [...rows, new ActionRowBuilder().addComponents(
     button(sessionId, state.turn, 'items', `Trang bị (${normalizeEquipment(state.items).length})`, 'school_satchel', ButtonStyle.Secondary),
     button(sessionId, state.turn, 'rift_info', 'Rift Modifier', 'cyclone', ButtonStyle.Secondary),
-    ...(state.encounter?.type === 'combat' ? [button(sessionId, state.turn, 'stats', 'Chỉ số', 'bar_chart', ButtonStyle.Secondary), button(sessionId, state.turn, 'enemy_info', 'Thông tin quái', 'information_source', ButtonStyle.Secondary)] : []),
+    button(sessionId, state.turn, 'stats', 'Chỉ số', 'bar_chart', ButtonStyle.Secondary),
+    ...(state.encounter?.type === 'combat' ? [button(sessionId, state.turn, 'enemy_info', 'Thông tin quái', 'information_source', ButtonStyle.Secondary)] : []),
   )];
   const turn = state.turn; const retreat = button(sessionId, turn, 'retreat', state.cleared ? 'Rút thưởng' : 'Bỏ run', state.cleared ? 'moneybag' : 'waving_white_flag', ButtonStyle.Danger);
   if (state.phase === 'summit') return withEquipment([new ActionRowBuilder().addComponents(retreat)]);
@@ -531,4 +583,4 @@ function hardcoreRows(sessionId, state, disabled, classes) {
   if (type === 'trap' && state.encounter.kind === 'wrong_portal') continueLabel = `Đi vào (rủi ro -${formatCoins(payoutLoss(state, 0.9))} xu)`;
   return withEquipment([new ActionRowBuilder().addComponents(button(sessionId, turn, 'continue', continueLabel, 'arrow_right', ButtonStyle.Primary), retreat)]);
 }
-module.exports = { hpBar, damageTypeText, battleText, battleColor, rankLabel, encounterText, chaosLabel, equipmentSummary, equipmentEmbed, equipmentRows, modifierEffectText, riftDetailEmbed, statsDetailEmbed, enemyDetailEmbed, hardcoreEmbed, hardcoreRows };
+module.exports = { hpBar, damageTypeText, battleText, combatIncomingPreview, shrineCatalogText, battleColor, rankLabel, encounterText, chaosLabel, chaosExplanation, equipmentSummary, equipmentEmbed, equipmentRows, modifierEffectText, riftDetailEmbed, statsDetailEmbed, enemyDetailEmbed, hardcoreEmbed, hardcoreRows };

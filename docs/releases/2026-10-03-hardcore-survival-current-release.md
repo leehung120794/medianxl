@@ -109,6 +109,12 @@ Critical damage = 175% damage trước giảm trừ
 - **Phòng thủ:** hồi 1 Mana; vật lý dùng Defense x2; phép nhận +15 RES; sau giảm trừ còn giảm thêm 15%; miễn Critical trong lượt đó.
 - **Bình máu:** tối thiểu hồi 20 HP, tiêu một bình, không dùng được khi đầy HP. Tối đa giữ 5 bình.
 
+### 4.1. Dự báo chỉ số và sát thương
+
+- Ở checkpoint, mục dự báo hiển thị toàn bộ chỉ số hiện tại và toàn bộ chỉ số sau từng lựa chọn `+5 STR`, `+5 DEX`, `+5 VIT` hoặc `+5 ENE`: HP, damage vật lý, damage phép, DEF, ACC, EVA, Crit, RES, Max Mana và hiệu lực bình máu.
+- Ở combat, dòng **Dự báo nhận** dùng đúng quái và loại đòn kế tiếp đang hiển thị. Dự báo tính tỷ lệ trúng, Defense hoặc Resistance, Rift Modifier, curse tăng damage nhận, Bloodlust/Frenzy và Class Shrine đang hoạt động.
+- Khoảng damage dự báo là lượng HP mất nếu đòn đánh trúng, **chưa tính Critical và chưa dùng nút Phòng thủ**. Vì vậy Critical thực tế có thể cao hơn con số này; bấm Phòng thủ sẽ thấp hơn.
+
 | Class | Skill | Cơ chế |
 |---|---|---|
 | Barbarian | Iron Will | Đòn vật lý ×1,65. |
@@ -190,6 +196,8 @@ Kết quả ẩn của event được roll khi encounter được tạo và lưu
 
 ### 8.1. Shrine
 
+Khi gặp Shrine, giao diện thay phần chỉ số của lượt trước bằng catalog sáu Shrine bên dưới. Sáu loại được chọn đồng đều, tương đương khoảng 16,7% mỗi loại; kết quả cụ thể vẫn được giữ kín cho tới khi người chơi bấm **Chạm Shrine**.
+
 | Shrine | Kết quả khi chạm |
 |---|---|
 | Healing | Hồi đầy HP. |
@@ -268,6 +276,8 @@ Mỗi loại shop cách lần xuất hiện trước của cùng loại ít nh�
 - **Hối lộ:** mất 40% payout hiện tại và đi tiếp.
 - **Cầu nguyện:** 10% sống và nhận item; trong phần thưởng đó 85% SSR, 15% UR. Thất bại chết.
 - **Dùng Vé:** tiêu một Vé và bỏ qua an toàn.
+
+Trong giao diện, Chaos là mức cảnh báo xác suất gặp RNGesus ở lần roll gần nhất, không phải debuff và không làm giảm chỉ số. `Thấp` là dưới 1%, `Bất ổn` là từ 1% đến dưới 3%, `Nguy hiểm` là từ 3% trở lên. UI hiển thị trực tiếp phần trăm, chuỗi lượt chưa gặp và trạng thái Chaos Spike; xác suất cuối luôn cap 12%.
 
 ## 10. Grave Echo và Server Nemesis
 

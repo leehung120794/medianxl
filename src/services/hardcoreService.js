@@ -8,7 +8,7 @@ const { createFairness, fairInt } = require('./fairnessService');
 const hardcoreRepository = require('./hardcoreRepository');
 const hardcoreView = require('./hardcoreView');
 const { EFFECT_KEYS, rarityLabel, itemEffects, normalizeEquipment } = require('./hardcoreEquipment');
-const { MODIFIERS, regionForFloor, bossForFloor, modifierStacks, effectiveModifierStacks } = require('./hardcoreWorld');
+const { MODIFIERS, regionForFloor, bossForFloor, modifierStacks, riftModifierEffects } = require('./hardcoreWorld');
 const { ITEMS } = require('../hardcore/item');
 const { spendDiamonds } = require('./playerLevelService');
 const { STAT_VERSION, CLASS_V2, initializeV2State, syncDerived, v2ItemBonuses, equipmentBonuses, v2HitChance, v2DefenseReduction } = require('./hardcoreStats');
@@ -76,35 +76,6 @@ function nextFair(maximum, context) {
 function randomFloat() { const value = nextFair(1_000_000, 'float'); return (value ?? crypto.randomInt(1_000_000)) / 1_000_000; }
 function randomInt(min, max) { const value = nextFair(max - min + 1, 'int'); return min + (value ?? crypto.randomInt(max - min + 1)); }
 function pick(items) { const value = nextFair(items.length, 'pick'); return items[value ?? crypto.randomInt(items.length)]; }
-
-function riftModifierEffects(state, enemy = null) {
-  const stoneSkin = modifierStacks(state, 'stone_skin');
-  const elemental = modifierStacks(state, 'elemental_dominion');
-  const bloodlust = modifierStacks(state, 'bloodlust');
-  const unstable = modifierStacks(state, 'unstable_rift');
-  const fortified = modifierStacks(state, 'fortified');
-  const swift = modifierStacks(state, 'swift_horror');
-  const soulDrain = modifierStacks(state, 'soul_drain');
-  const cursedGround = modifierStacks(state, 'cursed_ground');
-  const v2 = isV2(state);
-  const power = stacks => v2 ? effectiveModifierStacks(stacks) : stacks;
-  return {
-    stoneSkinMultiplier: 1 + power(stoneSkin) * (v2 ? 0.08 : 0.1),
-    elementalDamageMultiplier: 1 + power(elemental) * (v2 ? 0.03 : 0.04),
-    magicChanceBonus: power(elemental) * (v2 ? 0.03 : 0.04),
-    bloodlustDamageMultiplier: enemy && enemy.hp <= enemy.maxHp / 2 ? 1 + power(bloodlust) * (v2 ? 0.06 : 0.08) : 1,
-    chestBoost: Math.min(0.16, unstable * 0.02),
-    ancientMimicChance: Math.min(0.08, 0.03 + unstable * 0.01),
-    mimicChance: Math.min(0.3, 0.15 + unstable * 0.03),
-    treasureLegendaryChance: Math.min(0.7, 0.35 + unstable * 0.05),
-    fortifiedMultiplier: 1 + power(fortified) * (v2 ? 0.08 : 0.1),
-    swiftAccuracyBonus: v2 ? Math.round(power(swift) * 3) : swift * 3,
-    swiftEvasionBonus: v2 ? Math.round(power(swift) * 1.5) : swift,
-    soulDrainAmount: v2 ? (soulDrain ? Math.min(3, Math.ceil(soulDrain / 4)) : 0) : (soulDrain ? (soulDrain >= 5 ? 2 : 1) : 0),
-    cursedResistancePenalty: v2 ? Math.round(power(cursedGround) * 3) : cursedGround * 4,
-  };
-}
-
 
 function resolvePhysicalAttack(attacker, defender, level, options = {}) {
   const hitRoll = options.hitRoll ?? randomFloat();
