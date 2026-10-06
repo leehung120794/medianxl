@@ -1,0 +1,36 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Database
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/*.db
+data/backups/
+
+# Logs
+logs/
+*.log
+
+# Coverage
+coverage/
+
+# Local generated Discord emoji assets
+/output/stat-icons/
+/output/class-icons/
+/output/survival-ui-icons/
+/output/playing-cards/
+/assets/playing-cards/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
