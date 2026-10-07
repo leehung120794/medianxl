@@ -33,7 +33,8 @@
     "test:hardcore:healing": "node scripts/test-hardcore-healing-log.js",
     "test:hardcore:passives": "node scripts/test-hardcore-item-passives.js",
     "test:hardcore:curses": "node scripts/test-hardcore-item-curses.js",
-    "test:hardcore:loot": "node scripts/test-hardcore-monster-loot.js"
+    "test:hardcore:loot": "node scripts/test-hardcore-monster-loot.js",
+    "test:backup:discord": "node scripts/test-database-backup-discord.js"
   },
   "engines": {
     "node": ">=18.17.0"

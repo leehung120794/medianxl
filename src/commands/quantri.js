@@ -49,6 +49,7 @@ const GAME_NAMES = {
   maxbets: "xemgioihan",
   economy: "kinhte",
   health: "trangthai",
+  backup: "guibackup",
   configs: "xemcauhinh",
   configreset: "khoiphuc",
   gachaadd: "themgacha",
@@ -136,7 +137,8 @@ const options = [
   {
     type: ApplicationCommandOptionType.Subcommand,
     name: "xemthuongvaitro",
-    description: "Xem và quản lý thưởng vai trò hàng tuần (thêm, sửa, xóa bằng nút)",
+    description:
+      "Xem và quản lý thưởng vai trò hàng tuần (thêm, sửa, xóa bằng nút)",
   },
   {
     type: ApplicationCommandOptionType.Subcommand,
@@ -261,7 +263,11 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
-    if (["xemthuongvaitro", "hesothang"].includes(interaction.options.getSubcommand())) {
+    if (
+      ["xemthuongvaitro", "hesothang"].includes(
+        interaction.options.getSubcommand(),
+      )
+    ) {
       const name = interaction.options.getSubcommand();
       if (!interaction.guildId || !isAdmin(interaction))
         return interaction.reply({
@@ -274,7 +280,9 @@ module.exports = {
       return interaction.reply({
         ...(name === "hesothang"
           ? winMultiplierPanel(interaction.guildId, interaction.user.id)
-          : roleRewardPanel(interaction.guildId, interaction.user.id, { interaction })),
+          : roleRewardPanel(interaction.guildId, interaction.user.id, {
+              interaction,
+            })),
         flags: MessageFlags.Ephemeral,
       });
     }

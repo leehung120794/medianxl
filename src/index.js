@@ -132,7 +132,7 @@ client.once(Events.ClientReady, async () => {
   maintenanceTimers.push(
     require("./hardcore/tower/challengeCatalog").startWeeklyMaintenance(logger),
   );
-  backupManager = startDatabaseBackups(logger);
+  backupManager = startDatabaseBackups(client, logger);
   logger.info(
     {
       user: client.user.tag,
