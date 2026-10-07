@@ -208,7 +208,7 @@ function survivalRules() {
       {
         name: "☠️ Khi gặp RNGesus",
         value:
-          "RNGesus không thể bị đánh bại; **Chiến đấu** làm run kết thúc. **Bỏ chạy** có 75% thành công, giữ vé; thất bại tự dùng 1 Vé Thoát Hiểm nếu còn, hết vé thì chết. **Dùng vé** tiêu 1 Vé Thoát Hiểm để vượt tầng an toàn (giữ tối đa 1 vé). **Hối lộ** nhân payout ×0,6. **Cầu nguyện**: 30% thành công, nhận 85% SSR/15% UR; thất bại là chết. Không có nút rút thưởng.",
+          "RNGesus không thể bị đánh bại; **Chiến đấu** làm run kết thúc. **Bỏ chạy** có 75% thành công, giữ Vé thoát; thất bại tự dùng 1 Vé thoát nếu còn, hết vé thì chết. **Hối lộ** trừ một lần 40% payout hiện tại. **Cầu nguyện**: 30% thành công; Vé cầu nguyện tăng lên 60% trong toàn run. Không có nút rút thưởng.",
         inline: false,
       },
       {

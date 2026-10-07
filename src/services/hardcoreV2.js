@@ -1,8 +1,11 @@
 "use strict";
 const stats = require("./hardcoreStats");
 const itemPassives = require("../hardcore/itemPassives");
+const itemCurses = require("../hardcore/itemCurses");
 const monsterLoot = require("../hardcore/monsterLoot");
 const {
+  RNGESUS_MAX_DRY,
+  rngesusDryCount,
   rngesusEncounterChance,
   resetRngesusEncounter,
 } = require("./hardcoreRngesus");
@@ -48,6 +51,7 @@ const RESULT_STATS = [
   "maxMana",
   "luck",
   "potions",
+  "maxPotions",
   "escapeTokens",
   "potionRate",
 ];
@@ -59,6 +63,7 @@ function effectStatKeys(effects) {
     spell: ["spellMin", "spellMax"],
     maxMana: ["maxMana"],
     potionPower: ["potionRate"],
+    potionCapacityLoss: ["maxPotions", "potions"],
     heal: ["hp"],
     defenseSet: ["defense"],
   };
@@ -139,6 +144,20 @@ const EVENT_NAMES = {
 const pick = (pool, rng) => pool[Math.floor(rng() * pool.length)];
 const int = (lo, hi, rng) => lo + Math.floor(rng() * (hi - lo + 1));
 const randomItem = (rarity, rng) => structuredClone(pick(ITEMS[rarity], rng));
+function ensureGoblinReward(event, state) {
+  if (!event || event.kind !== "goblin" || event.rewardItem) return event;
+  const roll = Number.isFinite(event.roll2) ? event.roll2 : 0;
+  event.rewardRarity =
+    roll < 0.6 ? "rare" : roll < 0.95 ? "legendary" : "cursed";
+  const pool = ITEMS[event.rewardRarity];
+  event.rewardItem = structuredClone(
+    pool[
+      (Math.max(0, state.floor || 1) + Math.max(0, state.turn || 0)) %
+        pool.length
+    ],
+  );
+  return event;
+}
 const MERCHANT_PRICES = {
   potion: 0.025,
   heal: 0.04,
@@ -177,7 +196,7 @@ function reviveAfterDeath(state, session, rng, reason) {
   delete state.lastDeathCause;
   state.lastLog += adventurer
     ? "\n🤝 The Tower remembers: Lost Adventurer trở lại cứu bạn! Hiệu lực cứu giúp đã dùng, giữ nguyên vé hồi sinh."
-    : "\n🎟️ Tự dùng 1 vé hồi sinh.";
+    : `\n${E.reviveTicket} Dùng Vé hồi sinh.`;
   if (!combat || reason === "rngesus") completeFloor(state, session, rng, 0);
   // Set directly: checkpoint healing and regeneration must not alter the promised 50%.
   state.hp = Math.max(1, Math.ceil(state.maxHp * 0.5));
@@ -188,10 +207,40 @@ function normalize(state) {
   if (!["2.0.0", "2.0.1"].includes(state.releaseVersion))
     throw new Error("UNSUPPORTED_HARDCORE_VERSION");
   recompute(state);
+  state.payoutSpent = Math.max(0, Number(state.payoutSpent) || 0);
+  if (state.payoutLedgerVersion !== 2) {
+    // Old V2 saves stored event losses in eventPayoutFactor. Convert that
+    // reduction into a fixed deduction while preserving the exact cashout.
+    const preserved = payout(state);
+    // Old saves did not record categories, so keep their existing spent
+    // amount as an unlabeled legacy deduction rather than guessing "service".
+    state.payoutServiceSpent = 0;
+    state.payoutTaxPaid = 0;
+    state.payoutEventPenaltySpent = 0;
+    state.payoutWagered = 0;
+    state.eventPayoutFactor = 1;
+    recompute(state);
+    const converted = Math.max(0, payout(state) - preserved);
+    state.payoutSpent += converted;
+    state.payoutEventPenaltySpent += converted;
+    state.payoutLedgerVersion = 2;
+  } else {
+    state.payoutServiceSpent = Math.max(
+      0,
+      Number(state.payoutServiceSpent) || 0,
+    );
+    state.payoutEventPenaltySpent = Math.max(
+      0,
+      Number(state.payoutEventPenaltySpent) || 0,
+    );
+    state.payoutTaxPaid = Math.max(0, Number(state.payoutTaxPaid) || 0);
+    state.payoutWagered = Math.max(0, Number(state.payoutWagered) || 0);
+  }
   state.prayerBoost = Boolean(state.prayerBoost);
   state.reviveTickets = state.reviveTickets === 1 ? 1 : 0;
   expireAdventurer(state);
   const current = state.encounter;
+  ensureGoblinReward(current, state);
   if (
     current?.type === "rngesus" &&
     current.encounterChance == null &&
@@ -238,6 +287,8 @@ function normalize(state) {
   state.rngesusFleeCount = Number.isSafeInteger(state.rngesusFleeCount)
     ? Math.max(0, state.rngesusFleeCount)
     : 0;
+  state.rngesusDry = rngesusDryCount(state);
+  state.lastChaosSpike = false;
   // Existing runs did not record flee attempts; start their new counter at zero.
   if (
     state.encounter?.type === "rngesus" &&
@@ -297,6 +348,10 @@ function payoutSnapshot(state) {
     bonus: state.bonus,
     factor: state.payoutFactor,
     spent: state.payoutSpent || 0,
+    serviceSpent: state.payoutServiceSpent || 0,
+    eventPenaltySpent: state.payoutEventPenaltySpent || 0,
+    taxPaid: state.payoutTaxPaid || 0,
+    wagered: state.payoutWagered || 0,
     bloodFactor:
       state.paradox?.kind === "blood" ? state.paradox.bloodFactor : 0,
   };
@@ -357,14 +412,31 @@ function hurt(state, amount, hostile = true, nonlethal = false) {
     );
   return actual;
 }
-function penalty(state, fraction) {
-  state.eventPayoutFactor *= 1 - fraction;
-  recompute(state);
-}
-function charge(state, amount) {
+function charge(state, amount, category = "service") {
   if (!Number.isSafeInteger(amount) || amount < 1 || rawPayout(state) < amount)
     throw new Error("INSUFFICIENT_RUN_PAYOUT");
   state.payoutSpent += amount;
+  const key = {
+    service: "payoutServiceSpent",
+    event: "payoutEventPenaltySpent",
+    tax: "payoutTaxPaid",
+    wager: "payoutWagered",
+  }[category];
+  if (key) state[key] = (state[key] || 0) + amount;
+}
+function deductCurrentPayout(state, fraction, category = "event") {
+  const available = payout(state);
+  if (available < 1) return 0;
+  const amount = Math.min(
+    available,
+    Math.max(1, Math.ceil(available * fraction)),
+  );
+  // rawPayout can be lower than payout under Blood Paradox. A fixed event
+  // deduction is still allowed against the amount currently withdrawable.
+  state.payoutSpent += amount;
+  const key = category === "tax" ? "payoutTaxPaid" : "payoutEventPenaltySpent";
+  state[key] = (state[key] || 0) + amount;
+  return amount;
 }
 function receiveItem(state, definition, levels = 1, cleansedLevels = 0) {
   if (
@@ -787,6 +859,11 @@ function makeSurprise(state, rng, kind = null) {
     roll: rng(),
     roll2: rng(),
   };
+  if (kind === "goblin") {
+    e.rewardRarity =
+      e.roll2 < 0.6 ? "rare" : e.roll2 < 0.95 ? "legendary" : "cursed";
+    e.rewardItem = randomItem(e.rewardRarity, rng);
+  }
   const itemPool = state.items.filter(
     (x) =>
       kind !== "purifier" ||
@@ -915,25 +992,18 @@ function makeSurprise(state, rng, kind = null) {
   return itemPassives.prepareForecast(state, e, rng);
 }
 function rollRngesus(state, rng) {
-  const base = rngesusEncounterChance(state);
-  if (!base) {
+  const chance = rngesusEncounterChance(state);
+  if (!chance) {
     state.lastChaosChance = 0;
     state.lastChaosSpike = false;
     return false;
   }
-  const volatility = 0.25 + rng() * 2.75,
-    spike = rng() < 0.025;
-  const chance = clamp(
-    base * volatility +
-      (state.rngesusDry || 0) * 0.0005 +
-      (spike ? 0.04 + rng() * 0.06 : 0),
-    0,
-    0.12,
-  );
   state.lastChaosChance = chance;
-  state.lastChaosSpike = spike;
+  state.lastChaosSpike = false;
   const hit = rng() < chance;
-  state.rngesusDry = hit ? 0 : (state.rngesusDry || 0) + 1;
+  state.rngesusDry = hit
+    ? 0
+    : Math.min(RNGESUS_MAX_DRY, Math.max(0, state.rngesusDry || 0) + 1);
   return hit;
 }
 function echoEnemy(state, echo, rng, challenge = false) {
@@ -968,9 +1038,16 @@ function generateEncounter(state, session, rng) {
   );
 }
 function generateRawEncounter(state, session, rng) {
-  if (state.floor === 999)
+  if (state.floor === 999) {
+    state.lastChaosChance = 0;
+    state.lastChaosSpike = false;
     return world.makeEnemy(state, "final_boss", null, rng);
-  if (state.floor % 50 === 0) return world.makeEnemy(state, "boss", null, rng);
+  }
+  if (state.floor % 50 === 0) {
+    state.lastChaosChance = 0;
+    state.lastChaosSpike = false;
+    return world.makeEnemy(state, "boss", null, rng);
+  }
   if (rollRngesus(state, rng))
     return {
       type: "rngesus",
@@ -1621,6 +1698,11 @@ function surpriseActions(state) {
           label: "10% payout · +6 VIT",
           disabled: rawPayout(state) < 1,
         },
+        {
+          action: "event_sacrifice_wealth",
+          label: "Thử thách tài sản · cược 25%",
+          disabled: rawPayout(state) < 1,
+        },
       ],
       gambler: [
         {
@@ -1688,7 +1770,7 @@ function actions(state) {
   if (state.phase === "boss_chest")
     return [
       { action: "boss_open", label: "Mở rương · SSR 70% / UR 30%" },
-      { action: "boss_sell", label: "Bán rương · +50% payout" },
+      { action: "boss_sell", label: "Bán rương · +100% cược" },
     ];
   if (state.phase === "upgrade")
     return stats.ATTRIBUTES.map((key) => ({
@@ -1712,7 +1794,8 @@ function actions(state) {
     return keys.length
       ? keys.map((key) => ({
           action: `sever_${key}`,
-          label: `Xóa ${world.RIFT_MODIFIERS[key].name}`,
+          label: "\u200b",
+          riftKey: key,
         }))
       : [{ action: "sever_none", label: "Đi tiếp (không có modifier để xóa)" }];
   }
@@ -1858,7 +1941,7 @@ function actSurprise(state, session, action, rng) {
       if (offer.key === "luck") addSource(state, { luck: 1 });
       if (offer.key === "ticket") state.escapeTokens = 1;
       done(
-        `🛒 Đã mua ${{ potion: `${E.potion} bình máu`, heal: `hồi đầy ${E.hp} HP`, luck: `+1 ${E.luck} Luck`, ticket: `${E.ticket} vé thoát hiểm` }[offer.key] || offer.key}.`,
+        `🛒 Đã mua ${{ potion: `${E.potion} bình máu`, heal: `hồi đầy ${E.hp} HP`, luck: `+1 ${E.luck} Luck`, ticket: `${E.escapeTicket} Vé thoát` }[offer.key] || offer.key}.`,
       );
     }
     return;
@@ -1910,39 +1993,67 @@ function actSurprise(state, session, action, rng) {
     state.potions = Math.min(state.maxPotions, state.potions + 1);
     done("Wandering Healer đã hồi phục và tiếp tế cho bạn.");
   } else if (k === "goblin") {
+    ensureGoblinReward(e, state);
     if (e.roll < Math.min(0.9, 0.6 + state.luck * 0.01 + state.goblinChance)) {
       state.bonus += Math.floor(state.stake * 0.25);
-      done("💰 Bắt được Goblin: bonus +25% cược.");
+      const item = receiveItem(state, e.rewardItem);
+      done(
+        `💰 Bắt được Goblin: bonus +25% cược và **${item.name} [${{ rare: "SR", legendary: "SSR", cursed: "UR" }[e.rewardRarity]}]**.`,
+      );
     } else {
-      penalty(state, 0.1);
-      done("🏃 Goblin thoát: mất 10% payout.");
+      const amount = deductCurrentPayout(state, 0.05);
+      done(
+        `🏃 Goblin thoát: trừ một lần **${amount.toLocaleString("vi-VN")} xu** payout hiện tại.`,
+      );
     }
   } else if (k === "blacksmith") {
-    charge(state, serviceCost(state, 0.12));
     const target = itemById(e.targetId);
     if (!target) throw new Error("NO_FORGE_ITEM");
+    const cost = serviceCost(state, 0.12);
+    charge(state, cost, "service");
     const item = receiveItem(
       state,
       target.definition,
       1,
       target.level === (target.cleansedLevels || 0) ? 1 : 0,
     );
-    done(`🔨 ${item.name} Lv.${item.level}.`);
+    done(
+      `🔨 **${item.name}: Lv.${item.level - 1} → Lv.${item.level}** · đã trả ${cost.toLocaleString("vi-VN")} xu.`,
+    );
   } else if (k === "purifier") {
-    charge(state, serviceCost(state, PURIFIER_COST_RATE));
     const target = itemById(e.targetId);
+    if (!target) throw new Error("NO_CURSE");
+    const cost = serviceCost(state, PURIFIER_COST_RATE);
+    charge(state, cost, "service");
+    const layers = target.level - (target.cleansedLevels || 0);
+    const removed = target.definition.curse?.effects || {};
+    const removedText = Object.entries(removed)
+      .map(([key, value]) =>
+        itemCurses.describeEffect(key, value, layers, true),
+      )
+      .filter(Boolean)
+      .join("; ");
+    const potionBefore = state.maxPotions;
     cleanse(state, target);
     done(
-      `✨ ${target.name}: giải toàn bộ curse; giữ level và buff, chuyển SSR.`,
+      `✨ **${target.name} Lv.${target.level}**: đã gỡ ${layers} lớp nguyền (${removedText || "không có hiệu ứng"}); sức chứa bình ${potionBefore} → **${state.maxPotions}**; đã trả ${cost.toLocaleString("vi-VN")} xu.`,
     );
   } else if (k === "sacrifice") {
     if (action === "event_sacrifice_hp") {
       if (state.hp <= 1) throw new Error("INSUFFICIENT_HP");
       hurt(state, state.maxHp * 0.2, false, true);
       addSource(state, { [mainStat(state)]: 6 });
-    } else {
+    } else if (action === "event_sacrifice_payout") {
       charge(state, serviceCost(state, 0.1));
       addSource(state, { vit: 6 });
+    } else {
+      const amount = serviceCost(state, 0.25);
+      charge(state, amount, "wager");
+      if (e.roll < 0.5) state.bonus += Math.floor(state.stake * 1.5);
+      state.lastLog = `${eventIcon("sacrifice")} Thử thách Hiến tế tài sản: đã đặt ${amount.toLocaleString("vi-VN")} xu; ${e.roll < 0.5 ? `thắng và nhận bonus 150% cược ban đầu (${Math.floor(state.stake * 1.5).toLocaleString("vi-VN")} xu)` : "thất bại, mất khoản đã đặt"}.`;
+      remember(state, "sacrifice", rng);
+      completeFloor(state, session, rng, 0);
+      return;
     }
     state.lastLog = "🩸 Hoàn thành hiến tế.";
     remember(state, "sacrifice", rng);
@@ -1952,7 +2063,7 @@ function actSurprise(state, session, action, rng) {
       state,
       action === "event_gamble_10" ? 0.1 : 0.25,
     );
-    charge(state, amount);
+    charge(state, amount, "wager");
     if (e.roll < 0.5) state.bonus += amount * 2;
     done(
       `${eventIcon("gambler")} ${e.roll < 0.5 ? "Thắng" : "Thua"}: đã trả ${amount.toLocaleString("vi-VN")} xu payout; ${e.roll < 0.5 ? `nhận bonus ${(amount * 2).toLocaleString("vi-VN")} xu, lãi ròng ${amount.toLocaleString("vi-VN")} xu` : "không nhận bonus"}.`,
@@ -2191,10 +2302,9 @@ function act(state, session, action, rng) {
       receiveItem(state, state.encounter.item);
       state.lastLog = `${eventIcon("boss_chest")} Đã mở rương boss tầng ${state.encounter.bossFloor}.`;
     } else {
-      const amount = Math.floor(rawPayout(state) * 0.5);
-      state.bonus +=
-        state.payoutFactor > 0 ? Math.ceil(amount / state.payoutFactor) : 0;
-      state.lastLog = `${eventIcon("boss_chest")} Bán rương boss: +50% payout gốc (${amount.toLocaleString("vi-VN")} xu), cộng vào thưởng của run.`;
+      const amount = state.stake;
+      state.bonus += amount;
+      state.lastLog = `${eventIcon("boss_chest")} Bán rương boss: bonus +100% cược ban đầu (${amount.toLocaleString("vi-VN")} xu).`;
     }
     finishEventResult(state);
     nextMilestone(state, session, rng);
@@ -2325,8 +2435,8 @@ function act(state, session, action, rng) {
       if (e.kind !== "portal") {
         if (e.lucky) state.lastLog = `${E.luck} Lucky Break: tránh bẫy.`;
         else if (e.kind === "tax") {
-          penalty(state, 0.15);
-          state.lastLog = "Thuế: mất 15% payout.";
+          const amount = deductCurrentPayout(state, 0.15, "tax");
+          state.lastLog = `Tax Collector thu một lần **${amount.toLocaleString("vi-VN")} xu** (15% payout hiện tại, làm tròn lên).`;
         } else {
           const stolen = Math.min(1, state.potions);
           state.potions -= stolen;
@@ -2353,10 +2463,12 @@ function act(state, session, action, rng) {
         if (e.badEffect === "mana") state.mana = 0;
         if (e.badEffect === "supply")
           state.potions = Math.max(0, state.potions - 2);
-        if (e.badEffect === "payout") penalty(state, 0.1);
+        let portalPenalty = 0;
+        if (e.badEffect === "payout")
+          portalPenalty = deductCurrentPayout(state, 0.1);
         if (e.badEffect === "curse") addSource(state, { str: -5, ene: -5 });
         state.encounter = e.enemy;
-        state.lastLog = `Wrong Portal: ${{ blood: "bẫy gây mất HP (giữ ≥1)", mana: "bị rút cạn MP", supply: "bị cướp bình máu", payout: "mất 10% payout", curse: "lời nguyền giảm thuộc tính" }[e.badEffect]}. Elite đánh phủ đầu.`;
+        state.lastLog = `Wrong Portal: ${{ blood: "bẫy gây mất HP (giữ ≥1)", mana: "bị rút cạn MP", supply: "bị cướp bình máu", payout: `bị trừ một lần ${portalPenalty.toLocaleString("vi-VN")} xu payout hiện tại`, curse: "lời nguyền giảm thuộc tính" }[e.badEffect]}. Elite đánh phủ đầu.`;
         prepareItemCombat(state, rng);
         state.lastLog += `\n${enemyTurn(state, rng)}`;
       }
@@ -2377,17 +2489,17 @@ function act(state, session, action, rng) {
         if (chance < 1 && !e.fleeSuccess) {
           if (state.escapeTokens) {
             state.escapeTokens--;
-            state.lastLog = `RNGesus: bỏ chạy thất bại (nhánh ${failureChance}%); tự dùng 1 ${E.ticket} vé thoát hiểm để sống sót. Tỷ lệ chạy lần sau: **${nextChance}%**.`;
+            state.lastLog = `RNGesus: chạy thất bại (${failureChance}%); ${E.escapeTicket} Vé thoát kích hoạt. Lần sau: **${nextChance}%**.`;
           } else
             return die(
-              `Bỏ chạy khỏi RNGesus thất bại (nhánh ${failureChance}%) và không có vé thoát hiểm để cứu.`,
+              `Bỏ chạy khỏi RNGesus thất bại (nhánh ${failureChance}%) và không có Vé thoát để cứu.`,
             );
         } else
           state.lastLog = `RNGesus: bỏ chạy thành công (tỷ lệ ${Math.round(chance * 100)}%), thoát an toàn. Tỷ lệ chạy lần sau: **${nextChance}%**.`;
       }
       if (action === "bribe") {
-        penalty(state, 0.4);
-        state.lastLog = "Hối lộ: mất 40% payout.";
+        const amount = deductCurrentPayout(state, 0.4);
+        state.lastLog = `Hối lộ RNGesus: trừ một lần **${amount.toLocaleString("vi-VN")} xu** payout hiện tại.`;
         remember(state, "bribe_rngesus", rng);
       }
       if (action === "pray") {
@@ -2431,8 +2543,8 @@ function act(state, session, action, rng) {
         state.lastLog = `${eventIcon("memory")} The Tower Remembers: hồi phục ${E.hp} HP; bonus +${Math.floor(state.stake * e.debt.bonusRate).toLocaleString("vi-VN")} xu vào thưởng của run.`;
         completeFloor(state, session, rng, 0);
       } else if (e.debt.kind === "tax") {
-        penalty(state, 0.1);
-        state.lastLog = "The Tower Remembers: mất 10% payout.";
+        const amount = deductCurrentPayout(state, 0.1);
+        state.lastLog = `The Tower Remembers · bồi thường: trừ một lần **${amount.toLocaleString("vi-VN")} xu** payout hiện tại.`;
         completeFloor(state, session, rng, 0);
       } else {
         state.encounter = e.enemy;
@@ -2511,4 +2623,5 @@ module.exports = {
   legendaryChance,
   effectStatKeys,
   serviceCost,
+  deductCurrentPayout,
 };

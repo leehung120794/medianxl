@@ -13,21 +13,21 @@ const PRICES = Object.freeze({
 const TICKETS = Object.freeze([
   {
     id: "survival_escape",
-    name: "Vé chạy khỏi RNGesus",
+    name: "Vé thoát",
     price: 100,
     text: "Tự dùng khi bỏ chạy RNGesus thất bại, giữ tối đa 1 vé trong mỗi run.",
   },
   {
     id: "survival_prayer",
-    name: "Vé cầu nguyện RNGesus",
+    name: "Vé cầu nguyện",
     price: 100,
-    text: "Tăng tỷ lệ cầu nguyện thành công gấp đôi ở mọi lần gặp RNGesus trong run.",
+    text: "Tăng tỷ lệ cầu nguyện RNGesus từ 30% lên 60% trong toàn bộ run.",
   },
   {
     id: "survival_revive",
     name: "Vé hồi sinh",
     price: 300,
-    text: "Tự hồi sinh một lần khi tử trận, với 50% Max HP.",
+    text: "Tự hồi 50% Max HP một lần: chết khi giao tranh tiếp tục ngay tầng đó; chết bởi RNGesus sang tầng kế tiếp.",
   },
 ]);
 const CATALOG = Object.values(ITEMS)

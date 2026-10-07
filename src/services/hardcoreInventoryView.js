@@ -19,14 +19,25 @@ const { appEmoji, appEmojiObject } = require("../utils/appEmoji");
 const currencyIcon = (currency) =>
   currency === "diamonds" ? appEmoji("gem", "💎") : appEmoji("coin", "🪙");
 function ticketIcon(item) {
-  if (item.id === "survival_escape") return E.ticket;
-  if (item.id === "survival_prayer") return "🙏";
-  return "🎟️";
+  if (item.id === "survival_escape") return E.escapeTicket;
+  if (item.id === "survival_prayer") return E.prayerTicket;
+  return E.reviveTicket;
 }
 function ticketOptionEmoji(item) {
-  return item.id === "survival_escape"
-    ? appEmojiObject("ticket_rngesus") || { name: "🎫" }
-    : { name: ticketIcon(item) };
+  const key = {
+    survival_escape: "ticket_rngesus",
+    survival_prayer: "ticket_prayer",
+    survival_revive: "ticket_revive",
+  }[item.id];
+  return (
+    appEmojiObject(key) || {
+      name: {
+        survival_escape: "🎫",
+        survival_prayer: "🙏",
+        survival_revive: "💖",
+      }[item.id],
+    }
+  );
 }
 const productName = (item) =>
   item.typeCode === "ticket" ? `${ticketIcon(item)} ${item.name}` : item.name;
@@ -70,7 +81,7 @@ function shopPayload(guildId, userId) {
     );
   today.products.forEach((item) =>
     embed.addFields({
-      name: `${productName(item)} [${item.typeCode === "ticket" ? "Vé" : item.typeCode}] · ${money(item.price)} ${currencyIcon(item.currency)}`,
+      name: `${productName(item)}${item.typeCode === "ticket" ? "" : ` [${item.typeCode}]`} · ${money(item.price)} ${currencyIcon(item.currency)}`,
       value: detail(item).slice(0, 1024) || "—",
     }),
   );
@@ -115,7 +126,7 @@ function inventoryPayload(guildId, userId, filter = "all", page = 0) {
     });
   items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).forEach((item) =>
     embed.addFields({
-      name: `${productName(item)} [${item.typeCode === "ticket" ? "Vé" : item.typeCode}] ×${money(item.quantity)}`,
+      name: `${productName(item)}${item.typeCode === "ticket" ? "" : ` [${item.typeCode}]`} ×${money(item.quantity)}`,
       value: detail(item).slice(0, 1024) || "—",
     }),
   );

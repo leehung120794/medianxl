@@ -1,22 +1,40 @@
 "use strict";
 
-// Each survived encounter starts the same low-risk progression again.
+const RNGESUS_BASE_CHANCE = 0.003;
+const RNGESUS_DRY_STEP = 0.0005;
+const RNGESUS_MAX_CHANCE = 0.12;
+const RNGESUS_MAX_DRY = Math.ceil(
+  (RNGESUS_MAX_CHANCE - RNGESUS_BASE_CHANCE) / RNGESUS_DRY_STEP,
+);
+
+// Floors 1–4 remain the opening grace period. Every eligible cycle then uses
+// the same linear pity curve, independent of the absolute floor number.
 function rngesusChance(floor) {
   if (floor < 5) return 0;
-  if (floor < 10) return 0.003;
-  if (floor < 20) return 0.006;
-  return 0.01;
+  if (floor === 999 || floor % 50 === 0) return 0;
+  return RNGESUS_BASE_CHANCE;
+}
+function rngesusDryCount(state) {
+  return Number.isSafeInteger(state.rngesusDry)
+    ? Math.max(0, Math.min(RNGESUS_MAX_DRY, state.rngesusDry))
+    : 0;
+}
+function isRngesusRollBlocked(state) {
+  if (!Number.isSafeInteger(state.floor) || !rngesusChance(state.floor))
+    return true;
+  const resetFloor = state.rngesusResetFloor;
+  return (
+    Number.isSafeInteger(resetFloor) &&
+    resetFloor > 0 &&
+    state.floor - resetFloor <= 1
+  );
 }
 function rngesusEncounterChance(state) {
-  if (state.floor < 5) return 0;
-  const resetFloor = state.rngesusResetFloor;
-  if (!Number.isSafeInteger(resetFloor) || resetFloor <= 0)
-    return rngesusChance(state.floor);
-  const distance = state.floor - resetFloor;
-  // The next floor is always safe, including volatility/spike rolls.
-  if (distance <= 1) return 0;
-  // Restart at the first eligible band: 5 floors at 0.3%, then 10 at 0.6%.
-  return rngesusChance(distance + 3);
+  if (isRngesusRollBlocked(state)) return 0;
+  return Math.min(
+    RNGESUS_MAX_CHANCE,
+    RNGESUS_BASE_CHANCE + rngesusDryCount(state) * RNGESUS_DRY_STEP,
+  );
 }
 function resetRngesusEncounter(state) {
   state.rngesusResetFloor = state.floor;
@@ -26,29 +44,31 @@ function resetRngesusEncounter(state) {
 }
 // Shared by /luat and /sinhton tyle so both describe the same encounter cycle.
 const RNGESUS_CYCLE_RULES = [
-  "- Đầu run: tầng 1–4 không gặp; tỷ lệ nền 0,3% ở tầng 5–9, 0,6% ở tầng 10–19, 1% từ tầng 20.",
-  "- Vượt RNGesus tại tầng F: reset Chaos và bộ đếm không gặp, kể cả được cứu và sang tầng kế tiếp.",
-  "- Tầng ngay sau đó: **0%** (F+1), không roll spike. **RNGesus không xuất hiện ở hai tầng liền nhau.**",
-  "- Từ F+2: **0,3% trong 5 tầng** (F+2–F+6) → **0,6% trong 10 tầng** (F+7–F+16) → **1% từ F+17**. Đây là tỷ lệ nền, chưa cộng biến động/chuỗi không gặp.",
-  "- Boss tầng 50/100/… và 999 được ưu tiên; các tầng không roll RNGesus không tăng bộ đếm không gặp.",
-  "- Reset tỷ lệ gặp không đặt lại tỷ lệ bỏ chạy hoặc hiệu lực vé cầu nguyện. Mốc reset được lưu khi tiếp tục run/restart bot.",
+  "- Tầng 1–4 là giai đoạn an toàn. Lần roll hợp lệ đầu tiên có **0,30%** cơ hội gặp RNGesus.",
+  "- Mỗi lần roll nhưng không gặp cộng cố định **0,05 điểm phần trăm** cho lần hợp lệ kế tiếp, tối đa **12%**.",
+  "- Khi gặp RNGesus, bộ đếm không gặp được reset. Nếu vượt qua tại tầng F thì tầng F+1 an toàn **0%**; lần roll hợp lệ sau đó bắt đầu lại ở **0,30%**.",
+  "- Boss tầng 50/100/…/999 và mọi tầng bị chặn không roll RNGesus, không tăng bộ đếm.",
+  "- Không còn nhân ngẫu nhiên hoặc spike. Tỷ lệ bỏ chạy và hiệu lực vé cầu nguyện vẫn theo trạng thái riêng của run, không bị reset theo Chaos.",
 ].join("\n");
-function rngesusChaosRules(legacy = false) {
-  return (
-    "Chaos là tỷ lệ gặp RNGesus của lần roll gần nhất, không phải debuff.\n" +
-    "- Tỷ lệ nền nhân ngẫu nhiên **×0,25–3**.\n" +
-    "- Mỗi lần roll không gặp cộng **0,05 điểm %** cho lần sau" +
-    (legacy ? ", tối đa +2,5 điểm %." : ".") +
-    "\n" +
-    "- Mỗi roll có **2,5%** cơ hội spike, cộng thêm **4–10 điểm %**.\n" +
-    "- Tỷ lệ gặp cuối cùng tối đa **12%**. Tầng bị chặn là **0%**, không chịu biến động/spike.\n" +
-    "Ví dụ nền 0,3% không có nghĩa mỗi tầng luôn có đúng 0,3% cơ hội gặp."
-  );
+function rngesusChaosRules() {
+  return [
+    "Chaos là tỷ lệ gặp RNGesus của lần roll gần nhất, không phải debuff.",
+    "- Công thức: **0,30% + 0,05 điểm % × số lần roll liên tiếp không gặp**.",
+    "- Ví dụ: **0,30% → 0,35% → 0,40% → 0,45%…**, tối đa **12%**.",
+    "- Không còn biến động ngẫu nhiên hoặc spike; cùng số lần trượt luôn cho cùng tỷ lệ.",
+    "- Tầng an toàn, tầng boss và tầng bị chặn hiển thị **0%** và không làm tỷ lệ tăng.",
+  ].join("\n");
 }
 module.exports = {
+  RNGESUS_BASE_CHANCE,
   RNGESUS_CYCLE_RULES,
+  RNGESUS_DRY_STEP,
+  RNGESUS_MAX_CHANCE,
+  RNGESUS_MAX_DRY,
   rngesusChaosRules,
   rngesusChance,
+  rngesusDryCount,
   rngesusEncounterChance,
+  isRngesusRollBlocked,
   resetRngesusEncounter,
 };

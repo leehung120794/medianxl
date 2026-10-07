@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const {
+  RNGESUS_MAX_DRY,
   rngesusChance,
   rngesusEncounterChance,
   resetRngesusEncounter,
@@ -547,24 +548,19 @@ function makeChest(state, treasure = false) {
 }
 
 function rollRngesus(state, rolls = {}) {
-  const base = rngesusEncounterChance(state);
-  if (!base) {
+  const chance = rngesusEncounterChance(state);
+  if (!chance) {
     state.lastChaosChance = 0;
     state.lastChaosSpike = false;
     return false;
   }
-  const volatilityRoll = rolls.volatilityRoll ?? randomFloat();
-  const spikeRoll = rolls.spikeRoll ?? randomFloat();
-  const severityRoll = rolls.severityRoll ?? randomFloat();
   const encounterRoll = rolls.encounterRoll ?? randomFloat();
-  const volatility = 0.25 + volatilityRoll * 2.75;
-  const heat = Math.min(0.025, (state.rngesusDry || 0) * 0.0005);
-  const spike = spikeRoll < 0.025 ? 0.04 + severityRoll * 0.06 : 0;
-  const chance = clamp(base * volatility + heat + spike, 0, 0.12);
   const hit = encounterRoll < chance;
   state.lastChaosChance = chance;
-  state.lastChaosSpike = spike > 0;
-  state.rngesusDry = hit ? 0 : (state.rngesusDry || 0) + 1;
+  state.lastChaosSpike = false;
+  state.rngesusDry = hit
+    ? 0
+    : Math.min(RNGESUS_MAX_DRY, Math.max(0, state.rngesusDry || 0) + 1);
   return hit;
 }
 
@@ -702,10 +698,16 @@ function makeSurprise(state, forcedKind = null) {
 }
 
 function generateEncounter(state) {
-  if (state.floor === MAX_FLOOR)
+  if (state.floor === MAX_FLOOR) {
+    state.lastChaosChance = 0;
+    state.lastChaosSpike = false;
     return makeEnemy(state.floor, "final_boss", null, state.modifiers);
-  if (state.floor % 50 === 0)
+  }
+  if (state.floor % 50 === 0) {
+    state.lastChaosChance = 0;
+    state.lastChaosSpike = false;
     return makeEnemy(state.floor, "boss", null, state.modifiers);
+  }
   if (rollRngesus(state)) {
     const fleeRoll = randomFloat();
     return {
@@ -719,7 +721,6 @@ function generateEncounter(state) {
       prayerRarity: randomFloat() < 0.85 ? "legendary" : "cursed",
       prayerItemRoll: randomFloat(),
       chaosChance: state.lastChaosChance,
-      chaosSpike: state.lastChaosSpike,
     };
   }
   const roll = randomFloat();

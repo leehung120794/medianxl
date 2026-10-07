@@ -68,8 +68,13 @@ function play(s, action) {
   return receipt;
 }
 // Record penalties before changing the cleared floor or applying checkpoint healing.
-for (const [encounter, action, rate] of [
-  [{ type: "trap", name: "Thu thuế", kind: "tax", lucky: false }, "next", 0.15],
+for (const [encounter, action, rate, category] of [
+  [
+    { type: "trap", name: "Thu thuế", kind: "tax", lucky: false },
+    "next",
+    0.15,
+    "thuế",
+  ],
   [
     {
       type: "memory",
@@ -78,20 +83,23 @@ for (const [encounter, action, rate] of [
     },
     "next",
     0.1,
+    "phạt event",
   ],
-  [{ type: "rngesus", name: "RNGesus" }, "bribe", 0.4],
+  [{ type: "rngesus", name: "RNGesus" }, "bribe", 0.4, "phạt event"],
   [
     { type: "surprise", name: "Treasure Goblin", kind: "goblin", roll: 0.99 },
     "event_catch",
-    0.1,
+    0.05,
+    "phạt event",
   ],
 ]) {
   const s = create(encounter);
   const r = play(s, action);
   assert.equal(
     r.payoutAfter.coins,
-    Math.floor(10000 * baseMultiplier({ cleared: 4 }) * (1 - rate)),
+    r.payoutBefore.coins - Math.ceil(r.payoutBefore.coins * rate),
   );
+  assert.equal(s.eventPayoutFactor, 1);
   assert.equal(s.cleared, 5);
   assert.ok(
     core.payout(s) > r.payoutAfter.coins,
@@ -101,8 +109,7 @@ for (const [encounter, action, rate] of [
   const withdrawal = f.find((x) => x.name.includes("Rút thưởng")).value;
   assert.ok(withdrawal.includes("Thực nhận: **" + money(core.payout(s))));
   assert.ok(withdrawal.includes("Đã trừ:"));
-  assert.ok(withdrawal.includes("**" + Math.round(rate * 100) + "% xu**"));
-  assert.ok(withdrawal.split("\n").length <= 2);
+  assert.ok(withdrawal.includes(category));
   assert.equal(
     f.find((x) => x.name.includes("Trang bị")),
     undefined,
@@ -133,7 +140,13 @@ for (const [encounter, action, rate] of [
   ],
   [{ type: "chest", name: "Hòm" }, "sell", 0.15],
   [
-    { type: "surprise", name: "Treasure Goblin", kind: "goblin", roll: 0 },
+    {
+      type: "surprise",
+      name: "Treasure Goblin",
+      kind: "goblin",
+      roll: 0,
+      roll2: 0,
+    },
     "event_catch",
     0.25,
   ],
@@ -169,10 +182,7 @@ for (const [encounter, action, rate] of [
     { phase: "boss_chest", floor: 101, cleared: 100, eventPayoutFactor: 0.6 },
   );
   const r = play(s, "boss_sell");
-  assert.equal(
-    r.payoutAfter.coins - r.payoutBefore.coins,
-    Math.floor(r.payoutBefore.coins * 0.5),
-  );
+  assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, 10000 * 0.6);
   assert.equal(s.cleared, 100);
 }
 // Spending and restoring a curse have a single net receipt, with the original purchase cost preserved.
@@ -189,8 +199,43 @@ for (const [encounter, action, rate] of [
   assert.ok(
     fields(s)
       .find((f) => f.name.includes("Rút thưởng"))
-      .value.includes("**500 🪙** đã chi"),
+      .value.includes("mua/dịch vụ **500 🪙**"),
   );
+}
+
+// Old V2 multiplier penalties become a fixed deduction without changing the
+// amount currently withdrawable; future bonuses are no longer penalized.
+{
+  const s = create(
+    { type: "empty", name: "Trống" },
+    {
+      eventPayoutFactor: 0.6,
+      payoutLedgerVersion: 1,
+      payoutSpent: 250,
+    },
+  );
+  const before = core.payout(s);
+  core.normalize(s);
+  assert.equal(core.payout(s), before);
+  assert.equal(s.eventPayoutFactor, 1);
+  assert.ok(s.payoutEventPenaltySpent > 0);
+  const old = core.payout(s);
+  s.bonus += 1000;
+  assert.equal(core.payout(s) - old, 1000);
+}
+
+// Goblin reward is locked when the event is created and does not touch chest pity.
+{
+  const s = create({ type: "empty", name: "Trống" });
+  const values = [0, 0.97, 0.2, 0.4];
+  const event = core.makeSurprise(s, () => values.shift() ?? 0.1, "goblin");
+  assert.equal(event.rewardRarity, "cursed");
+  assert.ok(event.rewardItem);
+  const pity = [s.pityRare, s.pityLegendary];
+  s.encounter = event;
+  play(s, "event_catch");
+  assert.deepEqual([s.pityRare, s.pityLegendary], pity);
+  assert.ok(s.lastLog.includes("[UR]"));
 }
 {
   const s = create({ type: "empty", name: "Trống" });
@@ -269,7 +314,7 @@ for (const [encounter, action, rate] of [
   );
   play(s, "next");
   const withdrawal = fields(s).find((f) => f.name.includes("Rút thưởng")).value;
-  assert.ok(withdrawal.includes("**164.759 " + coin + "** đã chi"));
+  assert.ok(withdrawal.includes("khoản cũ **164.759 " + coin + "**"));
   assert.ok(s.lastLog.includes(coin + " **Thưởng xu · "));
   const old = JSON.parse(JSON.stringify(s));
   old.lastLog = old.lastLog.replace(

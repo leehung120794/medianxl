@@ -57,6 +57,15 @@ const E = {
   get ticket() {
     return icon("ticket_rngesus", "🎫");
   },
+  get escapeTicket() {
+    return icon("ticket_rngesus", "🎫");
+  },
+  get prayerTicket() {
+    return icon("ticket_prayer", "🙏");
+  },
+  get reviveTicket() {
+    return icon("ticket_revive", "💖");
+  },
   get str() {
     return icon("STR", "💪");
   },
@@ -75,7 +84,8 @@ function dynamicIcons(names, fallback) {
   for (const [key, name] of Object.entries(names))
     Object.defineProperty(result, key, {
       enumerable: true,
-      get: () => icon(name, fallback),
+      get: () =>
+        icon(name, typeof fallback === "object" ? fallback[key] : fallback),
     });
   return Object.freeze(result);
 }
@@ -104,7 +114,16 @@ const RIFT_ICONS = dynamicIcons(
       "cursed_ground",
     ].map((key) => [key, `rift_${key}`]),
   ),
-  "🌀",
+  {
+    stone_skin: "🪨",
+    elemental_dominion: "🌩️",
+    bloodlust: "🩸",
+    unstable_rift: "🌀",
+    fortified: "🏰",
+    swift_horror: "💨",
+    soul_drain: "👻",
+    cursed_ground: "☣️",
+  },
 );
 function eventIcon(key) {
   const aliases = {

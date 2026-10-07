@@ -472,9 +472,15 @@ function encounterText(state) {
 function chaosLabel(state) {
   const chance = state.lastChaosChance || 0;
   if (!chance) return `${icon("large_green_circle")} Chaos: Yên`;
-  if (chance < 0.01) return `${icon("large_green_circle")} Chaos: Thấp`;
-  if (chance < 0.03) return `${icon("large_yellow_circle")} Chaos: Bất ổn`;
-  return `${icon("red_circle")} Chaos: NGUY HIỂM${state.lastChaosSpike ? " · SPIKE" : ""}`;
+  const percent = (chance * 100).toLocaleString("vi-VN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (chance < 0.03)
+    return `${icon("large_green_circle")} Chaos: Thấp · ${percent}%`;
+  if (chance < 0.07)
+    return `${icon("large_yellow_circle")} Chaos: Bất ổn · ${percent}%`;
+  return `${icon("red_circle")} Chaos: NGUY HIỂM · ${percent}%`;
 }
 function signed(value, percent = false) {
   const amount = percent ? Math.round(value * 100) : value;
