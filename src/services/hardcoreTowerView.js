@@ -24,7 +24,7 @@ const actionName = {
 };
 const tabs = {
   stats: "Chỉ số",
-  effects: "Rift",
+  effects: "Cơ chế",
   encounter: "Chi tiết",
   rules: "Luật chơi",
 };
@@ -80,7 +80,7 @@ function turnText(state, c) {
   const before = state.lastOutcome;
   if (!before) return state.lastLog || "";
   const prior =
-    c.generatorVersion === 3
+    c.generatorVersion >= 3
       ? {
           ...c.floors[before.floor - 1],
           type: c.transitions[before.routeStep].type,
@@ -99,7 +99,15 @@ function turnText(state, c) {
     change(
       "HP quái",
       before.enemyHp,
-      Math.max(0, before.enemyHp - before.actionDamage),
+      before.enemyHpAfter ??
+        Math.max(
+          0,
+          before.enemyHp - before.actionDamage + (before.enemyHeal || 0),
+        ),
+    );
+  if (before.enemyHeal)
+    lines.push(
+      "Quái hấp thụ Skill chưa kết liễu: **+" + before.enemyHeal + " HP**.",
     );
   if (before.heal) lines.push("Hồi phục cho bạn: **+" + before.heal + " HP**.");
   change(`${E.hp} HP`, before.hp, state.hp);
@@ -114,7 +122,7 @@ function turnText(state, c) {
       `**Pha**: ${prior.phases?.[before.step]?.name || "Nhịp " + (before.step + 1)} → **${prior.phases?.[state.step]?.name || "Nhịp " + (state.step + 1)}**`,
     );
   const text = lines.join("\n");
-  return c.generatorVersion === 3
+  return c.generatorVersion >= 3
     ? text
     : text.replace(/\bMana\b(?! Vỡ Vụn)/g, "MP");
 }
@@ -136,7 +144,7 @@ function rewardText(state, c, result) {
 }
 function footer(state, c) {
   return {
-    text: `Challenge ${c.challengeId} · v${c.contentVersion} · Lượt ${state.turn}`,
+    text: `Challenge ${c.challengeId} · v${c.contentVersion}`,
   };
 }
 function button(
@@ -184,7 +192,7 @@ function chunkRows(buttons) {
   return rows;
 }
 function payload(row, state, c, result, now = Date.now()) {
-  if (c.generatorVersion === 3)
+  if (c.generatorVersion >= 3)
     return payloadGenerated(row, state, c, result, now);
   const live = catalog.playable(c, now);
   const replayTarget =
@@ -280,7 +288,7 @@ function rulesText(c) {
   return `• Vượt **${c.floors.length} tầng** với Sorceress cố định; không Crit, không Miss, không RNG.\n• Tấn công gây **${c.combat.attackDamage} damage**, nhận **${c.combat.attackMana} MP**. Arcane Burst gây **${c.combat.skillDamage} damage**, tốn **${c.combat.skillCost} MP**. Rift và luật pha có thể thay đổi các giá trị này.\n• Phòng thủ nhận **${c.combat.defendMana} MP**; sát thương nhận vào theo pha hiện tại. MP không vượt **${c.character.maxMana}**.\n• Kết liễu quái đúng luật pha không bị phản công. Phải tuân thủ hành động bắt buộc và giới hạn hành động của từng pha.\n• Không mang trang bị, vé hoặc bình vào Tháp.\n• Thưởng một lần mỗi người trong server cho challenge này. Chơi lại tăng số lần thử.\n• Mở: **${date(c.startsAt)}**; đóng: **${date(c.endsAt)}** (giờ Việt Nam). Sau khi đóng, chỉ xem kết quả trong 24 giờ.`;
 }
 function privatePayload(row, state, c, sourceMessageId, tab = "stats") {
-  if (c.generatorVersion === 3)
+  if (c.generatorVersion >= 3)
     return privateGenerated(row, state, c, sourceMessageId, tab);
   const embed = new EmbedBuilder()
     .setColor(color(state, c))
@@ -381,96 +389,141 @@ function generatedButton(
 }
 function generatedEncounter(state, c) {
   const { encounter: e, transition: t } = engine.current(state, c);
-  let text =
-    "**" +
-    e.name +
-    "** · Nhịp **" +
-    (t.floorStep + 1) +
-    "/" +
-    e.stepCount +
-    "**\n";
-  if (t.type === "combat") text += healthBar(state.enemyHp, e.hp) + "\n";
-  text += "**Tín hiệu:** " + t.clue;
+  let text = "**" + e.name + "**\n";
+  if (t.type === "combat") text += healthBar(state.enemyHp, e.hp);
+  if (c.contentVersion >= 5 && t.type === "combat") {
+    const solver = require("../hardcore/tower/solver"),
+      resistance = solver.resistances(c, state, t),
+      next = c.transitions[state.routeStep + 1],
+      intent = (transition) => {
+        if (!transition || transition.floor !== t.floor) return "Hết tầng";
+        if (transition.type === "event") return "Tình huống";
+        if (transition.guardIntent)
+          return "Trọng kích " + transition.intentDamage + " DMG";
+        if (transition.phaseEnd) return "Cửa chuyển phase";
+        return (
+          transition.intentDamage +
+          " DMG " +
+          (transition.counterType === "magic" ? "phép" : "vật lý")
+        );
+      },
+      pending = (state.delayedEffects || [])
+        .map((effect) => effect.damage + " DMG/" + effect.turns)
+        .join(", ");
+    text +=
+      "\nGiáp: **VL " +
+      resistance.physical +
+      "% · Phép " +
+      resistance.magic +
+      "%**" +
+      (state.adaptiveArmor
+        ? " · Thích nghi **" +
+          (state.adaptiveArmor === "physical" ? "VL" : "Phép") +
+          "**"
+        : "") +
+      "\nBreak **" +
+      state.breakGauge +
+      "/3**" +
+      (pending ? " · Vọng âm **" + pending + "**" : "") +
+      "\nIntent: **" +
+      intent(t) +
+      "** · Sau: **" +
+      intent(next) +
+      "**";
+    if (e.phaseHps?.length > 1)
+      text +=
+        "\nBoss **Pha " +
+        (state.bossPhase + 1) +
+        "/" +
+        e.phaseHps.length +
+        "** · HP phase **" +
+        state.phaseHp +
+        "/" +
+        e.phaseHps[state.bossPhase] +
+        "**";
+    if (t.echoDelay)
+      text +=
+        "\nVọng âm: **50% damage hành động lặp sau " + t.echoDelay + " lượt**";
+  } else if (t.stance)
+    text +=
+      "\nTrạng thái: **" +
+      {
+        magic_resist: "Kháng phép",
+        physical_resist: "Kháng vật lý",
+        immune: "Miễn nhiễm sát thương",
+      }[t.stance] +
+      "**";
   if (t.type === "event")
-    text += "\n" + t.choices.map((x) => "• " + x.label).join("\n");
+    text += t.choices.map((x) => "• " + x.label).join("\n");
+  else if (t.finisher)
+    text += "\n💀 **Hành quyết** · Tấn công thường **−50% DMG**";
+  else if (t.guardIntent)
+    text +=
+      "\n🛡️ **Trọng kích " +
+      t.intentDamage +
+      " DMG** · Phòng thủ còn **" +
+      t.defendDamage +
+      " DMG**";
   else
     text +=
       "\nÝ định: **" +
       t.intentDamage +
-      " damage " +
+      " DMG " +
       (t.counterType === "magic" ? "phép" : "vật lý") +
-      "**. Cơ chế class có thể chặn/giảm đòn; phản công áp dụng trước khi qua tầng.";
+      "**";
   return text;
 }
 function generatedStats(state, c) {
   const t = engine.current(state, c).transition;
   return (
     resources(state) +
-    SEP +
-    E.defense +
-    " **DEF " +
-    c.character.defense +
-    "**" +
-    SEP +
-    E.res +
-    " **RES " +
-    c.character.resistance +
-    "%**\n" +
+    "\n" +
     E.attack +
-    " **Tấn công: " +
+    " **Tấn công " +
     engine.damage(state, c, "attack") +
-    " damage · +" +
+    " DMG** · +" +
     t.attackMana +
-    " MP**\n" +
+    " MP\n" +
     SKILL_ICONS[c.classKey] +
     " **" +
     c.combat.skillName +
-    ": " +
+    " " +
     engine.damage(state, c, "skill") +
-    " damage · −" +
+    " DMG** · −" +
     t.skillCost +
-    " MP**\n" +
+    " MP\n" +
     E.defense +
-    " **Phòng thủ: nhận " +
+    " **Phòng thủ · nhận " +
     engine.counter(state, c, "defend") +
-    " damage · +" +
+    " DMG** · +" +
     t.defendMana +
-    " MP**\n*Damage cố định, không Crit, không Miss. " +
-    c.classDescription +
-    "*"
+    " MP"
   );
 }
 function generatedEffects(state, c) {
-  const flags = {
-    debt_bound:
-      "Khế ước sinh lực: dấu nợ được giữ từ đầu run, cần tại cửa thu nợ tầng 12 trở đi.",
-    mana_fracture:
-      "Mana Fracture: skill giảm 1 MP (tối thiểu 1); đòn thường +0 MP, phòng thủ giữ mức MP của class.",
-    mirror_bound:
-      "Khế ước Gương: nhịp combat tầng 8 được giữ nguyên cho tầng 14.",
-    memory_1: "Nhịp tầng 1 đã niêm phong cho Gương tầng 12.",
-    memory_8: "Nhịp tầng 8 đã niêm phong cho Gương tầng 14.",
-  };
   return (
     c.classDescription +
     (c.classKey === "necromancer"
       ? "\n**Ward:** " + state.classCharges.ward + " charge."
       : "") +
-    "\n" +
-    (state.flags.map((f) => "• " + (flags[f] || f)).join("\n") ||
-      "Chưa có hiệu ứng xuyên tầng.")
+    "\nMọi trạng thái chỉ có hiệu lực trong tầng hiện tại."
   );
 }
 function generatedRules(c) {
   const date = (v) =>
     new Date(v).toLocaleString("vi-VN", { timeZone: "Asia/Bangkok" });
   return (
-    "• **Perfect Chain:** " +
+    "• **Thử thách sinh tử:** " +
     c.character.name +
-    " cố định · 15 tầng · " +
-    c.stepCount +
-    " bước. Sai một hành động làm attempt thất bại ngay; bấm **Chơi lại từ tầng 1** để thử lại.\n" +
-    "• HP, MP, hiệu ứng, Ward và lựa chọn event giữ xuyên tầng. Mỗi bước có tín hiệu riêng, kể cả thứ tự nhịp đã ghi ở tầng trước.\n" +
+    " cố định · 15 tầng. Hạ quái trước khi quái hạ bạn; tử trận sẽ **thử lại từ đầu tầng hiện tại**.\n" +
+    "• Mỗi tầng là một puzzle độc lập. Khi sang tầng mới, HP, MP, Skill, Ward và hiệu ứng được đặt lại theo trạng thái đầu tầng; không lựa chọn nào từ tầng trước ảnh hưởng tầng sau. Tháp không công bố số hành động của từng tầng hoặc toàn bộ hành trình.\n" +
+    "• Mỗi tuần chỉ có **một chuỗi hành động duy nhất** có thể hoàn thành đủ 15 tầng.\n" +
+    (c.contentVersion >= 5
+      ? "• Skill dùng tự do khi đủ MP. Tấn công tăng Break; Skill tiêu Break để tăng damage. Giáp thích nghi cộng kháng với loại damage vừa nhận; kháng được tính theo phần trăm hiển thị.\n• Bảng hiện hai intent. Vọng âm lặp 50% damage sau tối đa hai lượt. Boss tầng 13–15 có nhiều phase, damage dư không xuyên phase.\n"
+      : c.contentVersion >= 4
+        ? "• Skill hoạt động bình thường, có thể dùng nhiều lần nếu đủ MP và không cần làm đòn kết liễu. Quái không hồi lại damage Skill; trạng thái kháng hoặc miễn nhiễm của từng lượt được hiển thị trực tiếp.\n"
+        : "• Tấn công và Skill luôn gây đúng damage đang hiển thị. Skill dùng **một lần mỗi tầng**; nếu Skill không kết liễu, quái hấp thụ và hồi lại toàn bộ damage vừa nhận.\n") +
+    "• Phòng thủ giảm đòn sắp nhận xuống đúng số dự báo. Quái chết trong lượt thì không thể phản công.\n" +
     "• " +
     c.classDescription +
     "\n" +
@@ -506,35 +559,23 @@ function payloadGenerated(row, state, c, result, now = Date.now()) {
     .setColor(color(state, c))
     .setTitle("🗼 THÁP ĐỊNH MỆNH · " + c.weekLabel)
     .setDescription(
-      (row.user_id ? "👤 <@" + row.user_id + ">\n" : "") +
+      (row.user_id ? "👤 <@" + row.user_id + ">" + SEP : "") +
         "**" +
         c.character.name +
-        " · 15 tầng · " +
-        c.stepCount +
-        " bước**" +
+        "**" +
+        SEP +
+        "Tầng **" +
+        state.floor +
+        "/15**" +
         (!live
           ? replayTarget
             ? "\n⏰ Challenge này đã đóng. Bấm Chơi Tháp hiện tại để mở tuần đang hoạt động."
             : "\n⏰ Challenge đã hết hạn. Chỉ xem kết quả."
           : ""),
-    )
-    .setFooter(footer(state, c));
+    );
   addTextFields(
     embed,
-    "🔗 Perfect Chain",
-    "Tầng **" +
-      state.floor +
-      "/15** · Bước **" +
-      Math.min(state.routeStep + 1, c.stepCount) +
-      "/" +
-      c.stepCount +
-      "**\nChain chính xác: **" +
-      state.routeStep +
-      " hành động liên tiếp**.\nSai một hành động sẽ phải chơi lại từ tầng 1.",
-  );
-  addTextFields(
-    embed,
-    SKILL_ICONS[c.classKey] + " " + c.character.name,
+    "⚔️ Hành động",
     state.status === "playing" && e.type === "combat"
       ? generatedStats(state, c)
       : resources(state),
@@ -545,40 +586,31 @@ function payloadGenerated(row, state, c, result, now = Date.now()) {
       encounterIcon(e) + " " + (e.type === "combat" ? "Đối thủ" : "Tình huống"),
       generatedEncounter(state, c),
     );
-  if (state.flags.length)
+  if (state.status !== "playing") {
     addTextFields(
       embed,
-      E.rift + " Hiệu ứng xuyên tầng",
-      generatedEffects(state, c),
+      "📍 Tiến độ",
+      "Đã vượt **" +
+        state.cleared +
+        "/15**" +
+        SEP +
+        "Cao nhất **" +
+        result.best_floor +
+        "/15**" +
+        SEP +
+        "Lần thử **" +
+        result.attempts +
+        "**",
     );
-  addTextFields(
-    embed,
-    "📍 Tiến trình tuần",
-    "Đã vượt: **" +
-      state.cleared +
-      "/15**" +
-      SEP +
-      "Cao nhất: **" +
-      result.best_floor +
-      "/15**" +
-      SEP +
-      "Lần thử: **" +
-      (result.attempts + (state.status === "playing" ? 1 : 0)) +
-      "**",
-  );
-  addTextFields(embed, "🏆 Phần thưởng", rewardText(state, c, result));
-  if (state.lastLog)
-    addTextFields(embed, "📜 Lượt vừa rồi", turnText(state, c));
+    addTextFields(embed, "🏆 Phần thưởng", rewardText(state, c, result));
+  }
+  if (state.lastLog) addTextFields(embed, "📜 Lượt trước", turnText(state, c));
   if (state.status !== "playing")
     addTextFields(
       embed,
       "🏁 KẾT QUẢ",
       state.status === "completed"
-        ? "🏆 **Hoàn thành Perfect Chain " +
-            c.stepCount +
-            "/" +
-            c.stepCount +
-            " bước!**"
+        ? "🏆 **Đã hạ toàn bộ kẻ địch và hoàn thành 15 tầng!**"
         : "❌ " + state.failure,
     );
   const t = engine.current(state, c).transition;
@@ -588,7 +620,11 @@ function payloadGenerated(row, state, c, result, now = Date.now()) {
       : [
           {
             action: "replay",
-            label: live ? "Chơi lại từ tầng 1" : "Chơi Tháp hiện tại",
+            label: live
+              ? state.status === "failed"
+                ? "Thử lại tầng " + state.floor
+                : "Chơi lại từ tầng 1"
+              : "Chơi Tháp hiện tại",
           },
         ];
   const labels =
@@ -616,7 +652,7 @@ function payloadGenerated(row, state, c, result, now = Date.now()) {
       ...Object.entries(tabs).map(([tab, label]) =>
         generatedButton(row, state, c, "view_" + tab, label),
       ),
-      generatedButton(row, state, c, "top", "Bảng xếp hạng tuần"),
+      generatedButton(row, state, c, "top", "Xếp hạng"),
     ]),
   );
   return { embeds: [embed], components, allowedMentions: { parse: [] } };
@@ -626,15 +662,7 @@ function privateGenerated(row, state, c, source, tab) {
     .setColor(color(state, c))
     .setTitle("🗼 " + tabs[tab] + " · THÁP ĐỊNH MỆNH")
     .setDescription(
-      "**" +
-        c.character.name +
-        "** · Tầng **" +
-        state.floor +
-        "/15** · Bước **" +
-        Math.min(c.stepCount, state.routeStep + 1) +
-        "/" +
-        c.stepCount +
-        "**",
+      "**" + c.character.name + "** · Tầng **" + state.floor + "/15**",
     )
     .setFooter(footer(state, c));
   const text =

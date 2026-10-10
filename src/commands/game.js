@@ -32,10 +32,6 @@ const {
   getOperationalHealth,
 } = require("../services/operationalHealthService");
 const {
-  runAndSendDatabaseBackup,
-  getBackupStatus,
-} = require("../services/databaseBackupService");
-const {
   GAME_CONFIG_KEYS,
   GAME_CONFIG_SPECS,
   listGameConfigs,
@@ -275,11 +271,6 @@ module.exports = {
       command
         .setName("health")
         .setDescription("Kiểm tra database, backup và phiên đang chạy"),
-    )
-    .addSubcommand((command) =>
-      command
-        .setName("backup")
-        .setDescription("Tạo và gửi backup database ngay qua Discord DM"),
     )
     .addSubcommand((command) =>
       command
@@ -561,23 +552,17 @@ module.exports = {
         : health.backup.running
           ? "Đang tạo bản sao đầu tiên"
           : "Chưa có trong phiên chạy này";
-      const deliveredTime = health.backup.lastDeliveredAt
-        ? `<t:${Math.floor(new Date(health.backup.lastDeliveredAt).getTime() / 1000)}:R>`
-        : "Chưa gửi trong phiên chạy này";
-      const nextDelivery = health.backup.nextDeliveryAt
-        ? `<t:${Math.floor(new Date(health.backup.nextDeliveryAt).getTime() / 1000)}:F>`
-        : "Chưa lên lịch";
       const healthy =
         health.database.check === "ok" &&
         !health.backup.lastError &&
-        !health.backup.lastDeliveryError;
+        !health.backup.discord?.lastError;
       const embed = new EmbedBuilder()
         .setColor(healthy ? 0x2ecc71 : 0xe67e22)
         .setTitle(`${healthy ? "✅" : "⚠️"} TRẠNG THÁI VẬN HÀNH`)
         .addFields(
           {
             name: "Database",
-            value: `${health.database.check === "ok" ? "Toàn vẹn" : health.database.check} · ${sizeText(health.database.bytes)} · schema v${health.database.migration}`,
+            value: `${health.database.check === "ok" ? "Toàn vẹn" : health.database.check} · ${sizeText(health.database.bytes)} · schema v${health.database.migration} · ghi ${health.database.synchronous}`,
             inline: true,
           },
           {
@@ -596,11 +581,22 @@ module.exports = {
           },
           {
             name: "Backup gần nhất",
-            value: `${backupTime}\nLịch: mỗi ${health.backup.intervalHours} giờ · giữ ${health.backup.retention} bản${health.backup.lastError ? `\n⚠️ ${health.backup.lastError}` : ""}`,
-          },
-          {
-            name: "Gửi backup qua Discord",
-            value: `User: <@${health.backup.discordUserId}>\nĐã gửi: ${deliveredTime}\nLần kế tiếp: ${nextDelivery} · ${health.backup.timeZone}${health.backup.lastDeliveryError ? `\n⚠️ ${health.backup.lastDeliveryError}` : ""}`,
+            value: `${backupTime}\nLịch: mỗi ${health.backup.intervalMinutes} phút · giữ ${health.backup.retention} bản
+${
+  health.backup.discord?.configured
+    ? "DM Discord: " +
+      (health.backup.discord.lastSuccessAt
+        ? "<t:" +
+          Math.floor(
+            new Date(health.backup.discord.lastSuccessAt).getTime() / 1000,
+          ) +
+          ":R>"
+        : health.backup.discord.waitingForDiscord
+          ? "Chờ Discord kết nối"
+          : "Chưa gửi thành công")
+    : "Chỉ lưu trên máy chủ; chưa cấu hình DM Discord."
+}
+${health.backup.discord?.lastError ? "⚠️ " + health.backup.discord.lastError : ""}${health.backup.lastError ? `\n⚠️ ${health.backup.lastError}` : ""}`,
           },
         )
         .setTimestamp();
@@ -608,31 +604,6 @@ module.exports = {
         embeds: [embed],
         flags: MessageFlags.Ephemeral,
       });
-    }
-    if (subcommand === "backup") {
-      if (!isAdmin(interaction))
-        return interaction.reply({
-          content: "Chỉ admin mới được tạo và gửi backup dữ liệu.",
-          flags: MessageFlags.Ephemeral,
-        });
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      try {
-        const result = await runAndSendDatabaseBackup(interaction.client);
-        const fileName = result.destination.split(/[\\/]/).pop();
-        return interaction.editReply({
-          content: `✅ Đã tạo **${fileName}**, nén còn **${sizeText(result.delivery.size)}** và gửi DM thành công tới <@${result.delivery.userId}>.`,
-          allowedMentions: { parse: [] },
-        });
-      } catch (error) {
-        const status = getBackupStatus();
-        const localCopy = error.backupDestination
-          ? " Bản backup cục bộ vẫn được giữ lại."
-          : "";
-        return interaction.editReply({
-          content: `❌ Không thể gửi backup qua DM.${localCopy}\nLỗi: \`${String(status.lastDeliveryError || status.lastError || error.message).slice(0, 500)}\``,
-          allowedMentions: { parse: [] },
-        });
-      }
     }
     if (subcommand === "configs") {
       if (!isAdmin(interaction))

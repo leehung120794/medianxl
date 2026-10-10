@@ -143,18 +143,26 @@ function choose(s, build = "balanced") {
                     : 0.01;
         } else if (
           e.kind !== "blood_shop" ||
-          s.hp - offer.price > s.maxHp * 0.5
+          Math.min(s.hp, s.maxHp - offer.price) > s.maxHp * 0.5
         ) {
           const c = structuredClone(s);
+          if (e.kind === "blood_shop")
+            stats.addSource(c, { maxHp: -offer.price });
           v2.receiveItem(c, offer.item);
           score = utility(c, build) - base;
-          if (e.kind === "blood_shop") score -= (offer.price / s.maxHp) * 0.15;
         }
         return { action: a.action, score };
       })
       .sort((a, b) => b.score - a.score);
     return offers[0]?.score > 0 ? offers[0].action : "event_skip";
   }
+  if (e.kind === "purifier" && v2.payout(s) < v2.purifierCost(s))
+    return "event_skip";
+  if (e.kind === "purifier")
+    return has("event_cleanse")
+      ? "event_cleanse"
+      : options.find((a) => a.action.startsWith("purifier_select_"))?.action ||
+          "event_skip";
   const decisions = {
     healer: "event_heal",
     goblin: "event_catch",

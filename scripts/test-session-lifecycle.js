@@ -612,7 +612,7 @@ function bet(guildId, roundId, userId, choice, amount) {
   );
   assert.equal(balance(afk, "pete"), START);
 
-  // Shrine giả gây chết trong Sinh tồn phải kết thúc run thay vì lỗi
+  // Shrine giả luôn chừa lại 1 HP và tiếp tục run.
   const shrineGuild = "shrine-guild";
   const hardcoreForShrine = require("../src/services/hardcoreService");
   const shrineRun = hardcoreForShrine.startHardcore({
@@ -641,15 +641,21 @@ function bet(guildId, roundId, userId, choice, amount) {
   });
   assert.equal(
     shrineResult.settled,
-    true,
-    "chạm Shrine giả khi gần chết phải kết thúc run",
+    false,
+    "chạm Shrine giả khi gần chết phải chừa lại 1 HP",
   );
-  assert.equal(shrineResult.result.outcome, "loss");
+  assert.equal(shrineResult.state.hp, 1);
   assert.equal(
     db
       .prepare("SELECT COUNT(*) AS count FROM hardcore_sessions WHERE id=?")
       .get(shrineRun.session.id).count,
-    0,
+    1,
+  );
+  hardcoreForShrine.forceEndHardcoreSession(
+    shrineRun.session.id,
+    shrineGuild,
+    "alice",
+    { forfeit: true },
   );
 
   // Bàn Poker hết hạn trả về state; bấm nút vào bàn đã hết hạn không gây lỗi
@@ -1334,9 +1340,10 @@ function bet(guildId, roundId, userId, choice, amount) {
   );
   assert.match(
     standTwo.calls.updates[0].content,
-    /:coin:.*:test_tube:/s,
+    /:coin:/,
     "bảng riêng hiện kết quả cuối",
   );
+  assert.doesNotMatch(standTwo.calls.updates[0].content, /:test_tube:/);
 
   // Bàn Xì dách: quắc khóa toàn bộ nút; cả người chơi và nhà cái cùng quắc thì hòa, hoàn cược
   {
@@ -1704,7 +1711,7 @@ function bet(guildId, roundId, userId, choice, amount) {
     assert(id, `${table} không tạo được session để kiểm tra`);
     assert.equal(
       balance(g, owners[table]),
-      START - 100,
+      START - (table === "chinchiro_sessions" ? 200 : 100),
       `${table} chưa giữ cược`,
     );
     db.prepare(`UPDATE ${table} SET message_id='123' WHERE id=?`).run(id);
@@ -1752,8 +1759,8 @@ function bet(guildId, roundId, userId, choice, amount) {
         "SELECT COUNT(*) AS count FROM economy_transactions WHERE guild_id=? AND reason LIKE '%timeout-%'",
       )
       .get(g).count,
-    0,
-    "xử thua không tạo giao dịch hoàn tiền",
+    1,
+    "Chinchiro hoàn đúng phần phạt dự phòng chưa dùng",
   );
   assert.equal(
     stale

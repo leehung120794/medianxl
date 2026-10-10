@@ -3,8 +3,8 @@ const { createHash, createHmac } = require("node:crypto");
 const { profile } = require("./classProfiles");
 const { makeClue, eventChoices } = require("./templates");
 const solver = require("./solver");
-const GENERATOR_VERSION = 3,
-  CONTENT_VERSION = 1;
+const GENERATOR_VERSION = 4,
+  CONTENT_VERSION = 5;
 const FIRST_LENGTHS = [4, 4, 5, 5, 4, 5, 5, 5, 6, 5, 6, 6, 6, 7, 8];
 const FLOOR_NAMES = [
   "Nhịp khai mở",
@@ -61,11 +61,10 @@ function productionSeed(
     .update(id + ":" + contentVersion)
     .digest("hex");
 }
-function costsAt(p, t) {
-  const fractured = t.floor > 5 || (t.floor === 5 && t.floorStep > 0);
+function costsAt(p) {
   return {
-    skillCost: fractured ? Math.max(1, p.skillCost - 1) : p.skillCost,
-    attackMana: fractured ? 0 : p.attackMana,
+    skillCost: p.skillCost,
+    attackMana: p.attackMana,
     defendMana: p.defendMana,
   };
 }
@@ -77,6 +76,7 @@ function candidate(
     seed,
     startsAt,
     endsAt,
+    challengeId: requestedChallengeId,
     contentVersion = CONTENT_VERSION,
   },
   nonce,
@@ -186,74 +186,118 @@ function candidate(
       t.memoryFloor = 8;
       t.memoryIndex = i + 1;
     });
-  const finalMana = Math.floor(rng() * (Math.floor(p.maxMana * 0.4) + 1));
-  const failed = new Set(),
-    orders = slots.map(() => shuffle(["attack", "skill", "defend"], rng));
-  function buildReverse(i, mana, nextAction, repeat, mask) {
-    if (i < 0) return mana;
-    const key = [i, mana, nextAction, repeat, mask].join("|");
-    if (failed.has(key)) return null;
-    const t = slots[i],
-      cost = costsAt(p, t);
-    Object.assign(t, cost);
-    if (t.type === "event") {
-      t.manaDelta = 0;
-      return buildReverse(
-        i - 1,
-        mana,
-        null,
-        0,
-        i === 0 || slots[i - 1].floor !== t.floor ? 0 : mask,
-      );
+  // V4 uses one global combat law instead of per-turn answer matching:
+  // build MP with Attack/Defend, then save the floor's single Skill for lethal.
+  for (const t of slots)
+    if (t.category === "memory") {
+      delete t.category;
+      delete t.memoryFloor;
+      delete t.memoryIndex;
+      delete t.forced;
     }
-    for (const a of orders[i]) {
-      const delta =
-        a === "skill"
+  const initialMana = p.skillCost;
+  let mana = initialMana,
+    forwardMana = initialMana,
+    finalMana = initialMana;
+  function combatPlan(length) {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const actions = shuffle(
+        [
+          "attack",
+          "defend",
+          "skill",
+          ...Array.from(
+            { length: length - 3 },
+            () => shuffle(["attack", "defend", "skill"], rng)[0],
+          ),
+        ],
+        rng,
+      );
+      if (actions.at(-1) === "defend") {
+        const swap = actions.findIndex((action) => action !== "defend");
+        [actions[swap], actions[actions.length - 1]] = [
+          actions.at(-1),
+          actions[swap],
+        ];
+      }
+      if (
+        actions.some(
+          (action, index) =>
+            index >= 2 &&
+            action === actions[index - 1] &&
+            action === actions[index - 2],
+        )
+      )
+        continue;
+      let available = initialMana,
+        valid = true;
+      for (const action of actions) {
+        if (action === "skill" && available < p.skillCost) {
+          valid = false;
+          break;
+        }
+        available = Math.max(
+          0,
+          Math.min(
+            p.maxMana,
+            available +
+              (action === "skill"
+                ? -p.skillCost
+                : action === "attack"
+                  ? p.attackMana
+                  : p.defendMana),
+          ),
+        );
+      }
+      if (valid) return actions;
+    }
+    throw Error("CANDIDATE_COMBAT_PLAN");
+  }
+  for (let floor = 1; floor <= 15; floor++) {
+    const combat = floorSlots(floor).filter((t) => t.type === "combat"),
+      plan = combatPlan(combat.length);
+    combat.forEach((t, index) => {
+      t.expectedAction = plan[index];
+      if (plan[index] === "attack") {
+        t.physicalResist = rng() < 0.5 ? 0 : 25;
+        t.magicResist = 100;
+        t.armorMode = "magic_guard";
+      } else if (plan[index] === "skill") {
+        t.physicalResist = 100;
+        t.magicResist = rng() < 0.5 ? 0 : 25;
+        t.armorMode = "physical_guard";
+      } else {
+        t.physicalResist = 100;
+        t.magicResist = 100;
+        t.armorMode = "fortified";
+      }
+    });
+  }
+  for (let floor = 1; floor <= 15; floor++) {
+    forwardMana = initialMana;
+    for (const t of floorSlots(floor)) {
+      const cost = costsAt(p);
+      Object.assign(t, cost);
+      t.manaBefore = forwardMana;
+      if (t.type === "event") {
+        t.manaDelta = 0;
+        continue;
+      }
+      const gain =
+        t.expectedAction === "skill"
           ? -cost.skillCost
-          : a === "attack"
+          : t.expectedAction === "attack"
             ? cost.attackMana
             : cost.defendMana;
-      const before = mana - delta,
-        bit = { attack: 1, skill: 2, defend: 4 }[a],
-        newMask = mask | bit;
-      if (
-        before < 0 ||
-        before > p.maxMana ||
-        (t.forced && a !== t.forced) ||
-        (t.floorStep === lengths[t.floor - 1] - 1 && a === "defend") ||
-        (a === nextAction && repeat >= 3)
-      )
-        continue;
-      const boundary = i === 0 || slots[i - 1].floor !== t.floor;
-      if (
-        boundary &&
-        ((newMask & (newMask - 1)) === 0 || (t.floor === 15 && newMask !== 7))
-      )
-        continue;
-      const initial = buildReverse(
-        i - 1,
-        before,
-        a,
-        a === nextAction ? repeat + 1 : 1,
-        boundary ? 0 : newMask,
-      );
-      if (initial !== null) {
-        t.expectedAction = a;
-        t.manaDelta = delta;
-        return initial;
-      }
+      if (t.expectedAction === "skill" && forwardMana < cost.skillCost)
+        throw Error("CANDIDATE_RESOURCE_DEAD_END");
+      const after = Math.max(0, Math.min(p.maxMana, forwardMana + gain));
+      t.manaDelta = after - forwardMana;
+      forwardMana = after;
     }
-    failed.add(key);
-    return null;
+    if (floor === 15) finalMana = forwardMana;
   }
-  const initialMana = buildReverse(n - 1, finalMana, null, 0, 0);
-  if (initialMana === null) throw Error("CANDIDATE_RESOURCE_DEAD_END");
-  let mana = initialMana;
-  let forwardMana = initialMana;
-  slots.forEach((t) => {
-    t.manaBefore = forwardMana;
-    forwardMana += t.manaDelta;
-  });
+  mana = initialMana;
   const counts = { direct: 0, resource: 0, delayed: 0, memory: 0, class: 0 };
   slots.forEach((t) => {
     if (t.category) counts[t.category]++;
@@ -285,10 +329,54 @@ function candidate(
   slots.forEach((t) => {
     if (!t.category) t.category = "direct";
   });
-  // Walk backward from the boss's small surviving HP budget. Ward/dodge steps
-  // take no damage; Druid healing is accounted for in the fixed counter curve.
-  let ward = 0;
+  for (let floor = 1; floor <= 15; floor++) {
+    const combat = floorSlots(floor).filter((t) => t.type === "combat");
+    for (let index = 0; index < combat.length - 2; index++)
+      if (floor >= 5 && combat[index].category === "delayed" && rng() < 0.65)
+        combat[index].echoDelay = rng() < 0.5 ? 1 : 2;
+    const phaseCount = floor === 15 ? 3 : floor >= 13 ? 2 : 1;
+    floors[floor - 1].phaseCount = phaseCount;
+    floors[floor - 1].phaseNames = Array.from(
+      { length: phaseCount },
+      (_, index) => "Pha " + (index + 1),
+    );
+    if (phaseCount > 1) {
+      let previousEnd = -1;
+      for (let phase = 1; phase < phaseCount; phase++) {
+        const target = Math.ceil((combat.length * phase) / phaseCount) - 1,
+          remaining = phaseCount - phase,
+          candidates = combat
+            .map((t, index) => ({ t, index }))
+            .filter(
+              ({ t, index }) =>
+                index > previousEnd &&
+                index < combat.length - remaining &&
+                t.expectedAction !== "defend",
+            )
+            .sort(
+              (a, b) => Math.abs(a.index - target) - Math.abs(b.index - target),
+            );
+        if (!candidates.length) throw Error("CANDIDATE_BOSS_PHASE_SPLIT");
+        const end = candidates[0].index;
+        combat[end].phaseEnd = true;
+        combat[end].bossPhase = phase - 1;
+        previousEnd = end;
+      }
+      combat.at(-1).phaseEnd = true;
+      combat.at(-1).bossPhase = phaseCount - 1;
+    }
+  }
+  // Every floor is an independent puzzle. HP, MP, Ward and flags are reset at
+  // its entrance, so no solution depends on choices made on an earlier floor.
+  let ward = 0,
+    wardFloor = 1;
   for (const t of slots) {
+    if (t.floor !== wardFloor) {
+      ward = 0;
+      wardFloor = t.floor;
+    }
+    t.finisher =
+      t.type === "combat" && t.floorStep === lengths[t.floor - 1] - 1;
     t.classChargesBefore = { ward };
     const blocked =
       t.type === "combat" &&
@@ -300,92 +388,180 @@ function candidate(
     if (p.mechanic === "ward" && t.expectedAction === "skill") ward = 1;
     t.classChargesAfter = { ward };
   }
-  const finalHp = 1 + Math.floor(rng() * Math.floor(p.maxHp * 0.2));
-  let budget = p.maxHp - finalHp - 3;
-  const vulnerable = slots.filter((t) => t.type === "combat" && !t.blocked);
-  const weights = vulnerable.map(() => 1 + Math.floor(rng() * 5)),
-    total = weights.reduce((a, b) => a + b, 0);
-  const losses = weights.map((w) => Math.floor((budget * w) / total));
-  let remaining = budget - losses.reduce((a, b) => a + b, 0);
-  for (const index of shuffle(
-    losses.map((_, i) => i),
-    rng,
-  )) {
-    if (!remaining) break;
-    losses[index]++;
-    remaining--;
-  }
-  let vi = 0;
-  for (const t of slots) {
-    t.hpDelta =
-      t.type === "event"
-        ? t.eventKind === "hp_fork"
-          ? -3
-          : 0
-        : t.blocked
-          ? 0
-          : -losses[vi++];
-    t.heal = t.type === "combat" && t.expectedAction === "skill" ? p.heal : 0;
-    t.counterDamage = t.type === "combat" ? t.heal - t.hpDelta : 0;
-    t.intentDamage = t.blocked
-      ? p.maxHp + 1
-      : p.mechanic === "shield" && t.expectedAction === "defend"
-        ? 2 * t.counterDamage
-        : t.counterDamage;
-    t.counterType =
-      p.mechanic === "shield" && t.expectedAction === "skill"
-        ? "magic"
-        : p.mechanic === "shield" && t.expectedAction === "defend"
-          ? "physical"
-          : rng() < 0.5
-            ? "physical"
-            : "magic";
-    t.requiredFlags = [];
-    t.grantsFlags = [];
-    t.removesFlags = [];
-    if (t.type === "event") {
-      if (t.eventKind === "hp_fork") t.grantsFlags = ["debt_bound"];
-      if (t.eventKind === "paradox") t.grantsFlags = ["mana_fracture"];
-      if (t.eventKind === "mana_fork") t.grantsFlags = ["mirror_bound"];
+  let finalHp = p.maxHp;
+  for (let floor = 1; floor <= 15; floor++) {
+    const floorTurns = floorSlots(floor),
+      freeHealing = floorTurns.reduce(
+        (sum, t) =>
+          sum +
+          ((t.finisher || t.phaseEnd || t.blocked) &&
+          t.expectedAction === "skill"
+            ? p.heal
+            : 0),
+        0,
+      ),
+      minimumTargetHp = Math.min(Math.floor(p.maxHp * 0.2), freeHealing + 1),
+      targetHp =
+        minimumTargetHp +
+        Math.floor(rng() * (Math.floor(p.maxHp * 0.2) - minimumTargetHp + 1)),
+      eventLoss = floorTurns.some((t) => t.eventKind === "hp_fork") ? 3 : 0,
+      vulnerable = floorTurns.filter(
+        (t) => t.type === "combat" && !t.blocked && !t.finisher && !t.phaseEnd,
+      ),
+      budget = p.maxHp - targetHp - eventLoss + freeHealing,
+      weights = vulnerable.map(() => 1 + Math.floor(rng() * 5)),
+      total = weights.reduce((a, b) => a + b, 0),
+      losses = weights.map((w) => Math.floor((budget * w) / total));
+    let remaining = budget - losses.reduce((a, b) => a + b, 0);
+    for (const index of shuffle(
+      losses.map((_, i) => i),
+      rng,
+    )) {
+      if (!remaining) break;
+      losses[index]++;
+      remaining--;
     }
-    if (t.floor >= 12) t.requiredFlags.push("debt_bound");
-    if (t.category === "delayed" && t.floor >= 5)
-      t.requiredFlags.push("debt_bound");
-    if (t.category === "memory")
-      t.requiredFlags.push("memory_" + t.memoryFloor);
-    if (
-      t.floorStep === lengths[t.floor - 1] - 1 &&
-      (t.floor === 1 || t.floor === 8)
-    )
-      t.grantsFlags.push("memory_" + t.floor);
-    t.requiredFlags = [...new Set(t.requiredFlags)];
-    t.resourceWasteWindow =
-      t.category === "resource" &&
-      t.expectedAction === "defend" &&
-      t.manaBefore >= t.skillCost;
-    t.shieldCharges =
-      p.mechanic === "barrage" &&
-      t.category === "class" &&
-      t.expectedAction === "skill"
-        ? 2
-        : 0;
-    t.classMechanic = p.mechanic;
-    t.spellLocked =
-      p.mechanic === "reflection" &&
-      t.category === "class" &&
-      t.expectedAction !== "skill";
+    let vi = 0,
+      hp = p.maxHp;
+    for (const t of floorTurns) {
+      t.heal = t.type === "combat" && t.expectedAction === "skill" ? p.heal : 0;
+      t.hpDelta =
+        t.type === "event"
+          ? t.eventKind === "hp_fork"
+            ? -3
+            : 0
+          : t.finisher || t.phaseEnd || t.blocked
+            ? t.heal
+            : -losses[vi++];
+      t.counterDamage = t.type === "combat" ? t.heal - t.hpDelta : 0;
+      t.intentDamage =
+        t.finisher || t.phaseEnd
+          ? 0
+          : t.blocked
+            ? p.maxHp + 1
+            : p.mechanic === "shield" && t.expectedAction === "defend"
+              ? 2 * t.counterDamage
+              : t.counterDamage;
+      t.counterType =
+        p.mechanic === "shield" && t.expectedAction === "skill"
+          ? "magic"
+          : p.mechanic === "shield" && t.expectedAction === "defend"
+            ? "physical"
+            : rng() < 0.5
+              ? "physical"
+              : "magic";
+      t.requiredFlags = [];
+      t.grantsFlags = [];
+      t.removesFlags = [];
+      t.resourceWasteWindow =
+        t.category === "resource" &&
+        t.expectedAction === "defend" &&
+        t.manaBefore >= t.skillCost;
+      t.shieldCharges =
+        p.mechanic === "barrage" &&
+        t.category === "class" &&
+        t.expectedAction === "skill"
+          ? 2
+          : 0;
+      t.classMechanic = p.mechanic;
+      t.spellLocked = false;
+      t.hpBefore = hp;
+      hp += t.hpDelta;
+    }
+    if (hp !== targetHp) throw Error("CANDIDATE_HP_CURVE");
+    if (floor === 15) finalHp = targetHp;
   }
-  let hp = finalHp;
-  for (let i = n - 1; i >= 0; i--) {
-    const t = slots[i];
-    hp -= t.hpDelta;
-    t.hpBefore = hp;
+  for (const t of slots) {
+    if (t.type !== "combat") continue;
+    t.guardIntent = t.expectedAction === "defend";
+    if (t.expectedAction === "defend") {
+      t.defendDamage = t.counterDamage;
+      t.intentDamage = t.hpBefore + t.heal;
+    } else {
+      t.defendDamage = Math.floor(t.intentDamage / 2);
+    }
   }
-  if (hp !== p.maxHp) throw Error("CANDIDATE_HP_CURVE");
+  const damagePayload = {
+    generatorVersion: GENERATOR_VERSION,
+    contentVersion,
+    classKey,
+    character: { maxHp: p.maxHp, maxMana: p.maxMana },
+    floors,
+    transitions: slots,
+    initialState: { hp: p.maxHp, mana: initialMana },
+  };
+  for (let floor = 1; floor <= 15; floor++) {
+    const floorTurns = floorSlots(floor);
+    let combatState = {
+        hp: p.maxHp,
+        mana: initialMana,
+        enemyHp: Number.MAX_SAFE_INTEGER,
+        floor,
+        floorStep: 0,
+        routeStep: floorTurns[0].routeStep,
+        flags: [],
+        classCharges: { ward: 0 },
+        skillUsed: false,
+        breakGauge: 0,
+        adaptiveArmor: null,
+        delayedEffects: [],
+        bossPhase: 0,
+        phaseHp: Number.MAX_SAFE_INTEGER,
+      },
+      floorDamage = 0,
+      phaseDamage = 0;
+    const phaseHps = [];
+    for (const t of floorTurns) {
+      if (t.type === "event") {
+        t.enemyHpDelta = 0;
+        t.damage = 0;
+        t.echoDamage = 0;
+        continue;
+      }
+      combatState = {
+        ...combatState,
+        hp: t.hpBefore,
+        mana: t.manaBefore,
+        routeStep: t.routeStep,
+        floorStep: t.floorStep,
+        classCharges: { ...t.classChargesBefore },
+      };
+      const outcome = solver.combatOutcome(
+        damagePayload,
+        combatState,
+        t,
+        t.expectedAction,
+      );
+      t.enemyHpDelta = -outcome.rawDamage;
+      t.damage = outcome.directDamage;
+      t.echoDamage = outcome.echoDamage;
+      floorDamage += outcome.rawDamage;
+      phaseDamage += outcome.rawDamage;
+      combatState = {
+        ...combatState,
+        breakGauge: outcome.breakGauge,
+        adaptiveArmor: outcome.adaptiveArmor,
+        delayedEffects: outcome.delayedEffects,
+      };
+      if (t.phaseEnd) {
+        phaseHps.push(phaseDamage);
+        phaseDamage = 0;
+      }
+    }
+    if (phaseDamage || !phaseHps.length) phaseHps.push(phaseDamage);
+    if (phaseHps.some((hp) => hp < 1)) throw Error("CANDIDATE_EMPTY_PHASE");
+    floors[floor - 1].hp = floorDamage;
+    floors[floor - 1].phaseHps = phaseHps;
+  }
   mana = initialMana;
   const used = {},
     templates = [];
+  let manaFloor = 1;
   for (const t of slots) {
+    if (t.floor !== manaFloor) {
+      mana = initialMana;
+      manaFloor = t.floor;
+    }
     t.manaBefore = mana;
     mana += t.manaDelta;
     t.hpRange =
@@ -401,30 +577,16 @@ function candidate(
       t.hpRange = [1, Math.floor(p.maxHp * 0.35)];
     t.manaRange =
       t.category === "resource" ? [t.manaBefore, t.manaBefore] : null;
-    let damage = 0;
-    if (t.expectedAction === "attack")
-      damage = Math.floor(
-        p.attackDamage *
-          (p.mechanic === "rage" && t.hpBefore <= p.maxHp * 0.35 ? 1.5 : 1),
-      );
-    if (t.expectedAction === "skill")
-      damage =
-        p.mechanic === "barrage"
-          ? Math.floor(p.skillDamage / 3) * (3 - t.shieldCharges)
-          : p.skillDamage + (p.mechanic === "dodge" ? 8 : 0);
-    t.enemyHpDelta = damage ? -damage : 0;
-    t.damage = damage;
-    floors[t.floor - 1].hp += damage;
     if (t.type === "event") {
       t.clueTemplate = "event_" + t.eventKind;
       t.clue =
         t.eventKind === "hp_fork"
-          ? "Khế ước đầu run sẽ bị thu nợ từ tầng 12. Hồi phục xóa dấu và đóng cửa thu nợ."
+          ? "Chọn mức HP khởi đầu cho puzzle của riêng tầng này."
           : t.eventKind === "paradox"
-            ? "Chuỗi này cần Mana Fracture. Lựa chọn tồn tại đến cuối run."
+            ? "Chọn cách quản lý MP chỉ áp dụng trong tầng này."
             : t.eventKind === "mana_fork"
-              ? "Gương tầng 14 cần giữ nguyên nhịp combat tầng 8. Nạp đầy MP sẽ đổi nhịp."
-              : "Cửa thu nợ chỉ mở khi dấu khế ước đầu run vẫn còn.";
+              ? "Chọn lượng MP khởi đầu cho phần combat của tầng này."
+              : "Chọn cách thanh tẩy hiệu ứng trong puzzle hiện tại.";
       continue;
     }
     const variants = shuffle([0, 1, 2], rng).map((v) =>
@@ -437,7 +599,7 @@ function candidate(
     );
     const clue = variants.find(
       (x) =>
-        (used[x.template] || 0) < 6 &&
+        (used[x.template] || 0) < 20 &&
         !(
           templates.length >= 2 &&
           templates.at(-1) === x.template &&
@@ -450,10 +612,6 @@ function candidate(
     if (t.category === "resource")
       t.clue +=
         " Khóa MP trước hành động: " + t.manaBefore + "/" + p.maxMana + ".";
-    if (t.floor === 1)
-      t.clue += " Ghi nhớ chuỗi combat tầng 1 để đảo nhịp ở tầng 12.";
-    if (t.floor === 8)
-      t.clue += " Ghi nhớ chuỗi combat tầng 8 để đảo nhịp ở tầng 14.";
     used[clue.template] = (used[clue.template] || 0) + 1;
     templates.push(clue.template);
     delete t.forced;
@@ -462,14 +620,15 @@ function candidate(
     delete t.manaBefore;
   }
   const payload = {
-    challengeId: challengeId(isoYear, isoWeek, classKey),
+    challengeId:
+      requestedChallengeId || challengeId(isoYear, isoWeek, classKey),
     isoYear,
     isoWeek,
     generatorVersion: GENERATOR_VERSION,
     contentVersion,
     classKey,
     seedCommitment: solver.hash(seed),
-    name: p.name + " · Perfect Chain",
+    name: p.name + " · Mortal Equation",
     weekLabel: "TUẦN " + isoWeek,
     character: {
       classKey,
@@ -503,7 +662,7 @@ function candidate(
     startsAt,
     endsAt,
     reward: { coins: 500000, diamonds: 250 },
-    wrongActionPolicy: "immediate_reset",
+    wrongActionPolicy: "combat_resolution",
     candidateNonce: nonce,
     solutionHash: null,
     difficultyScore: 0,
@@ -511,7 +670,9 @@ function candidate(
   let state = solver.initial(payload);
   for (const t of slots) state = solver.apply(payload, state, t.expectedAction);
   if (state.hp !== finalHp || state.mana !== finalMana)
-    throw Error("CANDIDATE_FINAL_CURVE");
+    throw Error(
+      `CANDIDATE_FINAL_CURVE:${state.hp}/${finalHp}:${state.mana}/${finalMana}`,
+    );
   payload.finalState = state;
   return payload;
 }

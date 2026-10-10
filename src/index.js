@@ -5,11 +5,12 @@ const {
   Client,
   Collection,
   Events,
+  RESTEvents,
   GatewayIntentBits,
   MessageFlags,
 } = require("discord.js");
 const pino = require("pino");
-const { db, seedBundledMedianItems } = require("./db");
+const { db } = require("./db");
 
 const { loadCommands } = require("./commandRegistry");
 const monitoring = require("./services/monitoringService");
@@ -42,7 +43,6 @@ const { loadApplicationEmojis } = require("./utils/appEmoji");
 
 if (!process.env.DISCORD_TOKEN)
   throw new Error("Missing DISCORD_TOKEN in .env");
-seedBundledMedianItems();
 const logDir = path.resolve(process.env.LOG_DIR || "./logs");
 fs.mkdirSync(logDir, { recursive: true });
 const logger = pino(
@@ -61,6 +61,8 @@ const maintenanceTimers = [startEconomyMaintenance(logger)];
 const rateLimiter = createRateLimiter();
 let backupManager = null;
 let shuttingDown = false;
+let activeInteractions = 0;
+const activeMessageTasks = new Set();
 const messageCommandsEnabled = /^(1|true|yes)$/i.test(
   process.env.ENABLE_MESSAGE_COMMANDS ||
     process.env.ENABLE_PREFIX_COMMANDS ||
@@ -73,10 +75,27 @@ if (messageCommandsEnabled)
     GatewayIntentBits.MessageContent,
   );
 const client = new Client({ intents });
+client.rest.on(RESTEvents.RateLimited, (limit) => {
+  // Never log the request URL: interaction webhook URLs contain private tokens.
+  logger.warn(
+    {
+      global: limit.global,
+      method: limit.method,
+      timeToResetMs: limit.timeToReset,
+      retryAfterMs: limit.retryAfter,
+      sublimitTimeoutMs: limit.sublimitTimeout,
+      limit: limit.limit,
+    },
+    "discord REST rate limited",
+  );
+});
 const commandModules = loadCommands();
 client.commands = new Collection(
   commandModules.map((command) => [command.data.toJSON().name, command]),
 );
+
+// Backup starts even if Discord is unavailable or still connecting.
+backupManager = startDatabaseBackups(logger);
 
 async function shutdown(signal, exitCode = 0) {
   if (shuttingDown) return;
@@ -84,12 +103,24 @@ async function shutdown(signal, exitCode = 0) {
   logger.info({ signal }, "game bot shutting down");
   for (const timer of maintenanceTimers) clearInterval(timer);
   rateLimiter.stop();
+  // Reject new work and give ongoing handlers a bounded chance to persist their action.
+  const drainDeadline = Date.now() + 10_000;
+  while (
+    (activeInteractions || activeMessageTasks.size) &&
+    Date.now() < drainDeadline
+  )
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  if (activeInteractions || activeMessageTasks.size)
+    logger.warn(
+      { activeInteractions, messageTasks: activeMessageTasks.size },
+      "shutdown drain timed out; backing up committed state",
+    );
   await backupManager
-    ?.stop()
+    ?.stop({ finalBackup: signal !== "uncaughtException" })
     .catch((error) =>
       logger.error({ err: error }, "could not finish database backup"),
     );
-  client.destroy();
+  await client.destroy();
   try {
     db.close();
   } catch (error) {
@@ -97,6 +128,8 @@ async function shutdown(signal, exitCode = 0) {
   }
   logger.flush?.();
   process.exitCode = exitCode;
+  // Release a supervisor IPC channel after backup and connection cleanup.
+  if (process.connected) process.disconnect();
 }
 process.once("SIGINT", () => {
   shutdown("SIGINT").catch(() => {
@@ -120,7 +153,18 @@ process.on("uncaughtException", (error) => {
   });
 });
 client.once(Events.ClientReady, async () => {
+  if (shuttingDown) return;
+  // DM delivery runs in the background; gameplay does not wait for backup uploads.
+  backupManager
+    .discordReady(client)
+    .catch((error) =>
+      logger.error(
+        { code: error.code || error.name },
+        "could not start Discord backup delivery",
+      ),
+    );
   await loadApplicationEmojis(client, logger);
+  if (shuttingDown) return;
   const resumedRounds = resumeOpenRounds(client, logger);
   const resumedHorseRaces = resumeHorseRaces(client, logger);
   maintenanceTimers.push(startTimedChallengeMaintenance(client, logger));
@@ -132,7 +176,6 @@ client.once(Events.ClientReady, async () => {
   maintenanceTimers.push(
     require("./hardcore/tower/challengeCatalog").startWeeklyMaintenance(logger),
   );
-  backupManager = startDatabaseBackups(client, logger);
   logger.info(
     {
       user: client.user.tag,
@@ -144,13 +187,14 @@ client.once(Events.ClientReady, async () => {
 });
 if (messageCommandsEnabled)
   client.on(Events.MessageCreate, (message) => {
+    if (shuttingDown) return;
     const rate = rateLimiter.consume(
       `message:${message.guildId}:${message.author.id}`,
       8,
       5_000,
     );
     if (!rate.allowed) return;
-    (async () => {
+    const task = (async () => {
       if (await handlePrefixMessage(message, logger)) return;
       if (await handleGamePrefix(message)) return;
       await handleGameMessage(message);
@@ -158,8 +202,15 @@ if (messageCommandsEnabled)
       logger.error({ err: error }, "message command failed");
       monitoring.recordRuntimeError(error, { source: "message" });
     });
+    activeMessageTasks.add(task);
+    task.then(
+      () => activeMessageTasks.delete(task),
+      () => activeMessageTasks.delete(task),
+    );
   });
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (shuttingDown) return;
+  activeInteractions++;
   try {
     if (interaction.isAutocomplete()) {
       const command = client.commands.get(interaction.commandName);
@@ -208,6 +259,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.deferred || interaction.replied)
       await interaction.followUp(payload).catch(() => {});
     else await interaction.reply(payload).catch(() => {});
+  } finally {
+    activeInteractions--;
   }
 });
 client.login(process.env.DISCORD_TOKEN).catch((error) => {

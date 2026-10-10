@@ -1,6 +1,7 @@
 const { ringForAchievement } = require("./avatarRingCatalog");
 const { grantCosmetic } = require("./profileCosmeticService");
 const { db } = require("../db");
+const relicRecords = require("../hardcore/storage/relicRecords");
 const { getAccount, creditCoins } = require("./economyService");
 const { addDiamonds } = require("./playerLevelService");
 
@@ -1330,11 +1331,69 @@ const eventAchievements = [
   ["hc_boss_10", "Thợ săn trùm", "Hạ 10 boss trong Sinh tồn", 10, 60_000, 150, "hardcoreBossKills"],
   ["hc_boss_50", "Bóng đen của trùm", "Hạ 50 boss trong Sinh tồn", 50, 250_000, 600, "hardcoreBossKills"],
 ].map(([id, name, description, target, reward, diamonds, metric]) => ({ id, name, description, target, reward, diamonds, metric }));
-const ACHIEVEMENTS = Object.freeze([...BASE_ACHIEVEMENTS, ...classFloorAchievements, ...eventAchievements]);
+const godAchievement = {
+  id: "hc_god_rngesus_1", name: "Được Thần Vận Mệnh Chọn",
+  description: "Gặp God of RNGesus và nhận phước lành trong Sinh tồn",
+  target: 1, reward: 0, diamonds: 0, metric: "hardcoreGodBlessings",
+};
+const relicAchievements = [
+  {
+    id: "hc_conquerors_covenant_1",
+    name: "Khế Ước Chinh Phạt",
+    description:
+      "Hợp nhất bốn mảnh và hạ Covenant Guardian, nhận Conqueror’s Covenant [LR] trong Sinh tồn",
+    target: 1,
+    reward: 0,
+    diamonds: 0,
+    metric: "hardcoreConquerorRelics",
+  },
+  {
+    id: "hc_gilded_soul_1",
+    name: "Linh Hồn Hoàng Kim",
+    description:
+      "Vượt nghi lễ Oán Hận, hạ Avarice Revenant và nhận Gilded Soul [LR] trong Sinh tồn",
+    target: 1,
+    reward: 0,
+    diamonds: 0,
+    metric: "hardcoreGildedRelics",
+  },
+  {
+    id: "hc_kingslayers_testament_1",
+    name: "Di Chúc Diệt Vương",
+    description:
+      "Giao nộp set Diệt Vương đã giải hết nguyền, nhận Kingslayer’s Testament [LR] từ Royal Invitation",
+    target: 1,
+    reward: 0,
+    diamonds: 0,
+    metric: "hardcoreKingslayerRelics",
+  },
+  {
+    id: "hc_astral_singularity_1",
+    name: "Điểm Kỳ Dị Tinh Tú",
+    description:
+      "Giao nộp set Tinh Tú đã giải hết nguyền, nhận Astral Singularity [LR] từ Royal Invitation",
+    target: 1,
+    reward: 0,
+    diamonds: 0,
+    metric: "hardcoreAstralRelics",
+  },
+];
+const ACHIEVEMENTS = Object.freeze([
+  ...BASE_ACHIEVEMENTS,
+  ...classFloorAchievements,
+  ...eventAchievements,
+  godAchievement,
+  ...relicAchievements,
+]);
 
 // Nhóm bộ lọc ở /kiemtra (Discord giới hạn 25 mục chọn): các chỉ số cùng chủ đề gộp thành một mục lọc.
 const CATEGORY_GROUPS = Object.freeze({
   hardcoreEvents: "hardcoreEvents",
+  hardcoreGodBlessings: "hardcoreEvents",
+  hardcoreConquerorRelics: "hardcoreEvents",
+  hardcoreGildedRelics: "hardcoreEvents",
+  hardcoreKingslayerRelics: "hardcoreEvents",
+  hardcoreAstralRelics: "hardcoreEvents",
   hardcoreChains: "hardcoreEvents",
   hardcoreEventKinds: "hardcoreEvents",
   hardcoreKills: "hardcoreEvents",
@@ -1385,6 +1444,7 @@ function metrics(guildId, userId) {
   const guild = String(guildId);
   const user = String(userId);
   const account = getAccount(guild, user);
+  const relicCounts = relicRecords.totals(guild, user);
   const gameTypes = db
     .prepare(
       "SELECT COUNT(*) count FROM game_player_stats WHERE guild_id=? AND user_id=? AND played>0",
@@ -1557,6 +1617,11 @@ function metrics(guildId, userId) {
     gameTypes,
     hardcoreFloor,
     ...classFloors,
+    hardcoreConquerorRelics: Math.max(relicCounts.conquerors_covenant, eventRow.kinds_json && JSON.parse(eventRow.kinds_json).includes("conquerors_covenant") ? 1 : 0),
+    hardcoreGildedRelics: relicCounts.gilded_soul,
+    hardcoreKingslayerRelics: relicCounts.kingslayers_testament,
+    hardcoreAstralRelics: relicCounts.astral_singularity,
+    hardcoreGodBlessings: db.prepare("SELECT blessings FROM hardcore_rngesus_favor WHERE guild_id=? AND user_id=?").get(guild, user)?.blessings || 0,
     hardcoreEvents: eventRow.events || 0,
     hardcoreChains: eventRow.chains || 0,
     hardcoreKills: eventRow.kills || 0,
@@ -1592,7 +1657,7 @@ function claimAchievements(guildId, userId, now = Date.now()) {
       db.prepare(
         "INSERT INTO achievement_claims(guild_id,user_id,achievement_id,claimed_at) VALUES(?,?,?,?)",
       ).run(String(guildId), String(userId), item.id, now);
-      creditCoins({
+      if (item.reward > 0) creditCoins({
         guildId,
         userId,
         amount: item.reward,

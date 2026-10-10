@@ -1,6 +1,6 @@
 "use strict";
 const world = require("../services/hardcoreWorld");
-const BASE_CHANCE = 0.05;
+const BASE_CHANCE = 0.01;
 const LUCK_PER_POINT = 0.005;
 const CAP = 0.2;
 const LOWER_RARITY_CHANCE = 0.6;
@@ -18,6 +18,7 @@ function hasRegionBossChest(state, enemy = state.encounter) {
     enemy?.type === "combat" &&
     enemy.rank === "boss" &&
     !enemy.echoId &&
+    !enemy.gildedTrial &&
     world.REGIONS.some(
       (region) => region.start > 1 && region.start === state.floor,
     )
@@ -45,7 +46,10 @@ function odds(state, enemy = state.encounter) {
   const pool = POOLS[locked?.group || group(enemy)];
   return {
     luck,
-    chance: hasRegionBossChest(state, enemy) ? 0 : chance(luck),
+    chance:
+      hasRegionBossChest(state, enemy) || enemy.boss?.id === "kabraxis"
+        ? 0
+        : chance(luck),
     rarities: pool,
     lowerChance: LOWER_RARITY_CHANCE,
     regionChest: hasRegionBossChest(state, enemy),

@@ -1,4 +1,8 @@
 const {
+  paginateRuleEmbed,
+  splitRuleFields,
+} = require("../hardcore/ui/rulePages");
+const {
   RNGESUS_CYCLE_RULES,
   rngesusChaosRules,
 } = require("../services/hardcoreRngesus");
@@ -25,7 +29,7 @@ const RULES = {
   ],
   blackjack: [
     "Xì dách",
-    "**Điểm bài**\n- Lá 2–10 tính theo số; J/Q/K = 10; A = 11 hoặc 1 để tránh quắc. Tổng trên 21 là **quắc**. Chỉ được **Dừng từ 16 điểm**; nhà cái rút đến ít nhất 15.\n- **Ngũ linh** (5 lá, không quắc) mạnh hơn **Xì dách** (2 lá, tổng 21), rồi đến điểm thường. Cùng Ngũ linh: tổng nhỏ hơn thắng. Cùng điểm thường hoặc cùng Xì dách: hòa. Cả hai quắc: hòa.\n\n**Chơi với bot**\n- Rút hoặc Dừng để so với nhà cái. Hai lá đầu cùng hạng được **Tách** một lần: trả thêm khoản bằng cược để chơi hai tay riêng. Tách A chỉ nhận thêm một lá mỗi tay.\n- Thắng thường: tổng nhận mặc định **2 lần cược**; Xì dách tự nhiên thắng nhận **2,5 lần**. Admin có thể chỉnh hệ số thường; Xì dách tự nhiên cộng thêm 0,5. Hòa hoàn cược; thua mất cược.\n\n**Bàn người chơi**\n- Người mở làm nhà cái, chọn ante không quá 25% số dư; tối đa 3 người vào trong 30 giây. Mỗi người đấu riêng với nhà cái.\n- Bài giữ kín đến kết thúc; dùng **Xem bài của tôi** để rút/dừng. Thắng nhận **2 lần ante**, hòa hoàn ante, thua mất ante. Người tham gia phải kết thúc bàn trước khi cược game khác.",
+    "**Điểm bài**\n- Lá 2–10 tính theo số; J/Q/K = 10; A = 11 hoặc 1 để tránh quắc. Tổng trên 21 là **quắc**. Chỉ được **Dừng từ 16 điểm**; nhà cái rút đến ít nhất 15.\n- **Xì bàng** (đúng 2 lá A) mạnh nhất, thắng cả Ngũ linh và Xì dách; tự động dừng, không cần đủ 16 điểm. Cùng Xì bàng: hòa. Tiếp theo là **Ngũ linh** (5 lá, không quắc), **Xì dách** (2 lá, tổng 21), rồi đến điểm thường. Cùng Ngũ linh: tổng nhỏ hơn thắng. Cùng điểm thường hoặc cùng Xì dách: hòa. Cả hai quắc: hòa.\n\n**Chơi với bot**\n- Rút hoặc Dừng để so với nhà cái. Hai lá đầu cùng hạng được **Tách** một lần: trả thêm khoản bằng cược để chơi hai tay riêng. Tách A chỉ nhận thêm một lá mỗi tay.\n- Thắng thường: tổng nhận mặc định **2 lần cược**; Xì dách hoặc Xì bàng từ hai lá đầu thắng nhận **2,5 lần**. Admin có thể chỉnh hệ số thường; hai bộ tự nhiên này cộng thêm 0,5. Hòa hoàn cược; thua mất cược.\n\n**Bàn người chơi**\n- Người mở làm nhà cái, chọn ante không quá 25% số dư; tối đa 3 người vào trong 30 giây. Mỗi người đấu riêng với nhà cái.\n- Bài giữ kín đến kết thúc; dùng **Xem bài của tôi** để rút/dừng. Thắng nhận **2 lần ante**, hòa hoàn ante, thua mất ante. Người tham gia phải kết thúc bàn trước khi cược game khác.",
   ],
   poker: [
     "Poker",
@@ -64,7 +68,7 @@ function survivalRules() {
       rngesus: "RNGESUS",
       rewards: "DỊCH VỤ & RÚT THƯỞNG",
     };
-    return [
+    const pages = [
       new EmbedBuilder()
         .setColor(0x9b59b6)
         .setTitle("📖 SINH TỒN v2.0.1 · CÁCH CHƠI")
@@ -80,7 +84,7 @@ function survivalRules() {
           {
             name: "Tháp Định Mệnh · mode riêng",
             value:
-              "`/choi sinhton thap` hoặc `/sinhton thap` mở/tiếp tục challenge 15 tầng · Perfect Chain 72–90 bước (tuần đầu 81). Sai một hành động phải chơi lại từ tầng 1; HP/MP/hiệu ứng giữ xuyên tầng. Xoay đủ 7 class trước khi lặp. Không cược, không dùng loadout, item, bình hoặc vé từ Sinh tồn 999. Damage cố định, không Miss/Crit/RNG; đọc tín hiệu từng bước, kể cả nhịp từ tầng trước. Snapshot đã kiểm chứng được khóa cả tuần; xem seed commitment trên bảng. Có thể giữ đồng thời một run mỗi mode. Challenge đổi lúc 00:00 thứ Hai (UTC+7); hết hạn có 24 giờ chỉ xem kết quả. Tuần 41: hoàn thành lần đầu nhận 500.000 xu + 250 kim cương; chơi lại không nhận thêm. Nút bảng xếp hạng nằm trên UI Tháp.",
+              "`/choi sinhton thap` hoặc `/sinhton thap` mở/tiếp tục challenge 15 tầng. Quy luật combat duy nhất là hạ quái trước khi bị quái kết liễu; Tấn công và Skill luôn gây đúng damage hiển thị. Skill dùng một lần mỗi tầng và bị quái hấp thụ toàn bộ damage nếu chưa kết liễu; Phòng thủ giảm đòn nhận theo số dự báo. Tháp không công bố số hành động và mỗi tuần chỉ có một lời giải duy nhất. Tử trận sẽ thử lại từ đầu tầng hiện tại; các tầng đã vượt được giữ lại. Mỗi tầng là puzzle độc lập: sang tầng mới sẽ đặt lại HP, MP, Skill, Ward và hiệu ứng theo trạng thái đầu tầng. Xoay đủ 7 class trước khi lặp. Không cược, không dùng loadout, item, bình hoặc vé từ Sinh tồn 999. Damage cố định, không Miss/Crit/RNG. Snapshot đã kiểm chứng được khóa cả tuần; xem seed commitment trên bảng. Có thể giữ đồng thời một run mỗi mode. Challenge đổi lúc 00:00 thứ Hai (UTC+7); hết hạn có 24 giờ chỉ xem kết quả. Hoàn thành lần đầu nhận 500.000 xu + 250 kim cương; chơi lại không nhận thêm. Nút bảng xếp hạng nằm trên UI Tháp.",
           },
           {
             name: "Bốn thuộc tính",
@@ -97,9 +101,10 @@ function survivalRules() {
           new EmbedBuilder()
             .setColor(0x9b59b6)
             .setTitle(`📖 SINH TỒN v2.0.1 · ${sections[category]}`)
-            .addFields(view.ratesFields(category)),
+            .addFields(splitRuleFields(view.ratesFields(category))),
       ),
     ];
+    return pages.flatMap((page) => paginateRuleEmbed(page));
   }
   const overview = new EmbedBuilder()
     .setColor(0x9b59b6)
@@ -208,7 +213,7 @@ function survivalRules() {
       {
         name: "☠️ Khi gặp RNGesus",
         value:
-          "RNGesus không thể bị đánh bại; **Chiến đấu** làm run kết thúc. **Bỏ chạy** có 75% thành công, giữ Vé thoát; thất bại tự dùng 1 Vé thoát nếu còn, hết vé thì chết. **Hối lộ** trừ một lần 40% payout hiện tại. **Cầu nguyện**: 30% thành công; Vé cầu nguyện tăng lên 60% trong toàn run. Không có nút rút thưởng.",
+          "RNGesus không thể bị đánh bại; **Chiến đấu** làm run kết thúc. **Bỏ chạy** có 75% thành công, giữ vé; thất bại tự dùng 1 Vé Thoát Hiểm nếu còn, hết vé thì chết. **Dùng vé** tiêu 1 Vé Thoát Hiểm để vượt tầng an toàn (giữ tối đa 1 vé). **Hối lộ** nhân payout ×0,6. **Cầu nguyện**: 30% thành công, nhận 85% SSR/15% UR; thất bại là chết. Không có nút rút thưởng.",
         inline: false,
       },
       {

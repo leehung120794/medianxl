@@ -49,7 +49,6 @@ const GAME_NAMES = {
   maxbets: "xemgioihan",
   economy: "kinhte",
   health: "trangthai",
-  backup: "guibackup",
   configs: "xemcauhinh",
   configreset: "khoiphuc",
   gachaadd: "themgacha",
@@ -117,6 +116,14 @@ function isAdmin(interaction) {
   );
 }
 
+function isBotAdmin(interaction) {
+  return String(process.env.ADMIN_USER_ID || "")
+    .split(/[,;\n]/)
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .includes(interaction.user.id);
+}
+
 function adminOptions(command, names, excluded = []) {
   return command.data
     .toJSON()
@@ -180,6 +187,11 @@ const options = [
         max_length: 32,
       },
     ],
+  },
+  {
+    type: ApplicationCommandOptionType.Subcommand,
+    name: "thapreset",
+    description: "Xoay Tháp Định Mệnh ngay; lịch tự động vẫn là thứ Hai",
   },
 ];
 
@@ -251,7 +263,33 @@ module.exports = {
     "Thiết lập game, kinh tế và cửa hàng dành cho admin",
     options,
   ),
-  execute(interaction) {
+  async execute(interaction) {
+    if (interaction.options.getSubcommand() === "thapreset") {
+      if (!interaction.guildId || !isBotAdmin(interaction))
+        return interaction.reply({
+          content: "Chỉ quản trị bot mới được xoay Tháp Định Mệnh.",
+          flags: MessageFlags.Ephemeral,
+        });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        const tower =
+          require("../hardcore/tower/challengeCatalog").resetCurrent(
+            Date.now(),
+          );
+        return interaction.editReply({
+          content: `🗼 Đã xoay Tháp Định Mệnh sang **${tower.character.name}**. Tháp này hoạt động đến <t:${Math.floor(new Date(tower.endsAt).getTime() / 1000)}:F>; rotation tự động kế tiếp vẫn bắt đầu lúc 00:00 thứ Hai.`,
+          allowedMentions: { parse: [] },
+        });
+      } catch (error) {
+        console.error("tower manual reset failed", error);
+        return interaction.editReply({
+          content:
+            error.message === "NO_ACTIVE_TOWER"
+              ? "Hiện không có Tháp Định Mệnh đang hoạt động để reset."
+              : "Không thể xoay Tháp Định Mệnh. Rotation hiện tại được giữ nguyên.",
+        });
+      }
+    }
     if (interaction.options.getSubcommand() === "baotri") {
       if (!interaction.guildId || !isAdmin(interaction))
         return interaction.reply({

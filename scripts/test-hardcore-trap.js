@@ -49,7 +49,7 @@ assert.deepEqual(portal.portal.odds, engine.portalEffectOdds(state()), "Portal l
 // UI
 const ui = (encounter, extra) => encounterText({ ...state(extra), encounter });
 const tax = ui({ kind: "tax_collector", type: "trap", luckyBreakRoll: 0.5 }, { luck: 10 });
-for (const needle of ["TAX COLLECTOR", "**15,0%** · Lucky Break: tránh được thuế", "**85,0%** · Mất thuế", "186 xu"]) assert(tax.includes(needle), `tax thiếu "${needle}"`);
+for (const needle of ["TAX COLLECTOR", "**15,0%** · Lucky Break: tránh được thuế", "**85,0%** · Thuế một lần: trừ 15% payout hiện tại", "186 xu", "không đổi hệ số payout"]) assert(tax.includes(needle), `tax thiếu "${needle}"`);
 const thief = ui({ kind: "potion_thief", type: "trap", luckyBreakRoll: 0.5 });
 for (const needle of ["**0,0%** · Lucky Break", "**100,0%** · Bị trộm mất 1 bình máu"]) assert(thief.includes(needle), `thief thiếu "${needle}"`);
 assert(ui({ kind: "potion_thief", type: "trap" }, { potions: 0 }).includes("Không còn bình để mất"));

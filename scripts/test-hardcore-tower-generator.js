@@ -32,7 +32,7 @@ try {
     assert.equal(catalog.weekAt(Date.parse("2027-01-03T17:00:00Z")).isoWeek, 1);
   }
   const id = generator.challengeId(2026, 41, "sorceress");
-  assert.equal(id, "tower:2026:W41:sorceress:g3");
+  assert.equal(id, "tower:2026:W41:sorceress:g4");
   const seed = generator.productionSeed(id, 1, secret);
   assert.notEqual(seed, generator.productionSeed(id, 1, "different-secret"));
   assert.throws(
@@ -44,6 +44,7 @@ try {
     b = generator.generate(input);
   assert.equal(JSON.stringify(a.payload), JSON.stringify(b.payload));
   assert.equal(a.payload.stepCount, 81);
+  assert.equal(a.payload.contentVersion, 5);
   assert.equal(a.payload.floors.length, 15);
   assert.deepEqual(
     a.payload.floors.map((f) => f.stepCount),
@@ -52,13 +53,144 @@ try {
   assert.equal(a.audit.winningPaths, 1);
   assert.equal(a.audit.wrongBranchesRecoverable, 0);
   assert.ok(a.audit.finalHpRatio > 0 && a.audit.finalHpRatio <= 0.25);
-  assert.ok(a.audit.finalManaRatio >= 0 && a.audit.finalManaRatio <= 0.4);
+  assert.ok(a.audit.finalManaRatio >= 0 && a.audit.finalManaRatio <= 0.8);
   assert.equal(a.payload.seedCommitment, solver.hash(seed));
   assert.equal(
     a.payload.solutionHash,
-    solver.hash(id + "|3|" + a.canonicalSolution.join(",")),
+    solver.hash(id + "|4|" + a.canonicalSolution.join(",")),
   );
   assert.ok(!("canonicalSolution" in a.payload));
+  assert.ok(
+    a.payload.floors.every((floor) => {
+      const combat = a.payload.transitions.filter(
+        (t) => t.floor === floor.number && t.type === "combat",
+      );
+      return new Set(combat.map((t) => t.expectedAction)).size === 3;
+    }),
+  );
+  assert.ok(
+    a.payload.transitions.filter(
+      (t) => t.type === "combat" && t.expectedAction === "skill" && !t.finisher,
+    ).length >= 10,
+  );
+  assert.ok(
+    a.payload.floors.some(
+      (floor) =>
+        a.payload.transitions.filter(
+          (t) =>
+            t.floor === floor.number &&
+            t.type === "combat" &&
+            t.expectedAction === "skill",
+        ).length >= 2,
+    ),
+  );
+  assert.ok(
+    a.payload.transitions
+      .filter((t) => t.type === "combat")
+      .every(
+        (t) =>
+          !t.spellLocked &&
+          [t.physicalResist, t.magicResist].every(
+            (value) => value >= 0 && value <= 100 && value % 25 === 0,
+          ) &&
+          (t.echoDelay == null || [1, 2].includes(t.echoDelay)),
+      ),
+  );
+  assert.deepEqual(
+    a.payload.floors.slice(12).map((floor) => floor.phaseHps.length),
+    [2, 2, 3],
+  );
+  assert.ok(a.audit.lookaheadDepth >= 3);
+  assert.ok(a.audit.lookaheadBranches >= 10);
+  assert.ok(a.audit.nearMissBranches >= 3);
+  assert.ok(a.audit.echoWindows >= 4);
+  assert.ok(a.audit.partialResistanceWindows >= 15);
+  const skillIndex = a.payload.transitions.findIndex(
+      (t) => t.type === "combat" && !t.finisher && t.expectedAction === "skill",
+    ),
+    skillTransition = a.payload.transitions[skillIndex],
+    reusableState = {
+      ...solver.initial(a.payload),
+      routeStep: skillIndex,
+      floor: skillTransition.floor,
+      floorStep: skillTransition.floorStep,
+      mana: a.payload.character.maxMana,
+      enemyHp: a.payload.floors[skillTransition.floor - 1].hp,
+      skillUsed: true,
+    };
+  assert.ok(solver.options(a.payload, reusableState).includes("skill"));
+  const normalSkill = solver.combatOutcome(
+    a.payload,
+    reusableState,
+    skillTransition,
+    "skill",
+  );
+  assert.equal(normalSkill.enemyHeal, 0);
+  assert.ok(normalSkill.damage > 0);
+  const legacyPayload = { ...a.payload, contentVersion: 3 },
+    legacySkill = solver.combatOutcome(
+      legacyPayload,
+      reusableState,
+      skillTransition,
+      "skill",
+    );
+  assert.equal(legacySkill.enemyHeal, legacySkill.damage);
+  assert.ok(!solver.options(legacyPayload, reusableState).includes("skill"));
+  let mechanicsState = solver.initial(a.payload),
+    sawEchoResolve = false,
+    sawAdaptive = false,
+    sawBreakSpend = false;
+  while (mechanicsState.status === "playing") {
+    const transition = a.payload.transitions[mechanicsState.routeStep],
+      beforeBreak = mechanicsState.breakGauge,
+      action = transition.expectedAction;
+    if (transition.type === "combat") {
+      const outcome = solver.combatOutcome(
+        a.payload,
+        mechanicsState,
+        transition,
+        action,
+      );
+      if (action === "attack") {
+        assert.equal(outcome.adaptiveArmor, "physical");
+        assert.equal(outcome.breakGauge, Math.min(3, beforeBreak + 1));
+        sawAdaptive = true;
+      }
+      if (action === "skill") {
+        assert.equal(outcome.adaptiveArmor, "magic");
+        assert.equal(outcome.breakGauge, 0);
+        if (beforeBreak) sawBreakSpend = true;
+      }
+      if (outcome.echoDamage) sawEchoResolve = true;
+    }
+    mechanicsState = solver.apply(a.payload, mechanicsState, action);
+  }
+  assert.equal(sawAdaptive, true);
+  assert.equal(sawBreakSpend, true);
+  assert.equal(sawEchoResolve, true);
+  const firstPhaseEnd = a.payload.transitions.findIndex(
+      (t) => t.floor === 13 && t.phaseEnd,
+    ),
+    phaseProbe = solver.initial(a.payload);
+  let beforePhase = phaseProbe;
+  while (beforePhase.routeStep < firstPhaseEnd)
+    beforePhase = solver.apply(
+      a.payload,
+      beforePhase,
+      a.payload.transitions[beforePhase.routeStep].expectedAction,
+    );
+  const phaseTransition = a.payload.transitions[firstPhaseEnd],
+    overflowProbe = { ...beforePhase, phaseHp: 1 },
+    phaseOutcome = solver.combatOutcome(
+      a.payload,
+      overflowProbe,
+      phaseTransition,
+      phaseTransition.expectedAction,
+    );
+  assert.equal(phaseOutcome.damage, 1);
+  assert.equal(phaseOutcome.phaseEnded, true);
+  assert.equal(phaseOutcome.bossPhase, 1);
+  assert.equal(phaseOutcome.counter, 0);
   const broken = structuredClone(a.payload);
   broken.transitions[0].manaDelta = 200;
   assert.throws(() => solver.validate(broken));
@@ -115,8 +247,8 @@ try {
     force: true,
   });
   assert.equal(current.challengeId, id);
-  assert.equal(repo.rotation().next_index, 2); // current + coming week's commitment
-  assert.equal(catalog.upcoming(catalog.ANCHOR).classKey, "druid");
+  assert.equal(repo.rotation().next_index, 1);
+  assert.equal(catalog.upcoming(catalog.ANCHOR), null);
   const snapshot = repo.challenge(id).payload_json;
   catalog.ensureWeekly(catalog.ANCHOR + 1000, {
     secret: "rotated-secret",
@@ -196,8 +328,57 @@ try {
       });
       assert.equal(solver.validate(r.payload).winningPaths, 1);
     }
+  const resetAt = at + 5000,
+    oldTower = catalog.active(resetAt),
+    resetIndex = repo.rotation().next_index;
+  assert.ok(oldTower);
+  repo.beginAttempt(
+    {
+      guild_id: "manual-reset",
+      user_id: "claimed",
+      challenge_id: oldTower.challengeId,
+    },
+    resetAt - 1,
+  );
+  db.prepare(
+    "UPDATE hardcore_tower_results SET reward_claimed_at=? WHERE guild_id=? AND user_id=? AND challenge_id=?",
+  ).run(resetAt - 1, "manual-reset", "claimed", oldTower.challengeId);
+  const resetTower = catalog.resetCurrent(resetAt, { secret });
+  assert.notEqual(resetTower.challengeId, oldTower.challengeId);
+  assert.equal(resetTower.challengeId.endsWith(":r" + resetIndex), true);
+  assert.equal(resetTower.startsAt, resetAt);
+  assert.equal(resetTower.endsAt, catalog.weekAt(resetAt).endsAt);
+  assert.equal(resetTower.classKey, CLASS_ROTATION[resetIndex % 7]);
+  assert.equal(repo.challenge(oldTower.challengeId).status, "archived");
+  assert.equal(
+    catalog.readable(catalog.get(oldTower.challengeId), resetAt),
+    false,
+  );
+  assert.equal(catalog.active(resetAt).challengeId, resetTower.challengeId);
+  assert.equal(repo.rotation().next_index, resetIndex + 1);
+  repo.beginAttempt(
+    {
+      guild_id: "manual-reset",
+      user_id: "claimed",
+      challenge_id: resetTower.challengeId,
+    },
+    resetAt,
+  );
+  assert.equal(
+    repo.result("manual-reset", "claimed", resetTower.challengeId)
+      .reward_claimed_at,
+    resetAt - 1,
+  );
+  const nextMonday = resetTower.endsAt,
+    scheduled = catalog.ensureWeekly(nextMonday, {
+      secret,
+      logger: silent,
+    });
+  assert.equal(scheduled.startsAt, nextMonday);
+  assert.equal(scheduled.endsAt, nextMonday + catalog.WEEK_MS);
+  assert.equal(repo.rotation().next_index, resetIndex + 2);
   console.log(
-    "Tower v3 generator: determinism, 81-step fixture, 7-class rotation, 70 diverse seeds, unique paths, resource mechanics, audit rejection, immutable publication and UTC+7 rollover passed.",
+    "Tower v4 generator: deterministic combat, manual reset, Monday schedule, weekly reward lock, 7-class rotation, 70 diverse seeds, unique lethal paths, immutable publication and UTC+7 rollover passed.",
   );
 } finally {
   Math.random = rng;

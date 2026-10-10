@@ -23,6 +23,15 @@ function create(encounter, overrides = {}) {
   const s = stats.createState("barbarian", 10000);
   Object.assign(s, { floor: 5, cleared: 4, encounter, ...overrides });
   stats.recompute(s);
+  if (overrides.curseFactor != null)
+    core.receiveItem(s, {
+      catalogVersion: 2,
+      id: "payout-test-curse",
+      name: "Payout test curse",
+      rarity: "cursed",
+      effects: {},
+      curse: { effects: { bonusPenalty: 1 - overrides.curseFactor } },
+    });
   return s;
 }
 function fields(s) {
@@ -39,6 +48,13 @@ function fields(s) {
     ) < 6000,
   );
   return e.fields;
+}
+function deductions(s) {
+  const payload = view.privatePayload(s, "payout-test", "message", "stats");
+  const embed = payload.embeds[0].toJSON();
+  assert.ok(embed.fields.every((f) => f.value.length <= 1024));
+  assert.ok(JSON.stringify(embed).indexOf("undefined") < 0);
+  return embed.fields.find((f) => f.name.includes("Thống kê xu"))?.value || "";
 }
 function play(s, action) {
   const before = core.payout(s);
@@ -68,13 +84,8 @@ function play(s, action) {
   return receipt;
 }
 // Record penalties before changing the cleared floor or applying checkpoint healing.
-for (const [encounter, action, rate, category] of [
-  [
-    { type: "trap", name: "Thu thuế", kind: "tax", lucky: false },
-    "next",
-    0.15,
-    "thuế",
-  ],
+for (const [encounter, action, rate] of [
+  [{ type: "trap", name: "Thu thuế", kind: "tax", lucky: false }, "next", 0.15],
   [
     {
       type: "memory",
@@ -83,23 +94,20 @@ for (const [encounter, action, rate, category] of [
     },
     "next",
     0.1,
-    "phạt event",
   ],
-  [{ type: "rngesus", name: "RNGesus" }, "bribe", 0.4, "phạt event"],
+  [{ type: "rngesus", name: "RNGesus" }, "bribe", 0.4],
   [
     { type: "surprise", name: "Treasure Goblin", kind: "goblin", roll: 0.99 },
     "event_catch",
     0.05,
-    "phạt event",
   ],
 ]) {
   const s = create(encounter);
   const r = play(s, action);
   assert.equal(
     r.payoutAfter.coins,
-    r.payoutBefore.coins - Math.ceil(r.payoutBefore.coins * rate),
+    Math.floor(10000 * baseMultiplier({ cleared: 4 }) * (1 - rate)),
   );
-  assert.equal(s.eventPayoutFactor, 1);
   assert.equal(s.cleared, 5);
   assert.ok(
     core.payout(s) > r.payoutAfter.coins,
@@ -108,8 +116,13 @@ for (const [encounter, action, rate, category] of [
   const f = fields(s);
   const withdrawal = f.find((x) => x.name.includes("Rút thưởng")).value;
   assert.ok(withdrawal.includes("Thực nhận: **" + money(core.payout(s))));
-  assert.ok(withdrawal.includes("Đã trừ:"));
-  assert.ok(withdrawal.includes(category));
+  assert.ok(!withdrawal.includes("Đã trừ:"));
+  assert.ok(deductions(s).includes("Đã trừ:"));
+  assert.ok(
+    deductions(s).includes(money(r.payoutBefore.coins - r.payoutAfter.coins)),
+  );
+  assert.equal(s.eventPayoutFactor, 1);
+  assert.equal(withdrawal.split("\n").length, 1);
   assert.equal(
     f.find((x) => x.name.includes("Trang bị")),
     undefined,
@@ -140,13 +153,7 @@ for (const [encounter, action, rate] of [
   ],
   [{ type: "chest", name: "Hòm" }, "sell", 0.15],
   [
-    {
-      type: "surprise",
-      name: "Treasure Goblin",
-      kind: "goblin",
-      roll: 0,
-      roll2: 0,
-    },
+    { type: "surprise", name: "Treasure Goblin", kind: "goblin", roll: 0 },
     "event_catch",
     0.25,
   ],
@@ -171,7 +178,7 @@ for (const [encounter, action, rate] of [
     0.3,
   ],
 ]) {
-  const s = create(encounter, { eventPayoutFactor: 0.6 });
+  const s = create(encounter, { curseFactor: 0.6 });
   const r = play(s, action);
   assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, 10000 * rate * 0.6);
   assert.ok(s.lastLog.includes("(+"));
@@ -179,10 +186,10 @@ for (const [encounter, action, rate] of [
 {
   const s = create(
     { type: "boss_chest", name: "Rương boss", bossFloor: 100 },
-    { phase: "boss_chest", floor: 101, cleared: 100, eventPayoutFactor: 0.6 },
+    { phase: "boss_chest", floor: 101, cleared: 100, curseFactor: 0.6 },
   );
   const r = play(s, "boss_sell");
-  assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, 10000 * 0.6);
+  assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, s.stake * 0.6);
   assert.equal(s.cleared, 100);
 }
 // Spending and restoring a curse have a single net receipt, with the original purchase cost preserved.
@@ -196,52 +203,13 @@ for (const [encounter, action, rate] of [
   const r = play(s, "buy_0");
   assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, -500);
   assert.equal(s.payoutSpent, 500);
-  assert.ok(
-    fields(s)
-      .find((f) => f.name.includes("Rút thưởng"))
-      .value.includes("mua/dịch vụ **500 🪙**"),
-  );
-}
-
-// Old V2 multiplier penalties become a fixed deduction without changing the
-// amount currently withdrawable; future bonuses are no longer penalized.
-{
-  const s = create(
-    { type: "empty", name: "Trống" },
-    {
-      eventPayoutFactor: 0.6,
-      payoutLedgerVersion: 1,
-      payoutSpent: 250,
-    },
-  );
-  const before = core.payout(s);
-  core.normalize(s);
-  assert.equal(core.payout(s), before);
-  assert.equal(s.eventPayoutFactor, 1);
-  assert.ok(s.payoutEventPenaltySpent > 0);
-  const old = core.payout(s);
-  s.bonus += 1000;
-  assert.equal(core.payout(s) - old, 1000);
-}
-
-// Goblin reward is locked when the event is created and does not touch chest pity.
-{
-  const s = create({ type: "empty", name: "Trống" });
-  const values = [0, 0.97, 0.2, 0.4];
-  const event = core.makeSurprise(s, () => values.shift() ?? 0.1, "goblin");
-  assert.equal(event.rewardRarity, "cursed");
-  assert.ok(event.rewardItem);
-  const pity = [s.pityRare, s.pityLegendary];
-  s.encounter = event;
-  play(s, "event_catch");
-  assert.deepEqual([s.pityRare, s.pityLegendary], pity);
-  assert.ok(s.lastLog.includes("[UR]"));
+  assert.ok(deductions(s).includes("**500 🪙** đã chi"));
 }
 {
   const s = create({ type: "empty", name: "Trống" });
   const cursed = core.ITEMS.cursed.find((i) => i.curse?.effects.bonusPenalty);
   core.receiveItem(s, cursed);
-  const spent = Math.max(1, Math.ceil(core.rawPayout(s) * 0.1));
+  const spent = Math.max(1, Math.ceil(core.payout(s) * 0.1));
   s.encounter = {
     type: "surprise",
     kind: "purifier",
@@ -255,6 +223,248 @@ for (const [encounter, action, rate] of [
     Math.floor(10000 * baseMultiplier({ cleared: 4 })) - spent,
   );
 }
+// Purifier prices the displayed payout before cleansing, including Blood Paradox.
+// The fee is fixed spending; future earnings keep their normal value.
+for (const bloodFactor of [null, -0.5, 0.5]) {
+  for (const remaining of [null, 0, 1]) {
+    const s = create(
+      { type: "empty", name: "Trống" },
+      {
+        bonus: 50000,
+        payoutSpent: 1234,
+        curseFactor: 0.8,
+        ...(bloodFactor == null
+          ? {}
+          : { paradox: { kind: "blood", bloodFactor, until: 20 } }),
+      },
+    );
+    const target = core.ITEMS.cursed.find((i) => i.id === "glass_cannon");
+    core.receiveItem(s, target);
+    s.encounter = {
+      type: "surprise",
+      kind: "purifier",
+      name: "Purifier",
+      targetId: target.id,
+    };
+    if (remaining != null) s.payoutSpent += core.payout(s) - remaining;
+    const before = core.payout(s),
+      spent = s.payoutSpent;
+    const factor = s.payoutFactor,
+      eventFactor = s.eventPayoutFactor;
+    const cost = Math.max(1, Math.ceil(before * core.PURIFIER_COST_RATE));
+    assert.equal(core.purifierCost(s), cost);
+    assert.equal(
+      core.serviceCost(s, 0.12),
+      Math.max(1, Math.ceil(core.payout(s) * 0.12)),
+    );
+    const action = core.actions(s).find((a) => a.action === "event_cleanse");
+    assert.equal(action.label, "Giải nguyền món này");
+    assert.equal(action.disabled, before < cost);
+    const detail = JSON.stringify(
+      view.privatePayload(s, "payout-test", "message", "encounter"),
+    );
+    assert.ok(detail.includes("payout hiện tại"));
+    assert.ok(!detail.includes("payout gốc"));
+    assert.ok(detail.includes(money(cost) + " xu**"));
+    if (!before) {
+      assert.throws(
+        () => core.act(s, session, "event_cleanse", rng),
+        /INVALID_ACTION/,
+      );
+      assert.equal(s.payoutSpent, spent);
+      assert.equal(
+        s.items.find((i) => i.definition.id === target.id).cleansedLevels,
+        0,
+      );
+      continue;
+    }
+    // Pending, persisted Purifier encounters must use the same price when resumed.
+    const resumed = JSON.parse(JSON.stringify(s));
+    core.normalize(resumed);
+    assert.equal(core.purifierCost(resumed), cost);
+    const receipt = play(resumed, "event_cleanse");
+    assert.equal(receipt.payoutAfter.coins, before - cost);
+    assert.equal(resumed.payoutSpent, spent + cost);
+    assert.equal(resumed.payoutFactor, factor);
+    assert.equal(resumed.eventPayoutFactor, eventFactor);
+    assert.equal(resumed.payoutEventSpent || 0, s.payoutEventSpent || 0);
+    const clean = resumed.items.find((i) => i.definition.id === target.id);
+    assert.equal(clean.cleansedLevels, clean.level);
+    assert.equal(clean.rarity, "cursed");
+  }
+}
+const purifierRule = view
+  .ratesFields()
+  .find((f) => f.name.includes("Purifier"));
+assert.ok(purifierRule.value.includes("payout hiện tại"));
+assert.ok(!purifierRule.value.includes("payout gốc"));
+
+// Audit every coin fee and wager against the displayed payout, not raw payout.
+for (const bloodFactor of [-0.5, 0.5]) {
+  for (const kind of ["blacksmith", "sacrifice", "gambler"]) {
+    const s = create(
+      { type: "empty", name: "Trống" },
+      {
+        bonus: 50000,
+        payoutSpent: 2000,
+        curseFactor: 0.8,
+        paradox: { kind: "blood", bloodFactor, until: 20 },
+      },
+    );
+    const gear = core.ITEMS.common[0];
+    core.receiveItem(s, gear);
+    s.encounter = core.makeSurprise(s, () => 0.5, kind);
+    if (kind === "blacksmith") s.encounter.targetId = gear.id;
+    // Ensure the gambler's locked win branch follows the actual paid wager.
+    s.encounter.roll = 0.49;
+    const fraction =
+      kind === "blacksmith" ? 0.12 : kind === "gambler" ? 0.25 : 0.1;
+    const before = core.payout(s),
+      spent = s.payoutSpent,
+      bonus = s.bonus,
+      factor = s.payoutFactor;
+    const cost = Math.max(1, Math.ceil(before * fraction));
+    const action = {
+      blacksmith: "event_smith",
+      sacrifice: "event_sacrifice_payout",
+      gambler: "event_gamble_25",
+    }[kind];
+    assert.equal(core.serviceCost(s, fraction), cost);
+    assert(core.actions(s).some((a) => a.action === action && !a.disabled));
+    const detail = JSON.stringify(
+      view.privatePayload(s, "fee-test", "message", "encounter"),
+    );
+    assert(!detail.includes("payout gốc"));
+    play(s, action);
+    assert.equal(s.payoutSpent, spent + cost, kind);
+    assert.equal(s.payoutFactor, factor, kind);
+    assert.equal(s.eventPayoutFactor, 1, kind);
+    assert.equal(s.bonus, bonus + (kind === "gambler" ? 2 * cost : 0), kind);
+  }
+  for (const shopRoll of [0.1, 0.5, 0.9]) {
+    for (const kind of ["merchant", "payout_shop"]) {
+      const s = create(
+        { type: "empty", name: "Trống" },
+        {
+          bonus: 50000,
+          payoutSpent: 2000,
+          curseFactor: 0.8,
+          paradox: { kind: "blood", bloodFactor, until: 20 },
+        },
+      );
+      const discountItem = core.ITEMS.legendary.find(
+        (i) => i.id === "golden_goblet",
+      );
+      core.receiveItem(s, discountItem);
+      const before = core.payout(s);
+      s.encounter = core.makeSurprise(s, () => shopRoll, kind);
+      const offers = s.encounter.offers;
+      const fractions = {
+        potion: 0.025,
+        heal: 0.04,
+        luck: 0.05,
+        item: 0.075,
+        ticket: 0.125,
+        chest: 0.075,
+      };
+      for (const offer of offers) {
+        const rate =
+          kind === "merchant"
+            ? fractions[offer.key]
+            : { common: 0.05, rare: 0.12, legendary: 0.25 }[offer.item.rarity];
+        assert.equal(offer.basePrice, Math.max(1, Math.ceil(before * rate)));
+        assert.equal(
+          offer.price,
+          Math.max(1, Math.ceil(offer.basePrice * 0.92)),
+        );
+      }
+      const legacy = JSON.parse(JSON.stringify(s));
+      delete legacy.encounter.coinPayoutPriceVersion;
+      const lockedRewards = JSON.stringify(
+        legacy.encounter.offers.map((o) => [o.key, o.item, o.chest]),
+      );
+      for (const o of legacy.encounter.offers) o.price = o.basePrice = 999999;
+      core.normalize(legacy);
+      assert.equal(
+        JSON.stringify(
+          legacy.encounter.offers.map((o) => [o.key, o.item, o.chest]),
+        ),
+        lockedRewards,
+      );
+      assert.deepEqual(
+        legacy.encounter.offers.map((o) => [o.price, o.basePrice, o.discount]),
+        offers.map((o) => [o.price, o.basePrice, o.discount]),
+      );
+      const firstResume = JSON.stringify(legacy);
+      core.normalize(legacy);
+      assert.equal(JSON.stringify(legacy), firstResume);
+      const frozenPrices = JSON.stringify(legacy.encounter.offers);
+      legacy.paradox.bloodFactor *= -1;
+      core.normalize(legacy);
+      assert.equal(
+        JSON.stringify(legacy.encounter.offers),
+        frozenPrices,
+        "locked price must not move or apply discount twice",
+      );
+      const resumed = JSON.parse(JSON.stringify(s));
+      core.normalize(resumed);
+      const cost = resumed.encounter.offers[0].price,
+        spent = resumed.payoutSpent;
+      play(resumed, "buy_0");
+      assert.equal(resumed.payoutSpent, spent + cost);
+      assert(
+        !JSON.stringify(
+          view.privatePayload(s, "fee-test", "message", "encounter"),
+        ).includes("payout gốc"),
+      );
+    }
+  }
+}
+// Positive Blood payout remains spendable even after raw payout has reached zero.
+for (const kind of [
+  "blacksmith",
+  "sacrifice",
+  "gambler",
+  "merchant",
+  "payout_shop",
+]) {
+  const s = create(
+    { type: "empty", name: "Trống" },
+    { bonus: 50000, paradox: { kind: "blood", bloodFactor: 0.5, until: 20 } },
+  );
+  core.receiveItem(s, core.ITEMS.common[0]);
+  s.payoutSpent = core.rawPayout(s);
+  assert.equal(core.rawPayout(s), 0);
+  assert(core.payout(s) > 0);
+  s.encounter = core.makeSurprise(s, () => 0.5, kind);
+  const action = {
+    blacksmith: "event_smith",
+    sacrifice: "event_sacrifice_payout",
+    gambler: "event_gamble_10",
+    merchant: "buy_0",
+    payout_shop: "buy_0",
+  }[kind];
+  assert(!core.actions(s).find((a) => a.action === action).disabled, kind);
+  play(s, action);
+  const zero = create({ type: "empty", name: "Trống" });
+  core.receiveItem(zero, core.ITEMS.common[0]);
+  zero.payoutSpent = core.payout(zero);
+  zero.encounter = core.makeSurprise(zero, () => 0.5, kind);
+  assert(core.actions(zero).find((a) => a.action === action).disabled, kind);
+  const snapshot = JSON.stringify(zero);
+  assert.throws(
+    () => core.act(zero, session, action, () => 0.5),
+    /INVALID_ACTION/,
+  );
+  assert.equal(JSON.stringify(zero), snapshot);
+}
+for (const rule of view.ratesFields()) {
+  assert(
+    !rule.name.includes("payout gốc") && !rule.value.includes("payout gốc"),
+  );
+  assert(rule.value.length <= 1024);
+}
+
 // Bonus at the cap is recorded as no cash change, never a fictitious +2500.
 {
   const s = create(
@@ -310,11 +520,12 @@ for (const [encounter, action, rate] of [
       kind: "tax",
       lucky: false,
     },
-    { payoutSpent: 164759, bonus: 500000, eventPayoutFactor: 0.381 },
+    { payoutSpent: 164759, bonus: 500000, curseFactor: 0.381 },
   );
   play(s, "next");
   const withdrawal = fields(s).find((f) => f.name.includes("Rút thưởng")).value;
-  assert.ok(withdrawal.includes("khoản cũ **164.759 " + coin + "**"));
+  assert.ok(!withdrawal.includes("đã chi"));
+  assert.ok(deductions(s).includes("**164.759 " + coin + "** đã chi"));
   assert.ok(s.lastLog.includes(coin + " **Thưởng xu · "));
   const old = JSON.parse(JSON.stringify(s));
   old.lastLog = old.lastLog.replace(
@@ -328,6 +539,228 @@ for (const [encounter, action, rate] of [
   assert.ok(!JSON.stringify(detail).includes("Payout gốc"));
   setApplicationEmojisForTest([]);
 }
+
+// Every monetary penalty uses the available payout after previous spending and curses.
+// Later event bonuses and floor rewards must not inherit that penalty.
+for (const curseFactor of [1, 0.8]) {
+  for (const [type, action, rate] of [
+    ["tax", "next", 0.15],
+    ["goblin", "event_catch", 0.05],
+    ["legacy", "next", 0.1],
+    ["bounty", "next", 0.1],
+    ["hunter", "memory_settle", 0.2],
+    ["portal", "next", 0.1],
+    ["rngesus", "bribe", 0.4],
+  ]) {
+    const s = create(
+      { type: "empty", name: "Trống" },
+      {
+        stake: 12345,
+        bonus: 50000,
+        payoutSpent: 12456,
+        curseFactor,
+      },
+    );
+    const enemy = world.makeEnemy(s, rng, "elite");
+    s.encounter = {
+      tax: { type: "trap", kind: "tax", name: "Thu thuế", lucky: false },
+      goblin: { type: "surprise", kind: "goblin", name: "Goblin", roll: 0.99 },
+      legacy: {
+        type: "memory",
+        name: "Ký ức cũ",
+        debt: { kind: "tax", good: false },
+      },
+      bounty: {
+        type: "memory",
+        name: "Truy nã",
+        debt: { version: 2, family: "bounty", kind: "tax" },
+      },
+      hunter: {
+        type: "memory",
+        name: "Truy nã",
+        debt: { version: 2, family: "bounty", kind: "hunter" },
+        enemy,
+      },
+      portal: {
+        type: "trap",
+        name: "Wrong Portal",
+        kind: "portal",
+        good: false,
+        badEffect: "payout",
+        enemy,
+      },
+      rngesus: { type: "rngesus", name: "RNGesus" },
+    }[type];
+    const before = core.payout(s);
+    const loss = Math.ceil(before * rate);
+    const factor = s.payoutFactor;
+    const spent = s.payoutSpent;
+    const r = play(s, action);
+    assert.equal(r.payoutAfter.coins, before - loss, type);
+    assert.equal(s.payoutSpent, spent + loss, type);
+    assert.equal(s.eventPayoutFactor, 1, type);
+    assert.equal(s.payoutFactor, factor, type);
+    const priorGross = (s.stake * baseMultiplier(s) + s.bonus) * factor;
+    s.bonus += s.stake;
+    assert.equal(
+      core.payout(s),
+      Math.max(0, Math.floor(priorGross + s.stake * factor) - spent - loss),
+    );
+  }
+}
+// Percent losses round up, stop at zero, and use the remaining payout on each repeat.
+{
+  const s = create(
+    { type: "rngesus", name: "RNGesus" },
+    {
+      stake: 12345,
+      bonus: 100000,
+      payoutSpent: 50000,
+    },
+  );
+  for (let i = 0; i < 3; i++) {
+    s.phase = "encounter";
+    s.encounter = { type: "rngesus", name: "RNGesus" };
+    const before = core.payout(s),
+      spent = s.payoutSpent;
+    core.act(s, session, "bribe", rng);
+    assert.equal(
+      s.lastEventResult.payoutAfter.coins,
+      before - Math.ceil(before * 0.4),
+    );
+    assert.equal(s.payoutSpent, spent + Math.ceil(before * 0.4));
+    assert.equal(s.eventPayoutFactor, 1);
+  }
+  for (const available of [0, 1]) {
+    const tiny = create({
+      type: "trap",
+      kind: "tax",
+      name: "Tax",
+      lucky: false,
+    });
+    tiny.payoutSpent = core.payout(tiny) - available;
+    const spent = tiny.payoutSpent;
+    core.act(tiny, session, "next", rng);
+    assert.equal(tiny.payoutSpent - spent, Math.ceil(available * 0.15));
+    if (available) assert.equal(tiny.lastEventResult.payoutAfter.coins, 0);
+    assert.equal(tiny.eventPayoutFactor, 1);
+  }
+}
+// Convert saved multipliers once, preserving cashout, curses and capped/zero payouts.
+for (const overrides of [
+  { eventPayoutFactor: 0.6, payoutSpent: 2000 },
+  { eventPayoutFactor: 0.6, payoutSpent: 2000, curseFactor: 0.8 },
+  { eventPayoutFactor: 0, payoutSpent: 2000 },
+  { eventPayoutFactor: 0.6, stake: 10000000, cleared: 100 },
+  { eventPayoutFactor: 0.6, payoutSpent: 200000 },
+  {
+    eventPayoutFactor: 0.6,
+    paradox: { kind: "blood", bloodFactor: 0.5, until: 20 },
+  },
+]) {
+  const s = create({ type: "empty", name: "Trống" }, overrides);
+  const before = core.payout(s);
+  const oldFactor = s.eventPayoutFactor;
+  const curseFactor = s.payoutFactor / (oldFactor || 1);
+  core.normalize(s);
+  assert.equal(core.payout(s), before);
+  assert.equal(s.eventPayoutFactor, 1);
+  if (oldFactor > 0) assert.ok(Math.abs(s.payoutFactor - curseFactor) < 1e-12);
+  const saved = JSON.stringify(s);
+  core.normalize(s);
+  assert.equal(JSON.stringify(s), saved, "normalization must not charge twice");
+}
+// Gambling is the explicit exception: rewards follow the actual event wager.
+for (const fraction of [0.1, 0.25]) {
+  for (const roll of [0.49, 0.5]) {
+    const s = create(
+      { type: "surprise", name: "Cursed Gambler", kind: "gambler", roll },
+      {
+        bonus: 50000,
+        payoutSpent: 2000,
+      },
+    );
+    const wager = core.serviceCost(s, fraction),
+      bonus = s.bonus;
+    play(s, fraction === 0.1 ? "event_gamble_10" : "event_gamble_25");
+    assert.equal(s.payoutSpent, 2000 + wager);
+    assert.equal(s.bonus, bonus + (roll < 0.5 ? wager * 2 : 0));
+    assert.equal(s.eventPayoutFactor, 1);
+    assert.ok(!s.lastLog.includes("lãi ròng"));
+  }
+}
+// Boss sales are independent of accumulated payout; ordinary sales stay at 15% stake.
+for (const bonus of [0, 500000]) {
+  const s = create(
+    { type: "boss_chest", name: "Rương boss", bossFloor: 100 },
+    {
+      phase: "boss_chest",
+      floor: 101,
+      cleared: 100,
+      bonus,
+      payoutSpent: 3000,
+    },
+  );
+  const detail = JSON.stringify(view.privatePayload(s, "s", "m", "encounter"));
+  assert.ok(detail.includes("100% cược"));
+  assert.ok(
+    core
+      .actions(s)
+      .some((a) => a.action === "boss_sell" && a.label.includes("100%")),
+  );
+  const r = play(s, "boss_sell");
+  assert.equal(s.bonus, bonus + s.stake);
+  assert.equal(r.payoutAfter.coins - r.payoutBefore.coins, s.stake);
+}
+// Pending wealth trials from old runs also use stake without rerolling the encounter.
+{
+  const memories = require("../src/hardcore/towerMemories");
+  const s = create({ type: "empty", name: "Trống" }, { bonus: 50000 });
+  const debt = {
+    version: 2,
+    family: "wealth",
+    kind: "wealth",
+    coins: 999999,
+    due: 20,
+  };
+  s.encounter = memories.makeEncounter(s, debt, rng);
+  assert.equal(s.encounter.enemy.memoryReward.coins, s.stake * 1.5);
+  assert.ok(JSON.stringify(memories.fields(s)).includes("15.000"));
+  core.act(s, session, "next", rng);
+  // Simulate a persisted combat from before the update.
+  s.encounter.memoryReward.coins = 999999;
+  const enemy = s.encounter;
+  enemy.hp = 1;
+  enemy.defense = 0;
+  enemy.evasion = 0;
+  enemy.mechanic = null;
+  const beforeBonus = s.bonus;
+  const combatReward = Math.floor(s.stake * 0.01 * enemy.rewardMultiplier);
+  core.act(s, session, "attack", () => 0.5);
+  assert.equal(s.bonus - beforeBonus, s.stake * 1.5 + combatReward);
+}
+
+// Updated rule fields fit Discord and describe the same money policy as the engine.
+for (const field of view
+  .ratesFields()
+  .filter((f) =>
+    [
+      "Rương boss cuối khu vực",
+      "RNGesus · không được rút thưởng",
+      "Rút thưởng và mất thưởng",
+    ].some((name) => f.name.includes(name)),
+  )) {
+  assert.ok(field.value.length <= 1024);
+}
+assert.ok(
+  view
+    .ratesFields()
+    .some((f) => f.value.includes("event cược thưởng theo khoản đã đặt")),
+);
+assert.ok(
+  view.ratesFields().some((f) => f.value.includes("100% cược ban đầu")),
+);
+
 db.close();
 console.log(
   "Hardcore payout display: event penalties, bonuses, costs, curse restoration, checkpoints, cap, contracts and persisted UI passed.",

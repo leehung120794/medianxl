@@ -52,6 +52,11 @@ const { handleStore, handleBag } = require("./services/hardcoreInventoryView");
 const ROUTES = Object.freeze([
   {
     kind: "button",
+    prefix: "changelog:",
+    handle: (interaction) => require("./commands/changelog").handleButton(interaction),
+  },
+  {
+    kind: "button",
     prefix: "hardcore-tower:",
     handle: (interaction, logger) =>
       require("./services/hardcoreTowerService").handleTowerButton(
@@ -92,6 +97,11 @@ const ROUTES = Object.freeze([
     kind: "select",
     prefix: "hardcore-rates:",
     handle: (interaction) => hardcoreCommand.handleRatesSelect(interaction),
+  },
+  {
+    kind: "button",
+    prefix: "hardcore-rates-page:",
+    handle: (interaction) => hardcoreCommand.handleRatesPage(interaction),
   },
   {
     kind: "select",
@@ -227,6 +237,16 @@ const ROUTES = Object.freeze([
   },
   { kind: "button", prefix: "poker:", handle: handlePokerButton },
   { kind: "button", prefix: "hardcore:", handle: handleHardcoreButton },
+  {
+    kind: "select",
+    prefix: "hardcore:",
+    handle: (interaction, logger) =>
+      interaction.isStringSelectMenu() &&
+      interaction.customId.split(":")[3] === "purifier_select"
+        ? handleHardcoreButton(interaction, logger)
+        : false,
+  },
+
   { kind: "button", prefix: "hardcore-setup:", handle: handleHardcoreSetup },
   { kind: "button", prefix: "mines:", handle: handleMinesButton },
   { kind: "button", prefix: "coquay:", handle: handleCoquayButton },

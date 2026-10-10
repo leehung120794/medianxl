@@ -361,14 +361,23 @@ async function run() {
   for (const id of [...selectedItems, ...ticketIds])
     bag.grant(guildId, carrier, id, 2);
   assert.deepEqual(
-    bag.inventory(guildId, carrier).map((item) => item.typeCode),
-    ["UR", "UR", "SSR", "SR", "R", "ticket", "ticket", "ticket"],
+    bag
+      .inventory(guildId, carrier)
+      .map((item) =>
+        item.typeCode === "ticket" ? item.rarity || "ticket" : item.typeCode,
+      ),
+    ["LR", "UR", "UR", "UR", "SSR", "SR", "R", "ticket"],
   );
   for (const filter of bag.FILTERS)
     assert.ok(
       bag
         .inventory(guildId, carrier, filter)
-        .every((item) => filter === "all" || item.typeCode === filter),
+        .every(
+          (item) =>
+            filter === "all" ||
+            item.typeCode === filter ||
+            item.rarity === filter,
+        ),
     );
   const loadout = { itemIds: selectedItems, ticketIds };
   assert.throws(
@@ -494,7 +503,9 @@ async function run() {
     state.floor = 6;
     state.prayerBoost = boosted;
     for (let i = 0; i < 3; i++) {
-      const values = [0.5, 0.5, 0, 0.5, 0.45, 0.5];
+      // Force the 0.30% RNGesus roll, then keep the prayer roll between
+      // the normal 30% and boosted 60% thresholds.
+      const values = [0, 0.5, 0.45, 0.5];
       const encounter = core.generateEncounter(
         state,
         { guild_id: guildId, user_id: newUser(), id: "prayer" },
@@ -644,10 +655,13 @@ async function run() {
     const factor = state.eventPayoutFactor,
       bonus = state.bonus,
       floor = state.floor;
+    const loss = Math.ceil(core.payout(state) * 0.1);
+    const spent = state.payoutSpent;
     core.act(state, session, "next", () => 0.5);
     assert.equal(state.bonus, bonus);
     if (kind === "tax") {
-      assert.equal(state.eventPayoutFactor, factor * 0.9);
+      assert.equal(state.eventPayoutFactor, factor);
+      assert.equal(state.payoutSpent, spent + loss);
       assert.equal(state.floor, floor + 1);
     } else {
       assert.equal(state.encounter.type, "combat");
@@ -696,7 +710,14 @@ async function run() {
   );
   const adventurerText = v2View.encounterText(adventurerPreview);
   assert.ok(adventurerText.includes("[SSR]"));
-  assert.ok(adventurerText.includes("50% mất 10% payout"));
+  assert.ok(adventurerText.includes("Rift"));
+  assert.ok(
+    require("../src/hardcore/towerMemories")
+      .fields(adventurerPreview)
+      .some((field) =>
+        field.value.includes("50% bị thu một lần 10% payout hiện tại"),
+      ),
+  );
   assert.ok(
     core
       .actions(adventurerPreview)

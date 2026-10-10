@@ -1,0 +1,991 @@
+[
+  {
+    "id": "e78cd438-7e52-452f-b865-b0aaadb6f249",
+    "updatedAt": "2026-10-10T03:13:20.802Z",
+    "auditedAt": "2026-10-10T03:13:20.802Z",
+    "title": "Hợp nhất bot game và Median XL",
+    "changes": [
+      "Cập nhật toàn bộ hệ thống game theo phiên bản bot chính mới.",
+      "Giữ lại lệnh /item và !item cùng dữ liệu tra cứu Median XL.",
+      "Bổ sung các bảng game mới vào lệnh xóa dữ liệu người chơi toàn server."
+    ]
+  },
+  {
+    "id": "efc85496-a55e-496c-930d-e10ef2cd18c7",
+    "updatedAt": "2026-10-09T06:13:02.363Z",
+    "auditedAt": "2026-10-09T06:13:02.363Z",
+    "title": "Sửa Xì bàng trong Xì dách",
+    "changes": [
+      "Hai lá A được tính là Xì bàng, bộ bài mạnh nhất ở chế độ bot, bàn nhiều người và đấu tay đôi; cùng Xì bàng thì hòa.",
+      "Xì bàng tự động dừng; nhà cái không rút thêm khi có hai lá A. UI và luật chơi hiển thị đúng tên bộ bài.",
+      "Xì bàng từ hai lá đầu khi thắng bot nhận cùng hệ số với Xì dách tự nhiên: mặc định 2,5 lần cược."
+    ]
+  },
+  {
+    "id": "c034cdf0-e5d5-4185-91f7-159c044aee51",
+    "updatedAt": "2026-10-09T03:45:55.022Z",
+    "auditedAt": "2026-10-09T03:45:55.022Z",
+    "title": "Chuẩn hóa icon di vật LR, event và quái Sinh tồn",
+    "changes": [
+      "Di vật LR có icon riêng cho món đồ và nội tại; chuẩn hóa trong Túi, Chỉ số, phần thưởng và hồ sơ.",
+      "Mỗi loài quái và boss có icon nhận diện trên bảng chiến đấu, Chi tiết và kết quả hạ quái, gồm quái từ event và Tower.",
+      "Bổ sung icon cho God of RNGesus, Royal Invitation, Nghi lễ Oán Hận, chuỗi Chinh Phạt, bốn mảnh LR, Threefold Prophecy và các ấn."
+    ]
+  },
+  {
+    "id": "c438a444-ede8-466c-b374-7a109fe7ba6d",
+    "updatedAt": "2026-10-08T10:39:33.564Z",
+    "auditedAt": "2026-10-08T10:39:33.564Z",
+    "title": "Ẩn Phase ở boss một giai đoạn",
+    "changes": [
+      "Giao diện Sinh tồn không ghi Phase cho boss chỉ có một giai đoạn. Boss nhiều giai đoạn vẫn hiển thị phase hiện tại; Deimoss giữ bảng ba thanh HP."
+    ]
+  },
+  {
+    "id": "ee7a55b0-6dc6-4cbd-b11d-78dffb7ef351",
+    "updatedAt": "2026-10-08T09:49:27.694Z",
+    "auditedAt": "2026-10-08T09:49:27.694Z",
+    "title": "Tự chọn trang bị giải nguyền tại Purifier",
+    "changes": [
+      "Purifier có menu chọn món còn nguyền, hiển thị tên, level và số cấp nguyền; hỗ trợ phân trang khi có nhiều món.",
+      "Chọn hoặc đổi món chỉ xem trước lời nguyền được gỡ, chỉ số trước → sau và giá; chỉ nút Giải nguyền món này mới trả phí. Giữ giá theo payout hiện tại và chỉ giải 1 món mỗi lần gặp.",
+      "Run đang lưu vẫn sử dụng được; nút cũ sau khi đổi món không thể giải nhầm hoặc trừ xu lần nữa."
+    ]
+  },
+  {
+    "id": "28c12f38-cd63-4022-bb87-e1ab8ddd5e3a",
+    "updatedAt": "2026-10-08T08:42:06.806Z",
+    "auditedAt": "2026-10-08T08:42:06.806Z",
+    "title": "Tháp Định Mệnh: reset thủ công",
+    "changes": [
+      "Thêm lệnh quản trị /quantri thapreset để xoay ngay Tháp Định Mệnh đang hoạt động.",
+      "Tháp được reset chỉ hoạt động đến 00:00 thứ Hai; lịch rotation tự động kế tiếp không bị dịch theo thời điểm dùng lệnh.",
+      "Snapshot cũ được lưu lại và phần thưởng vẫn chỉ nhận một lần trong cùng tuần, kể cả khi tháp được reset."
+    ]
+  },
+  {
+    "id": "d08c8ef0-7495-472c-8fbd-4fe564e210f2",
+    "updatedAt": "2026-10-08T08:16:47.020Z",
+    "auditedAt": "2026-10-08T08:16:47.020Z",
+    "title": "Tháp Định Mệnh: puzzle nhiều lớp",
+    "changes": [
+      "Thêm kháng vật lý/phép theo phần trăm và Giáp thích nghi tăng 25% kháng với loại damage vừa nhận.",
+      "Thêm Break 0–3: Tấn công và đỡ Trọng kích tích Break, Skill tiêu Break để tăng damage; Skill vẫn dùng tự do khi đủ MP.",
+      "Bảng chiến đấu hiển thị intent hiện tại và intent kế tiếp; Vọng âm lặp 50% damage sau một hoặc hai lượt.",
+      "Boss tầng 13–14 có hai phase, tầng 15 có ba phase; damage dư không xuyên phase và trạng thái được reset riêng từng tầng.",
+      "Solver loại puzzle thiếu chiều sâu: bắt buộc nhánh sai cần nhìn trước, nhánh gần thắng, đủ cửa sổ Vọng âm và đủ lượt kháng một phần. Luật mới chỉ áp dụng từ rotation kế tiếp."
+    ]
+  },
+  {
+    "id": "81204195-1b6f-4442-b2dc-6daf9945cdbf",
+    "updatedAt": "2026-10-08T07:47:10.029Z",
+    "auditedAt": "2026-10-08T07:47:10.029Z",
+    "title": "Tháp Định Mệnh: Skill tự do và puzzle khó hơn",
+    "changes": [
+      "Từ rotation kế tiếp, Skill có thể dùng nhiều lần khi đủ MP, gây damage bình thường, không cần làm đòn kết liễu và quái không còn hồi lại damage Skill.",
+      "Mỗi lượt combat có trạng thái Kháng phép, Kháng vật lý hoặc Miễn nhiễm sát thương; chuỗi hành động được xáo trộn riêng từng tầng thay cho công thức cố định Thủ rồi Đánh rồi Skill.",
+      "Mỗi tầng bắt buộc kết hợp Tấn công, Skill và Phòng thủ; nhiều tầng cần Skill giữa tầng hoặc dùng Skill nhiều lần, nhưng solver vẫn xác nhận chỉ có một đường hoàn thành.",
+      "Tháp đang hoạt động giữ nguyên snapshot và luật cũ đến hết tuần."
+    ]
+  },
+  {
+    "id": "d9dd0b87-3510-4aff-9687-dba562769220",
+    "updatedAt": "2026-10-08T07:23:03.786Z",
+    "auditedAt": "2026-10-08T07:23:03.786Z",
+    "title": "Tinh gọn giao diện Tháp Định Mệnh",
+    "changes": [
+      "Bảng chiến đấu chỉ giữ tầng hiện tại, HP/MP, damage và MP của ba hành động, HP/ý định quái cùng kết quả lượt trước.",
+      "Chuyển các giải thích về Skill, RNG, class và luật qua các tab chi tiết; ẩn tiến độ tuần, phần thưởng và mã challenge khi đang chiến đấu.",
+      "Rút gọn ý định Hành quyết, Trọng kích và nút Bảng xếp hạng để giao diện dễ đọc hơn."
+    ]
+  },
+  {
+    "id": "c07a6793-315a-41e8-b207-33221f4508d2",
+    "updatedAt": "2026-10-08T07:00:35.185Z",
+    "auditedAt": "2026-10-08T07:00:35.185Z",
+    "title": "Tháp Định Mệnh: checkpoint từng tầng",
+    "changes": [
+      "Tử trận hoặc chọn sai nhánh sẽ cho thử lại từ đầu tầng hiện tại; các tầng đã vượt không bị đặt lại.",
+      "Mỗi tầng nay là một puzzle độc lập: HP, MP, Skill, Ward và hiệu ứng được đặt lại khi bước sang tầng mới, không mang lựa chọn hay tài nguyên từ tầng trước.",
+      "Ổn định bộ sinh puzzle cho các class có hồi máu để rotation tuần luôn tạo được challenge hợp lệ; chơi lại sau khi hoàn thành vẫn không trao thêm phần thưởng."
+    ]
+  },
+  {
+    "id": "1d52c714-67fc-423e-97d3-9aa5829d4b6d",
+    "updatedAt": "2026-10-08T04:47:41.398Z",
+    "auditedAt": "2026-10-08T04:47:41.398Z",
+    "title": "Tháp Định Mệnh v4: Combat Puzzle",
+    "changes": [
+      "Thiết kế lại Tháp thành combat thật: Tấn công, Skill và Phòng thủ luôn xử lý theo damage, HP, MP cùng ý định quái đang hiển thị; không còn phạt vì chọn sai đáp án ẩn.",
+      "Skill chỉ dùng một lần mỗi tầng và bị quái hấp thụ toàn bộ damage nếu chưa kết liễu; Trọng kích hiển thị damage khi đỡ, còn Hành quyết chỉ giết người chơi nếu quái vẫn sống.",
+      "Ẩn toàn bộ số nhịp và số hành động khỏi giao diện; mỗi tuần vẫn có đúng một đường hoàn thành đã được solver xác nhận.",
+      "Tử trận hoặc chọn sai nhánh event sẽ kết thúc attempt và chơi lại từ tầng 1; phần thưởng hoàn thành vẫn chỉ nhận một lần mỗi tuần."
+    ]
+  },
+  {
+    "id": "a47f9ca7-c452-4765-be78-9d3ec9a2c933",
+    "updatedAt": "2026-10-08T04:32:25.394Z",
+    "auditedAt": "2026-10-08T04:32:25.394Z",
+    "title": "Event hồi phục cả HP và MP",
+    "changes": [
+      "Các event hồi HP trong Sinh tồn nay hồi thêm MP theo cùng tỷ lệ Max MP, làm tròn lên và không vượt giới hạn; HP đã đầy vẫn hồi MP. Healer hồi 30% MP, Grave Echo hồi 15%; các nhánh hồi đầy cũng hồi đầy MP.",
+      "Áp dụng cho Healing Shrine, Blood Fountain, cửa sáng, Wrong Portal tốt, dịch vụ hồi phục của Rift Merchant, phần thưởng hồi phục Tower Remembers và Class Shrine của Druid (5% MP mỗi tầng hiệu lực).",
+      "Checkpoint vẫn chỉ hồi HP. Cập nhật nút, Chi tiết, luật và log HP/MP trước → sau; lời nguyền giảm hồi HP không giảm lượng MP hồi."
+    ]
+  },
+  {
+    "id": "aaac3efc-3196-4aa1-afc5-e680c6b40dde",
+    "updatedAt": "2026-10-08T03:08:00.089Z",
+    "auditedAt": "2026-10-08T03:08:00.089Z",
+    "title": "Sinh tồn: 21 boss và Threefold Prophecy",
+    "changes": [
+      "Thay vòng 5 boss bằng 21 boss có cơ chế riêng tại các mốc 50 tầng, thêm Kabraxis tầng 666; hiển thị stack, cảnh báo và dự báo sát thương, xem toàn bộ cơ chế trong Chi tiết.",
+      "Tầng 333 chọn ấn War, Protection hoặc Arcane một lần. Tầng 666 cho rút thưởng trước cửa; khi vào trận không thể bỏ qua/rút. Hạ Kabraxis nhận trang bị SSR 66,6% hoặc UR có nguyền 33,4%, bonus 66,6% cược và thức tỉnh ấn.",
+      "Deimoss tầng 999 có ba thanh HP riêng 30/30/40%; sát thương dư không xuyên phase, chuyển phase không phản công, chỉ nhận thưởng khi phá thanh thứ ba.",
+      "Khóa phần thưởng từ lúc boss xuất hiện và giữ trạng thái khi tiếp tục; trận cũ đang đánh giữ cơ chế cũ, các boss tiếp theo dùng bộ mới. Tower không đổi."
+    ]
+  },
+  {
+    "id": "320f661e-e6a9-404c-8b43-6ddbe3d466f5",
+    "updatedAt": "2026-10-08T01:14:11.177Z",
+    "auditedAt": "2026-10-08T01:14:11.177Z",
+    "title": "Điều chỉnh mốc Gilded Soul",
+    "changes": [
+      "Gilded Soul tăng 10/20/30/40/50% DMG khi xu có thể rút trong run đạt 2/3/4/5/7 lần cược, thay cho 2/5/10/20/40.",
+      "Đồng bộ mô tả và luật; mức tăng vẫn chốt khi vào combat, trận đang diễn ra giữ mức đã chốt."
+    ]
+  },
+  {
+    "id": "942d7e12-5cbb-4405-bba4-6166e399824a",
+    "updatedAt": "2026-10-07T10:38:15.497Z",
+    "auditedAt": "2026-10-07T10:38:15.497Z",
+    "title": "Tinh gọn Túi đồ Sinh tồn",
+    "changes": [
+      "Bỏ dòng class và tầng ở đầu Túi đồ; gộp bình và ba loại vé thành một dòng, bỏ mô tả tỷ lệ cầu nguyện và hồi sinh.",
+      "Rút gọn Mảnh Chinh Phạt thành tiến độ x/4 và danh sách mảnh.",
+      "Thêm tiến độ hai set Diệt Vương và Tinh Tú: món đang có, món còn thiếu và UR cần giải nguyền trước khi đổi di vật."
+    ]
+  },
+  {
+    "id": "0f96ee41-48e0-445f-a5b4-172a6b8ea500",
+    "updatedAt": "2026-10-07T09:56:19.015Z",
+    "auditedAt": "2026-10-07T09:56:19.015Z",
+    "title": "Tinh gọn mục Rút thưởng Sinh tồn",
+    "changes": [
+      "Chuyển thống kê xu đã trừ vì thuế, Goblin, event, mua đồ/dịch vụ và giảm thưởng do nguyền sang tab Chỉ số, mục Thống kê xu.",
+      "Mục Rút thưởng trên bảng chơi chỉ hiển thị xu thực nhận và kim cương; icon và số tiền vẫn giữ đầy đủ trong Chỉ số."
+    ]
+  },
+  {
+    "id": "1f6f72da-fb5d-4403-b40d-ae26c1415b12",
+    "updatedAt": "2026-10-07T09:43:53.902Z",
+    "auditedAt": "2026-10-07T09:43:53.902Z",
+    "title": "Giảm phản phệ Avarice Revenant",
+    "changes": [
+      "Avarice Revenant phản phệ 10% sát thương Tấn công/Skill thực tế gây lên boss, giảm từ 30%; làm tròn xuống, áp dụng cả đòn kết liễu.",
+      "Chi tiết, luật và log chiến đấu cập nhật mức 10%."
+    ]
+  },
+  {
+    "id": "7da75a03-1879-451b-a80e-333253861c96",
+    "updatedAt": "2026-10-07T09:18:55.975Z",
+    "auditedAt": "2026-10-07T09:18:55.975Z",
+    "title": "Đánh giá checkpoint cuối run Sinh tồn",
+    "changes": [
+      "Đã mô phỏng 14.000 run, 1.000 run/class/cấu hình, so sánh checkpoint hiện tại với phương án từ tầng 700: mỗi 10 tầng chọn +10 thuộc tính, hồi đầy HP và thêm 2 bình.",
+      "Trong chiến thuật cố định được đo, cả 7 class đều giảm tỷ lệ thắng; Barbarian 26,3% → 8,6%, Sorceress 51% → 31,1%, Druid 16,8% → 13,8%. Tổng điểm cuối run không tăng, số lần hồi HP/nhận bình giảm một nửa.",
+      "Đây là báo cáo thử nghiệm; luật checkpoint đang chơi vẫn giữ hiện tại. Báo cáo kèm kết quả từng class, thống kê sau tầng 700, khoảng tin cậy và dữ liệu để chạy lại."
+    ]
+  },
+  {
+    "id": "c7cd1811-e68b-41cd-ae1e-2a223e66bf97",
+    "updatedAt": "2026-10-07T09:18:17.882Z",
+    "auditedAt": "2026-10-07T09:18:17.882Z",
+    "title": "Tháp Suy Luận: tối giản giao diện",
+    "changes": [
+      "Trạng thái quái chỉ còn các nhãn ngắn như Kháng vật lý, Kháng phép, Miễn nhiễm sát thương và Chuẩn bị đòn chí tử; không còn giải thích hành động cần chọn.",
+      "Bảng chính được rút gọn còn mục tiêu tầng, HP/MP/bình, damage cơ bản, HP quái và tiến trình bước.",
+      "Ẩn phần thưởng và nhật ký lượt chi tiết trong lúc đang giải để giảm nội dung lặp và tránh lộ hướng giải."
+    ]
+  },
+  {
+    "id": "ad4e0172-75ad-4504-a362-9b6c33a817fe",
+    "updatedAt": "2026-10-07T09:04:45.321Z",
+    "auditedAt": "2026-10-07T09:04:45.321Z",
+    "title": "Tháp Suy Luận: đòn chí tử kết thúc ngay",
+    "changes": [
+      "Nếu không Phòng thủ trước đòn chí tử, HP về 0 và attempt kết thúc ngay thay vì chờ hết số bước của tầng.",
+      "Các lỗi puzzle không gây chết vẫn tiếp tục được giữ kín và chỉ chấm khi hết bước."
+    ]
+  },
+  {
+    "id": "0f1348cb-0047-4d31-962c-f27e96cd18c0",
+    "updatedAt": "2026-10-07T09:00:00.233Z",
+    "auditedAt": "2026-10-07T09:00:00.233Z",
+    "title": "Tháp Suy Luận: mechanic dễ hiểu hơn",
+    "changes": [
+      "Mỗi tầng hiển thị thẳng mục tiêu hạ quái trong đúng số bước và đưa HP quái về đúng 0 ở bước cuối.",
+      "Trạng thái quái được viết rõ bằng tiếng Việt: kháng vật lý, kháng phép, đòn chí tử bắt buộc Phòng thủ hoặc thời điểm dùng bình máu.",
+      "Hành động sai mechanic không gây damage; bỏ qua Phòng thủ trước đòn chí tử sẽ khiến HP về 0 khi chấm cuối tầng.",
+      "Đổi tên bộ quái sang tiếng Việt và khóa tổng HP quái đúng bằng tổng damage của chuỗi lời giải duy nhất."
+    ]
+  },
+  {
+    "id": "584f30e7-db0c-4738-b1ad-fd03fd0839fe",
+    "updatedAt": "2026-10-07T08:38:36.735Z",
+    "auditedAt": "2026-10-07T08:38:36.735Z",
+    "title": "Tháp Suy Luận: chấm kết quả cuối tầng",
+    "changes": [
+      "Sai bước không còn làm dừng lượt hoặc báo lỗi ngay; mọi hành động tiếp tục tiêu hao số bước của tầng.",
+      "Khi hết bước mà chưa vượt tầng, hệ thống chỉ đưa một gợi ý trừu tượng rồi cho thử lại từ đầu tầng chưa vượt.",
+      "Bổ sung kiểm thử ẩn lỗi giữa tầng, bình máu dùng trễ và khôi phục checkpoint khi thử lại."
+    ]
+  },
+  {
+    "id": "64731853-13cc-4b5d-8f43-22c7687c5bd7",
+    "updatedAt": "2026-10-07T08:26:26.439Z",
+    "auditedAt": "2026-10-07T08:26:26.439Z",
+    "title": "Tháp Suy Luận: quái và luật deterministic",
+    "changes": [
+      "Thêm bộ 15 quái riêng cho Tháp, mỗi dấu hiệu chiến đấu chỉ có một hành động hợp lệ và lời giải duy nhất.",
+      "Loại bỏ Crit, Miss, né và RNG trong lượt chơi; Tấn công, Kỹ năng, Phòng thủ cùng bình máu đều dùng giá trị cố định được kiểm chứng trước khi phát hành.",
+      "Bình máu hồi đúng 20 HP trong cửa sổ quy định; đòn Hành quyết bắt buộc Phòng thủ, chọn sai sẽ thất bại và nhận gợi ý theo mechanic."
+    ]
+  },
+  {
+    "id": "1ae77116-0cf2-4164-afb6-23f2222f6da6",
+    "updatedAt": "2026-10-07T08:10:30.297Z",
+    "auditedAt": "2026-10-07T08:10:30.297Z",
+    "title": "Tháp Định Mệnh: checkpoint theo tầng",
+    "changes": [
+      "Thất bại ở tầng nào sẽ thử lại từ đầu tầng đó, giữ nguyên các tầng đã vượt và khôi phục HP, MP, bình cùng hiệu ứng lúc vừa vào tầng.",
+      "Sau khi hoàn thành đủ 15 tầng, nút Chơi lại cho phép bắt đầu lại từ tầng 1 nhưng không trao lại phần thưởng đã nhận."
+    ]
+  },
+  {
+    "id": "9f8f275b-23dd-4506-979e-dbea147c84a8",
+    "updatedAt": "2026-10-07T07:55:58.178Z",
+    "auditedAt": "2026-10-07T07:55:58.178Z",
+    "title": "Tháp Định Mệnh: đồng bộ dữ liệu theo tuần",
+    "changes": [
+      "Stats và bộ trang bị của mỗi rotation được chụp từ dữ liệu Sinh tồn mới nhất khi tuần đó bắt đầu.",
+      "Thay đổi cân bằng trong lúc một tháp đang hoạt động không làm đổi tháp hiện tại và chỉ áp dụng từ 00:00 thứ Hai của tuần kế tiếp."
+    ]
+  },
+  {
+    "id": "134a8b97-08be-4875-863f-401a017cb424",
+    "updatedAt": "2026-10-07T07:47:29.504Z",
+    "auditedAt": "2026-10-07T07:47:29.504Z",
+    "title": "Tháp Định Mệnh: 15 tầng puzzle",
+    "changes": [
+      "Làm lại Tháp thành 15 puzzle chiến đấu: tầng 1 cần đúng 1 bước, tăng dần đến tầng 15 cần đúng 15 bước; quái phải bị hạ ở bước cuối.",
+      "Tháp dùng class, chỉ số, bình máu và bộ trang bị mẫu từ dữ liệu Sinh tồn hiện tại nhưng giữ session, tiến trình và phần thưởng hoàn toàn độc lập.",
+      "Khi chọn sai, lượt chơi dừng và đưa gợi ý theo đúng lỗi như dùng bình quá sớm, thiếu phòng thủ trước đòn chí tử hoặc dùng sai loại sát thương."
+    ]
+  },
+  {
+    "id": "7d9efb27-0892-45f0-8851-a972d38940d8",
+    "updatedAt": "2026-10-07T07:09:28.894Z",
+    "auditedAt": "2026-10-07T07:09:28.894Z",
+    "title": "Royal Invitation: quy đổi set thành di vật LR",
+    "changes": [
+      "Đủ set Diệt Vương hoặc Tinh Tú với mọi level UR đã giải nguyền sẽ mở Royal Invitation: trọng số 10, Purifier giữ 3, event thường 1.",
+      "Nhận lời giao nộp toàn bộ 5 món của set được chọn cùng mọi level để nhận Kingslayer’s Testament hoặc Astral Singularity. Mỗi run quy đổi một set; bỏ đi sẽ khóa thư mời trong cả run.",
+      "Kingslayer’s Testament tăng sát thương crit vật lý từ x2,5, thêm 0,1 sau mỗi boss định kỳ hạ kể từ kích hoạt, tối đa x3,5. Astral Singularity miễn MP cho Skill phép; Skill Necromancer không chặn phản công hai lượt liên tiếp.",
+      "Khi nhận di vật: hồi đầy HP/MP theo chỉ số còn lại, giải mọi nguyền UR và xóa mọi ấn Rift; giữ Paradox/Contract. Chỉ một nội tại LR hoạt động trong run.",
+      "Thêm thành tựu Di Chúc Diệt Vương và Điểm Kỳ Dị Tinh Tú. Thành tích nhận từng LR được lưu ngay: số lần nhận, class, tầng và thời gian, vẫn giữ sau tử trận hoặc rút thưởng. Có animation ban phước và thông tin trong Chi tiết/luật."
+    ]
+  },
+  {
+    "id": "6542f0cd-53f9-4d46-baa0-6b670745e433",
+    "updatedAt": "2026-10-07T06:19:54.366Z",
+    "auditedAt": "2026-10-07T06:19:54.366Z",
+    "title": "Nghi lễ Oán Hận và di vật Gilded Soul",
+    "changes": [
+      "Cướp Lost Adventurer giữ hậu quả cũ và thêm Dấu ấn oán hận trong Rift. Từ tầng cướp +10, Shrine có 7 nhánh ngang nhau; nghi lễ xuất hiện với tỷ lệ 1/7. Bỏ qua giữ dấu ấn, cướp lại không lùi mốc.",
+      "Nghi lễ triệu hồi Avarice Revenant: dưới 40% Max HP không dùng bình; phản phệ 30% DMG Tấn công/Skill thực tế, không Crit/né/chặn. Boss chờ một lượt không tấn công, đánh từ lượt thứ hai liên tiếp. Crit chặn đòn thường nhưng vẫn chịu phản phệ.",
+      "Hạ boss và sống sót nhận Gilded Soul [LR], không hồi HP/MP hay giải nguyền. DMG +10/20/30/40/50% khi xu có thể rút trong run đạt 2/5/10/20/40 lần cược; chốt mỗi combat. Chỉ một nội tại LR hoạt động trong run.",
+      "Lưu ngay thành tích nhận Gilded Soul và Conqueror’s Covenant vào hồ sơ, kèm thành tựu riêng; vẫn giữ sau khi run kết thúc. Cơ chế boss nằm trong Chi tiết, dấu ấn trong Rift, di vật trong Túi và nội tại hiện tại trong Chỉ số."
+    ]
+  },
+  {
+    "id": "2ba38462-13c5-4d13-8879-8510ba410952",
+    "updatedAt": "2026-10-07T05:42:51.903Z",
+    "auditedAt": "2026-10-07T05:42:51.903Z",
+    "title": "Sinh tồn: Bốn mảnh Chinh Phạt và di vật LR",
+    "changes": [
+      "Lần hạ đầu tiên trong run của Mimic, Ancient Mimic, Blood Mimic và Clone sau khi phá Mirror of Fate bảo đảm cho một mảnh mỗi nguồn, độc lập LUCK; giữ nguyên thưởng vật phẩm cũ.",
+      "Đủ bốn mảnh: Wrong Portal tiếp theo bảo đảm mở thêm cửa tầng hầm. Thắng Covenant Guardian mới tiêu thụ mảnh; lựa chọn vào portal thường và bỏ qua vẫn giữ nguyên.",
+      "Thắng thử thách nhận Conqueror’s Covenant [LR] kèm animation, hồi đầy HP/MP, giải toàn bộ nguyền UR và xóa mọi ấn Rift; giữ Paradox và Contract còn hiệu lực.",
+      "Nội tại Conqueror’s Covenant: mỗi quái hạ sau khi kích hoạt cộng 0,2 điểm % thưởng xu, tối đa +100%; giữ trần 10 triệu xu, chi phí/phạt và thưởng kim cương. Chỉ một nội tại LR hoạt động mỗi run.",
+      "Tiến độ mảnh nằm trong Túi, điều kiện và thưởng tầng hầm nằm trong Chi tiết, mức tăng xu hiện tại nằm trong Chỉ số. Lưu tiến độ qua khôi phục run, chống nhận thưởng và phát animation lặp."
+    ]
+  },
+  {
+    "id": "e39ddeac-f7cd-4134-9a7d-b56dceb0eff3",
+    "updatedAt": "2026-10-07T05:12:26.114Z",
+    "auditedAt": "2026-10-07T05:12:26.114Z",
+    "title": "Sửa bảng tỷ lệ Sinh tồn",
+    "changes": [
+      "Sửa lỗi sinhton tyle không gửi được bảng khi emoji của bot làm nội dung vượt giới hạn Discord. Các nhóm dài có phân trang Trước/Sau, chuyển nhóm quay về trang đầu và giữ đủ mô tả.",
+      "Luật Sinh tồn cũng tự chia trang để hiển thị đầy đủ với emoji portal và emoji động. Chỉ người mở bảng được chuyển nhóm hoặc trang."
+    ]
+  },
+  {
+    "id": "e4ac06c2-ed18-4413-b22e-b4f64eba4659",
+    "updatedAt": "2026-10-07T04:46:41.400Z",
+    "auditedAt": "2026-10-07T04:46:41.400Z",
+    "title": "Bảo trì cấu trúc Sinh tồn",
+    "changes": [
+      "Tổ chức lại Sinh tồn theo từng chức năng để dễ bảo trì và cập nhật; giữ nguyên luật chơi, phần thưởng và dữ liệu run đang diễn ra.",
+      "Tower mode và các game khác giữ nguyên."
+    ]
+  },
+  {
+    "id": "b607d33b-b2ec-4b28-ad60-fa16b075399f",
+    "updatedAt": "2026-10-07T04:20:52.585Z",
+    "auditedAt": "2026-10-07T04:20:52.585Z",
+    "title": "God of RNGesus và di vật Fatebreaker Seal",
+    "changes": [
+      "Thêm God of RNGesus: roll riêng từng tầng từ tầng 1 với tỷ lệ ban đầu 0,0001%; mỗi run tử trận thật sự do RNGesus tăng thêm 0,0001 điểm %. Tính cả lịch sử tử trận RNGesus đã lưu, giữ qua các run và restart.",
+      "God ban phước hồi đầy HP/MP, giải mọi nguyền UR và xóa mọi ấn Rift; giữ UR, level, Paradox và Contract. Nhận Fatebreaker Seal [LR], không gặp RNGesus trong phần còn lại của run; tỷ lệ God reset về 0,0001%.",
+      "Thêm animation ngắn khi gặp God, hiển thị đúng tỷ lệ lúc gặp, thành tựu Được Thần Vận Mệnh Chọn và lịch sử trong hồ sơ Sinh tồn. Không bỏ qua boss, không nhận phước lặp khi bấm nút cũ; lỗi Discord không làm mất phước lành đã lưu."
+    ]
+  },
+  {
+    "id": "f1ca9b07-77aa-4248-8089-bc521ec331f2",
+    "updatedAt": "2026-10-07T03:53:41.373Z",
+    "auditedAt": "2026-10-07T03:53:41.373Z",
+    "title": "Khai báo nhóm di vật LR cho Sinh tồn",
+    "changes": [
+      "Bổ sung tên và thiết kế nội tại cho 6 di vật LR: Di Chúc Diệt Vương, Điểm Kỳ Dị Tinh Tú, Ấn Phá Mệnh, Màn Chắn Tuyệt Đối, Khế Ước Chinh Phạt và Linh Hồn Hoàng Kim.",
+      "Di vật LR không cộng chỉ số cơ bản, không có level; dự kiến chỉ một nội tại được kích hoạt trong mỗi run. Cách nhận và kích hoạt chưa mở; không có trong drop, Gacha, cửa hàng hay loadout.",
+      "Vé hồi sinh LR vẫn là vật phẩm tiêu hao riêng và tiếp tục bán như trước."
+    ]
+  },
+  {
+    "id": "82b76c9b-a068-42a3-911b-1c654a88214a",
+    "updatedAt": "2026-10-07T03:17:24.627Z",
+    "auditedAt": "2026-10-07T03:17:24.627Z",
+    "title": "Treasure Shrine thay Blood Shrine",
+    "changes": [
+      "Trong Sinh tồn V2, Blood Shrine được thay bằng Treasure Shrine: nhận một vật phẩm ngẫu nhiên theo tỷ lệ R 50%, SR 30%, SSR 15%, UR 5%. Treasure vẫn là một trong sáu loại Shrine xuất hiện đồng đều.",
+      "Vật phẩm được khóa khi gặp Shrine, không đổi khi xem bảng hoặc tiếp tục run; tỷ lệ không chịu LUCK/pity hòm. Trang bị trùng tăng một level, UR có thể nhận Vé thoát; Bỏ qua không nhận vật phẩm.",
+      "Blood Shrine đang chờ của run V2 cũ được chuyển thành Treasure một lần. Cập nhật Chi tiết, luật và log Lượt vừa rồi cho phần thưởng mới."
+    ]
+  },
+  {
+    "id": "8c4cd1d9-0ac8-4a84-91b0-839cf223e28f",
+    "updatedAt": "2026-10-07T02:49:30.749Z",
+    "auditedAt": "2026-10-07T02:49:30.749Z",
+    "title": "Thống nhất mọi phí xu theo payout hiện tại",
+    "changes": [
+      "Blacksmith, Purifier, hiến tế xu và khoản cược Cursed Gambler đều tính theo payout hiện tại đang hiển thị, sau lời nguyền, Paradox và các khoản đã chi. Giữ nguyên tỷ lệ phí; cược thắng vẫn thưởng theo khoản đã đặt.",
+      "Rift Merchant và Payout Shop chốt giá theo payout hiện tại lúc gặp, áp dụng nội tại giảm giá xu một lần. Điều kiện đủ tiền và thanh toán dùng cùng số payout.",
+      "Cửa hàng đang chờ của bản cũ được cập nhật giá một lần khi mở lại, giữ nguyên hàng và kết quả rương. Giá mới tiếp tục được khóa, không tính lại khi xem UI.",
+      "Đồng bộ bảng chơi, Chi tiết và luật; bỏ mô tả payout gốc khỏi các event."
+    ]
+  },
+  {
+    "id": "1370f7cd-3c95-4150-ae86-540ab5443e84",
+    "updatedAt": "2026-10-07T02:41:41.820Z",
+    "auditedAt": "2026-10-07T02:41:41.820Z",
+    "title": "Wrong Portal: cho phép bỏ qua",
+    "changes": [
+      "Wrong Portal có hai nút Vào portal và Bỏ qua. Bỏ qua giúp vượt tầng, không nhận thưởng, không chịu hiệu ứng portal và không gặp Elite đánh phủ đầu; hiệu ứng cuối tầng và checkpoint vẫn diễn ra bình thường.",
+      "Nội tại tiên tri vẫn đánh dấu an toàn/nguy hiểm trên nút Vào portal. Bỏ qua không tính đã tham gia sự kiện; nút cũ bấm lặp không thể vượt thêm tầng."
+    ]
+  },
+  {
+    "id": "426616ef-9923-4af6-aaa3-ccdb17f6aad6",
+    "updatedAt": "2026-10-07T02:33:54.568Z",
+    "auditedAt": "2026-10-07T02:33:54.568Z",
+    "title": "Purifier: phí theo payout hiện tại",
+    "changes": [
+      "Phí giải nguyền của Purifier là 10% số xu payout hiện tại đang hiển thị trước khi giải, sau lời nguyền, Paradox và các khoản đã chi; làm tròn lên, tối thiểu 1 xu.",
+      "Nút giải nguyền, Chi tiết và luật dùng cùng cách tính. Trừ phí một lần, giữ nguyên UR, level, buff và nội tại; không giảm hệ số payout."
+    ]
+  },
+  {
+    "id": "f084a54c-da43-4b08-a6ff-3eae6f8d1320",
+    "updatedAt": "2026-10-07T02:30:04.516Z",
+    "auditedAt": "2026-10-07T02:30:04.516Z",
+    "title": "Sinh tồn: vật phẩm UR và độ hiếm LR",
+    "changes": [
+      "Vé thoát RNGesus [UR] vào pool vật phẩm của run. Nhặt được nhận tối đa một vé, không có level hoặc lời nguyền và không chiếm ô trang bị; vé dư được ghi trong Lượt vừa rồi.",
+      "Vé hồi sinh được xếp [LR], hiện LR chỉ có vật phẩm. LR không nằm trong Gacha hoặc pool rơi đồ ngẫu nhiên; sự kiện đặc biệt cấp LR sẽ có spec sau.",
+      "Cửa hàng Sinh tồn vẫn bán cả ba vé với giá cũ: thoát 100, cầu nguyện 100, hồi sinh 300 kim cương. Vé đã sở hữu vẫn sử dụng được.",
+      "Túi đồ hỗ trợ lọc LR/UR cho vé và sắp xếp LR trước UR. Mỗi loại vé vẫn chọn riêng một chiếc trước khi bắt đầu run."
+    ]
+  },
+  {
+    "id": "6f4501a4-b859-455e-9019-a1b0da437611",
+    "updatedAt": "2026-10-07T02:11:03.095Z",
+    "auditedAt": "2026-10-07T02:11:03.095Z",
+    "title": "Tinh gọn nút xóa Rift",
+    "changes": [
+      "Rift Severance hiển thị nút chỉ có icon riêng của từng loại Rift thay cho tên dài; chọn icon để xóa toàn bộ stack của loại đó.",
+      "Mô tả hướng dẫn xem nút Rift để đọc hiệu ứng từng loại; Unstable Rift vẫn được giữ."
+    ]
+  },
+  {
+    "id": "bea968ad-c12d-40d5-a8e9-d00e0fa30422",
+    "updatedAt": "2026-10-07T02:03:15.777Z",
+    "auditedAt": "2026-10-07T02:03:15.777Z",
+    "title": "Thống nhất thưởng và phạt xu Sinh tồn V2",
+    "changes": [
+      "Bán rương boss nhận bonus bằng 100% cược ban đầu; hòm thường giữ 15%. Thử thách Hiến tế tài sản thưởng 150% cược ban đầu khi thắng.",
+      "Phạt Wrong Portal, hối lộ RNGesus và bồi thường Tower Remembers trừ xu một lần theo payout hiện tại, không giảm hệ số thưởng hoặc phạt tiền kiếm thêm về sau.",
+      "Event cược giữ thưởng theo khoản xu thực sự đã đặt. Run V2 cũ chuyển phạt hệ số sang khoản xu đã trừ, giữ nguyên payout tại lúc chuyển.",
+      "Cập nhật nút bán rương, Chi tiết, luật và log biến động xu; phân biệt tiền bị trừ do event với tiền mua đồ/dịch vụ."
+    ]
+  },
+  {
+    "id": "8381b823-2095-4410-8052-83f2b16228c2",
+    "updatedAt": "2026-10-06T15:52:39.757Z",
+    "auditedAt": "2026-10-06T15:52:39.757Z",
+    "title": "Làm rõ Purifier và kết quả giải nguyền",
+    "changes": [
+      "Purifier hiển thị ngay trên bảng chính tên, độ hiếm, cấp trang bị, từng lời nguyền sẽ gỡ và dự báo chỉ số trước sang sau, gồm sức chứa bình máu; in đậm kết quả sau.",
+      "Hiển thị số xu cần trả theo 10% payout gốc. Chi tiết liệt kê buff và nội tại giữ nguyên, điều kiện trả phí và ảnh hưởng của các trang bị còn nguyền khác.",
+      "Lượt vừa rồi ghi rõ trang bị đã giải, hiệu ứng đã gỡ và sức chứa bình thay đổi, tránh lặp dòng kết quả chung."
+    ]
+  },
+  {
+    "id": "afceb3fd-4294-4066-8e6b-e1144955dfc5",
+    "updatedAt": "2026-10-06T15:36:48.703Z",
+    "auditedAt": "2026-10-06T15:36:48.703Z",
+    "title": "RNGesus tăng tỷ lệ đều, bỏ spike",
+    "changes": [
+      "Bỏ spike và biến động ngẫu nhiên của tỷ lệ gặp RNGesus. Bắt đầu từ 0,30%, tăng cố định 0,05 điểm phần trăm sau mỗi tầng có roll nhưng không gặp, tối đa 12%; áp dụng cả ván mới và ván cũ.",
+      "Gặp RNGesus thì reset bộ đếm. Tầng ngay sau khi vượt vẫn an toàn 0%, lần roll hợp lệ tiếp theo bắt đầu lại ở 0,30%. Tầng boss và tầng bị chặn không tăng bộ đếm.",
+      "Đồng bộ luật chơi và mô tả Chaos theo cơ chế mới; tỷ lệ bỏ chạy và vé cầu nguyện tiếp tục theo trạng thái của ván."
+    ]
+  },
+  {
+    "id": "be10819a-c590-4332-849d-2cf1a990a800",
+    "updatedAt": "2026-10-06T15:15:38.409Z",
+    "auditedAt": "2026-10-06T15:15:38.409Z",
+    "title": "Hiển thị rõ kết quả rèn trang bị",
+    "changes": [
+      "Blacksmith hiển thị trước khi rèn: tên và độ hiếm trang bị, cấp cũ sang cấp mới, từng buff và lời nguyền trước sang sau; in đậm kết quả sau.",
+      "Hiển thị số xu cần trả theo 12% payout gốc, nội tại giữ nguyên và điều kiện rèn trong Chi tiết. Trang bị đã giải toàn bộ nguyền được ghi rõ không thêm nguyền khi rèn.",
+      "Lượt vừa rồi ghi cấp trang bị trước sang sau khi rèn cùng các thay đổi chỉ số, tránh lặp dòng nhận trang bị."
+    ]
+  },
+  {
+    "id": "72a9be73-c2d8-4443-a229-619cc23ecbfa",
+    "updatedAt": "2026-10-06T15:09:09.224Z",
+    "auditedAt": "2026-10-06T15:09:09.224Z",
+    "title": "Làm rõ Tấn công và Phòng thủ",
+    "changes": [
+      "Mô tả Tấn công và Phòng thủ bằng các dòng ngắn, dùng icon chuẩn cho Vật lý, MP, DEF, RES và CRIT.",
+      "Làm rõ Phòng thủ tăng RES 15 điểm phần trăm, giảm thêm 15% sát thương nhận và chống CRIT trong lượt hiện tại; đồng bộ mô tả trong Chỉ số và luật giao tranh."
+    ]
+  },
+  {
+    "id": "4fec5081-5204-4b20-bd9e-f145282ad69f",
+    "updatedAt": "2026-10-06T15:00:30.732Z",
+    "auditedAt": "2026-10-06T15:00:30.732Z",
+    "title": "Treasure Goblin thưởng thêm trang bị",
+    "changes": [
+      "Bắt được Treasure Goblin nhận bonus 25% tiền cược và 1 trang bị: 60% SR, 35% SSR, 5% UR kèm lời nguyền. Buff bắt Goblin tiếp tục tăng tỷ lệ bắt, tối đa 90%.",
+      "Goblin thoát chỉ trừ một lần 5% payout hiện tại (làm tròn lên 1 xu), thay cho giảm 10% hệ số payout của cả ván.",
+      "Bảng event tách tỷ lệ bắt và độ hiếm khi thành công; Lượt vừa rồi ghi item, độ hiếm và thay đổi chỉ số. Phần thưởng của event mới được khóa khi xuất hiện, không dùng pity của hòm."
+    ]
+  },
+  {
+    "id": "74be5799-7457-4a6e-998b-bc3eaadc1977",
+    "updatedAt": "2026-10-06T14:45:13.165Z",
+    "auditedAt": "2026-10-06T14:45:13.165Z",
+    "title": "Chuẩn hóa vé Sinh tồn",
+    "changes": [
+      "Thống nhất tên ngắn: Vé thoát, Vé cầu nguyện và Vé hồi sinh; mỗi loại dùng icon riêng trên bảng chơi, Chỉ số, cửa hàng, túi đồ và màn chọn đồ.",
+      "Mô tả vé cầu nguyện ghi rõ 30% lên 60% trong cả ván; vé hồi sinh ghi rõ hồi 50% Max HP và tiếp tục ở đâu. Rút gọn diễn biến dùng vé, bỏ nhãn Vé bị lặp trong cửa hàng và túi đồ."
+    ]
+  },
+  {
+    "id": "49a6dc8d-6b2e-4346-a980-c6df42030036",
+    "updatedAt": "2026-10-06T14:30:51.702Z",
+    "auditedAt": "2026-10-06T14:30:51.702Z",
+    "title": "Thu thuế trừ trực tiếp payout",
+    "changes": [
+      "Tax Collector thu một lần 15% số xu hiện có thể rút (làm tròn lên 1 xu), thay vì giảm hệ số payout của cả ván.",
+      "Cập nhật mô tả và luật thu thuế; Lượt vừa rồi ghi rõ số xu trước và sau khi thu, phần payout phân biệt xu thuế với khoản đã chi."
+    ]
+  },
+  {
+    "id": "0d1ddbb1-4a46-4793-8a21-d72122c3b788",
+    "updatedAt": "2026-10-06T14:08:41.722Z",
+    "auditedAt": "2026-10-06T14:08:41.722Z",
+    "title": "Icon riêng cho chỉ số phụ và nội tại Sinh tồn",
+    "changes": [
+      "Tách icon riêng cho DMG Boss, DMG Elite, hiệu lực bình, phát hiện Mimic, bắt Goblin, tìm SSR, DMG nhận, HP mất mỗi tầng, tỷ lệ Mimic và Payout.",
+      "Mỗi loại nội tại có tên icon riêng; cập nhật mô tả trang bị, giới hạn bình/CRIT/né, Tiên tri, Thương lượng và diễn biến nội tại trong lượt vừa rồi.",
+      "Diễn biến phản sát thương ghi rõ nội tại Gai, Phản đòn hoặc Né phản kích đã kích hoạt."
+    ]
+  },
+  {
+    "id": "1f5f11c1-b407-4693-833e-4351db011376",
+    "updatedAt": "2026-10-06T13:55:15.549Z",
+    "auditedAt": "2026-10-06T13:55:15.549Z",
+    "title": "Chuẩn hóa icon chỉ số và buff Sinh tồn",
+    "changes": [
+      "Thống nhất icon và tên chỉ số trong buff trang bị, mô tả nội tại và lời nguyền; bổ sung icon cho Payout, sức chứa bình và hiệu lực bình.",
+      "Phân biệt icon sát thương vật lý và phép trong mô tả lời nguyền; các nội tại sử dụng icon theo tác dụng thay cho biểu tượng chung.",
+      "Đồng bộ cách trình bày icon, tên chỉ số in đậm và giá trị ở trang bị, túi đồ, Chỉ số và buff Class Shrine."
+    ]
+  },
+  {
+    "id": "8ea6594d-6fb8-4194-8ee2-97a30ebfd3b5",
+    "updatedAt": "2026-10-06T13:33:06.739Z",
+    "auditedAt": "2026-10-06T13:33:06.739Z",
+    "title": "Chuẩn hóa icon The Tower Remembers",
+    "changes": [
+      "Mỗi loại ký ức dùng một icon riêng trên tình huống, nút lựa chọn, quái truy đuổi và kết quả lượt.",
+      "Bảng tỷ lệ và luật chơi có chú giải 8 icon: Ân nghĩa, Truy nã, Hiến tế máu, Hiến tế tài sản, Dư âm gương, Thử thách thần linh, Oán niệm và Ký ức cũ."
+    ]
+  },
+  {
+    "id": "eb82dda9-5114-4916-b481-6f53cbe43dba",
+    "updatedAt": "2026-10-06T10:59:59.000Z",
+    "auditedAt": "2026-10-06T10:59:59.000Z",
+    "title": "Backup database qua DM Discord",
+    "changes": [
+      "Chủ bot nhận snapshot database đã kiểm tra qua tin nhắn riêng, theo lịch backup và khi dừng bình thường.",
+      "File được nén và tự chia phần khi lớn, kèm SHA-256 và công cụ ghép/phục hồi.",
+      "Trạng thái vận hành tách backup local và DM; gửi lỗi sẽ giữ snapshot local và tự thử lại bản mới nhất."
+    ]
+  },
+  {
+    "id": "0227a70d-e66e-4fa2-b16b-b00a5fe1d8f1",
+    "updatedAt": "2026-10-06T10:44:35.781Z",
+    "auditedAt": "2026-10-06T10:44:35.781Z",
+    "title": "Củng cố lưu dữ liệu và backup",
+    "changes": [
+      "Database đồng bộ dữ liệu mỗi lần commit để tăng độ bền khi máy chủ mất điện hoặc reset cứng.",
+      "Backup được kiểm tra toàn vẹn; bot tạo thêm bản khi dừng bình thường và hỗ trợ cấu hình lịch theo phút.",
+      "Bổ sung công cụ backup/phục hồi và trạng thái vận hành. Backup hiện vẫn nằm trên máy chủ; nơi lưu bên ngoài chưa được cấu hình."
+    ]
+  },
+  {
+    "id": "25ea2548-7d02-419b-bf62-dfd9b87b2d11",
+    "updatedAt": "2026-10-06T10:17:19.566Z",
+    "auditedAt": "2026-10-06T10:17:19.566Z",
+    "title": "Sinh tồn: giảm nghẽn cập nhật giao diện",
+    "changes": [
+      "Bảng chi tiết và lượt chơi dùng hàng đợi riêng, giúp hạn chế việc chờ nhau khi Discord cập nhật chậm.",
+      "Bấm trùng một lượt đang xử lý không gửi lại bảng battle đã cập nhật thành công; lượt chơi vẫn được lưu và cập nhật theo đúng thứ tự.",
+      "Bổ sung đo độ trễ xử lý lượt, dựng UI, chờ hàng đợi và gửi Discord để chẩn đoán phản hồi chậm."
+    ]
+  },
+  {
+    "id": "c825a5da-cc84-4448-8af4-e51c82b144e4",
+    "updatedAt": "2026-10-06T09:40:45.620Z",
+    "auditedAt": "2026-10-06T09:40:45.620Z",
+    "title": "Tower Remembers: ký ức gắn với hành động",
+    "changes": [
+      "Phân loại Ân nghĩa, Truy nã, Hiến tế máu/tài sản, Dư âm gương, Thử thách thần linh và Oán niệm; mỗi event có icon placeholder riêng.",
+      "Đưa nguồn gốc, hậu quả, tầng đến hạn và bảo hộ vào nút Rift; battle UI chỉ giữ tên và nút xử lý.",
+      "Hiến tế có phần thưởng theo loại; truy nã cho lựa chọn bồi thường; thử thách tài sản/thần linh có thể từ chối.",
+      "Mirror Clone và Echo thức tỉnh chuyển thành trận đánh trễ; cướp mộ chỉ nhận đồ một lần. Bỏ qua, bán hòm và hối lộ không tạo ký ức mới.",
+      "Giữ nguyên hậu quả đã khóa của run cũ; giới hạn 8 ký ức chờ, chặn lựa chọn rủi ro khi hàng chờ đầy."
+    ]
+  },
+  {
+    "id": "37347bb3-cfa9-45d1-b590-ad8ee4d4e5df",
+    "updatedAt": "2026-10-06T08:28:53.175Z",
+    "auditedAt": "2026-10-06T08:28:53.175Z",
+    "title": "Lịch sử cập nhật của bot",
+    "changes": [
+      "Thêm /changelog để xem thời gian và nội dung cập nhật; mới nhất ở trang đầu, có phân trang và chọn trang trực tiếp.",
+      "Bổ sung lịch sử các thay đổi gần đây; thời gian hiển thị theo giờ Việt Nam (UTC+7)."
+    ]
+  },
+  {
+    "id": "d08afd1",
+    "updatedAt": "2026-10-06T15:07:53+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "d08afd138546d48e1c1edacd0eb9b64b5ce26542",
+    "title": "Sinh tồn: giảm tỷ lệ rơi đồ cơ bản",
+    "changes": [
+      "Tỷ lệ rơi đồ từ quái: 1% + LUCK × 0,5 điểm %, tối đa 20% (thay mức cơ bản 5%)."
+    ]
+  },
+  {
+    "id": "1f0878e",
+    "updatedAt": "2026-10-06T15:05:16+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "1f0878e8c74e4a0ceb46c46ed27167961a5ce1a9",
+    "title": "Sinh tồn: giá của Blood Merchant",
+    "changes": [
+      "Mua SR/SSR/UR mất lần lượt 12%/25%/40% Max HP trong run, tính theo Max HP lúc gặp thương nhân.",
+      "HP hiện tại chỉ giảm nếu vượt Max HP mới; log ghi chỉ số trước → sau."
+    ]
+  },
+  {
+    "id": "7a1bf36",
+    "updatedAt": "2026-10-06T14:55:50+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "7a1bf36d2ba5b17e87da704fdc614eba78163ed6",
+    "title": "Sinh tồn: giải nguyền giữ nguyên UR",
+    "changes": [
+      "Giải nguyền giữ độ hiếm UR, cấp độ, chỉ số và nội tại; không hạ trang bị xuống SSR.",
+      "Khôi phục UR cho các món từng bị hạ xuống SSR sau giải nguyền."
+    ]
+  },
+  {
+    "id": "3cb961a",
+    "updatedAt": "2026-10-06T13:39:56+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "3cb961a643d081db4ca25c765d847c8a50e49f97",
+    "title": "Sinh tồn: quái có thể rơi trang bị",
+    "changes": [
+      "Quái thường rơi R/SR; tinh anh rơi SR/SSR; trùm rơi SSR/UR. Độ hiếm thấp/cao chia 60%/40%.",
+      "Trùm cuối khu vực có rương không roll thêm; Ancient/Blood Mimic giữ thưởng cũ và roll thêm theo LUCK.",
+      "Tỷ lệ nằm trong Chi tiết; nhặt được đồ ghi ở Lượt vừa rồi. Tỷ lệ cơ bản lúc ra mắt là 5%, đã chỉnh ở bản mới hơn."
+    ]
+  },
+  {
+    "id": "a7d0a36",
+    "updatedAt": "2026-10-06T13:22:27+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "a7d0a363039d897a31b85ef9cd9a67252691e669",
+    "title": "Sinh tồn: vai trò SSR/UR và lời nguyền",
+    "changes": [
+      "Phân định lại vai trò trang bị SSR/UR, bổ sung lựa chọn cho LUCK và ENE.",
+      "Đa dạng hóa lời nguyền UR: chi phí HP/MP, giảm hồi phục, giới hạn bình và tăng sát thương phải nhận; mô tả rõ đối tượng và giới hạn."
+    ]
+  },
+  {
+    "id": "ec99bb9",
+    "updatedAt": "2026-10-06T12:25:08+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "ec99bb96ae84c61363401b8d9d53cd6a7797fb1d",
+    "title": "Sinh tồn: nội tại trang bị",
+    "changes": [
+      "Trang bị có nội tại hỗ trợ khám phá và chiến đấu: dự báo sự kiện, phản sát thương, đổi sát thương thành MP, giảm giá và tăng giới hạn chỉ số.",
+      "Nội tại không tăng theo cấp item; các món khác nhau có cùng hiệu ứng cộng dồn theo giới hạn. Dự báo không tiết lộ kết quả cầu nguyện RNGesus."
+    ]
+  },
+  {
+    "id": "3132cde",
+    "updatedAt": "2026-10-06T11:15:12+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "3132cde0f91ac068574e113ca0d7acf91b48d676",
+    "title": "Sinh tồn: tinh gọn trang bị R/SR",
+    "changes": [
+      "Mỗi món R/SR có vai trò chỉ số rõ ràng, giảm các món cùng độ hiếm có công dụng tương tự.",
+      "Túi đồ cũ được chuyển sang danh mục mới."
+    ]
+  },
+  {
+    "id": "8a27425",
+    "updatedAt": "2026-10-06T10:24:55+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "8a27425b49b329f61588b16fa597cb4261badc5a",
+    "title": "Sinh tồn: phân bổ lại các bảng thông tin",
+    "changes": [
+      "Túi chỉ hiển thị vật phẩm; Rift hiển thị Rift, Paradox và Contract.",
+      "Chỉ số hiển thị nhân vật, tổng chỉ số item và các hiệu ứng ảnh hưởng đến chỉ số."
+    ]
+  },
+  {
+    "id": "aacf186",
+    "updatedAt": "2026-10-06T10:07:39+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "aacf186fd5e9907d4cbb7818dc22e690b70cdd21",
+    "title": "Sinh tồn: dự báo Checkpoint trong Chi tiết",
+    "changes": [
+      "Các lựa chọn tăng STR/DEX/VIT/ENE và dự báo chỉ số trước → sau tại Checkpoint chuyển vào nút Chi tiết."
+    ]
+  },
+  {
+    "id": "89c721c",
+    "updatedAt": "2026-10-06T10:01:34+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "89c721c08a0167c1a149f30af8ca5957b03cac52",
+    "title": "Sinh tồn: rút gọn giao diện chiến đấu",
+    "changes": [
+      "Bỏ mục Rift modifier trên giao diện chiến đấu; xem hiệu ứng bằng nút Rift."
+    ]
+  },
+  {
+    "id": "d70d986",
+    "updatedAt": "2026-10-06T09:56:33+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "d70d9867b026eecb712eb829fe026f2295271da6",
+    "title": "Sinh tồn: mục Rút thưởng gọn hơn",
+    "changes": [
+      "Rút gọn phần xu/kim cương có thể nhận và phần giảm thưởng để dễ đọc."
+    ]
+  },
+  {
+    "id": "4fc4d63",
+    "updatedAt": "2026-10-06T09:53:53+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "4fc4d63d8d0a019e0ed9e8262fc268dd5eb8fdce",
+    "title": "Sinh tồn: hiển thị tỷ lệ gặp RNGesus",
+    "changes": [
+      "Khi gặp RNGesus, tên hiển thị tỷ lệ đã dùng để roll lần gặp đó: RNGesus (X%).",
+      "Bỏ mục Tiến trình khỏi giao diện chiến đấu."
+    ]
+  },
+  {
+    "id": "d5758e9",
+    "updatedAt": "2026-10-06T09:49:57+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "d5758e9b34d159db664e3015833351fe47278586",
+    "title": "Sinh tồn: phân loại Mimic",
+    "changes": [
+      "Ancient Mimic và Blood Mimic được phân loại là quái tinh anh."
+    ]
+  },
+  {
+    "id": "d95d1c0",
+    "updatedAt": "2026-10-06T09:44:47+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "d95d1c05530070822b90d4d962538dd72010cfb2",
+    "title": "Sinh tồn: tách mô tả sự kiện và trang bị",
+    "changes": [
+      "Bỏ trang bị/tổng chỉ số item khỏi giao diện chiến đấu.",
+      "Giải thích các nhánh kết quả của sự kiện chuyển vào nút Chi tiết."
+    ]
+  },
+  {
+    "id": "b4d47e0",
+    "updatedAt": "2026-10-06T09:38:08+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "b4d47e09118d61b950d8e502e937c1e085d9e87e",
+    "title": "Sinh tồn: chuyển Paradox/Contract vào Rift",
+    "changes": [
+      "Hiệu ứng Rift Paradox và Contract nằm trong nút Rift, giảm thông tin trên giao diện chiến đấu."
+    ]
+  },
+  {
+    "id": "23bafb8",
+    "updatedAt": "2026-10-06T09:21:29+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "23bafb8e21278794b9d16c2bf2267ea33538e858",
+    "title": "Sinh tồn: log hồi máu của Druid",
+    "changes": [
+      "Ghi hồi HP của Druid trong log lượt, gồm lượng hồi và HP trước → sau; chuẩn hóa icon HP."
+    ]
+  },
+  {
+    "id": "e30f4da",
+    "updatedAt": "2026-10-06T09:14:07+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "e30f4da50908321689954a1884ba9896d73b36d6",
+    "title": "Sinh tồn: mô tả Mana Vỡ Vụn",
+    "changes": [
+      "Bổ sung icon cho lựa chọn Paradox và làm rõ MP tiêu hao/hồi khi dùng kỹ năng, tấn công, phòng thủ."
+    ]
+  },
+  {
+    "id": "7fe144d",
+    "updatedAt": "2026-10-06T08:39:58+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "7fe144dfd9235388b999373e921c106a4d8998f4",
+    "title": "Sinh tồn: sửa icon xu",
+    "changes": [
+      "Sửa chỗ hiển thị undefined trong phần xu đã chi và chuẩn hóa icon xu ở giao diện/log."
+    ]
+  },
+  {
+    "id": "aafd356",
+    "updatedAt": "2026-10-06T08:30:37+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "aafd356316a88fd7a5251ff2e38112ba779fdab4",
+    "title": "Sinh tồn: minh bạch biến động tiền thưởng",
+    "changes": [
+      "Đưa số xu thực nhận sau phạt vào mục Rút thưởng.",
+      "Sự kiện cộng/trừ tiền thưởng và bán rương ghi biến động trước → sau trong log."
+    ]
+  },
+  {
+    "id": "9d2609e",
+    "updatedAt": "2026-10-05T19:01:24+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "9d2609eef3a0188926d4a8968e0c8716d639c3cd",
+    "title": "Sinh tồn: icon Paradox",
+    "changes": [
+      "Dùng các icon Paradox đã upload lên ứng dụng Discord trong giao diện sinh tồn."
+    ]
+  },
+  {
+    "id": "bbc2039",
+    "updatedAt": "2026-10-05T18:01:05+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "bbc2039c65d7b4a5006e614c240c00a24dc331b8",
+    "title": "Tháp Định Mệnh: sửa nút Chơi lại",
+    "changes": [
+      "Run thất bại, đã hoàn thành hoặc thuộc phiên bản cũ có thể chơi lại thử thách đang hoạt động."
+    ]
+  },
+  {
+    "id": "bb01b4e",
+    "updatedAt": "2026-10-05T17:14:42+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "bb01b4e39e6c27042b32cbff65a1c641b4674638",
+    "title": "Tháp Định Mệnh: bộ sinh thử thách tuần",
+    "changes": [
+      "Nâng cấp bộ sinh tháp tuần, kiểm tra chuỗi hoàn hảo cho cả 7 class trước khi đưa thử thách vào chơi."
+    ]
+  },
+  {
+    "id": "7b4dedd",
+    "updatedAt": "2026-10-05T15:38:26+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "7b4dedddec9b58925991ea3491cbd9974f8f3fe4",
+    "title": "Sinh tồn: chu kỳ xuất hiện RNGesus",
+    "changes": [
+      "Sau khi vượt qua RNGesus, tỷ lệ gặp được reset và tăng chậm lại từ đầu.",
+      "RNGesus không xuất hiện ở hai tầng liền kề."
+    ]
+  },
+  {
+    "id": "c72eb03",
+    "updatedAt": "2026-10-05T15:26:03+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "c72eb03a3d12305df68ca6014aa499cf8e047da0",
+    "title": "Hồ sơ: vòng avatar thành tựu class",
+    "changes": [
+      "Đạt tầng 500 với một class nhận vòng avatar riêng của class đó; vòng chỉ nhận qua thành tựu."
+    ]
+  },
+  {
+    "id": "384906b",
+    "updatedAt": "2026-10-05T14:07:45+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "384906b9437417bd15178c003ad0140e3a6bc774",
+    "title": "Sinh tồn: mô tả hiệu ứng rõ hơn",
+    "changes": [
+      "Làm rõ đối tượng chịu/nhận hiệu ứng Rift, chuẩn hóa cách hiển thị chỉ số và mô tả Soul Drain."
+    ]
+  },
+  {
+    "id": "a168a3c",
+    "updatedAt": "2026-10-05T13:51:50+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "a168a3c2f345cdb5328d125f8666d333aa73110b",
+    "title": "Sinh tồn V2: khôi phục cách hiển thị cũ",
+    "changes": [
+      "Khôi phục nút chiến đấu gọn và nhãn MP trong Sinh tồn V2."
+    ]
+  },
+  {
+    "id": "c305df0",
+    "updatedAt": "2026-10-05T13:06:04+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "c305df09cdc528e07a1cab6394419721960005d7",
+    "title": "Tháp Định Mệnh: bỏ chỉ số bị lặp",
+    "changes": [
+      "DEF và RES trên bảng nhân vật không còn hiển thị hai lần."
+    ]
+  },
+  {
+    "id": "579168c",
+    "updatedAt": "2026-10-05T13:01:38+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "579168cfe8e8a32b72e8d64a61724ca7eab85515",
+    "title": "Tháp Định Mệnh: đồng bộ giao diện",
+    "changes": [
+      "Áp dụng quy tắc hiển thị chỉ số và giao diện chiến đấu của Sinh tồn V2 cho tháp."
+    ]
+  },
+  {
+    "id": "eb66020",
+    "updatedAt": "2026-10-05T12:41:01+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "eb66020a0ca323bb062f1c03dd13073d49b623b2",
+    "title": "Rift Paradox V2 và Tháp Định Mệnh",
+    "changes": [
+      "Bổ sung Paradox V2 và thử thách Tháp Định Mệnh theo tuần, độc lập với run sinh tồn."
+    ]
+  },
+  {
+    "id": "1df259e",
+    "updatedAt": "2026-10-05T11:54:46+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "1df259eed83b7de93d44a8569f068a83f88f6b5f",
+    "title": "Hồ sơ: nền tối",
+    "changes": [
+      "Đổi các mảng màu pastel sáng trên hồ sơ sang bảng màu tối."
+    ]
+  },
+  {
+    "id": "e80316e",
+    "updatedAt": "2026-10-05T11:46:32+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "e80316ef864635027053c5ed3a66c08cd60ac477",
+    "title": "Poker: giao diện kết thúc ván",
+    "changes": [
+      "Ẩn mục Bài của bot sau khi ván poker đã kết thúc."
+    ]
+  },
+  {
+    "id": "8f329df",
+    "updatedAt": "2026-10-05T11:33:47+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "8f329df5839d842dab7e58f98a18cf831b4a9d12",
+    "title": "Sinh tồn: nhánh cướp Lost Adventurer",
+    "changes": [
+      "Cướp thành công nhận SSR (75%) hoặc UR (25%).",
+      "Hậu quả sau đó: 50% mất 10% payout, 50% phải đánh Bounty Hunter tinh anh."
+    ]
+  },
+  {
+    "id": "3fdf93f",
+    "updatedAt": "2026-10-05T11:18:02+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "3fdf93f5ca415d04e8180e472cca257fbeca2d3b",
+    "title": "Sinh tồn: cửa hàng, túi đồ và loadout",
+    "changes": [
+      "Thêm /sinhton cuahang và /sinhton tuido. Vé chạy RNGesus/tăng cầu nguyện/hồi sinh giá 100/100/300 kim cương.",
+      "Năm món ngẫu nhiên đổi lúc 00:00 Việt Nam; giá R/SR/SSR/UR là 10.000/50.000/100.000/200.000 xu, mua không giới hạn.",
+      "Trước khi bắt đầu chọn tối đa 5 món khác nhau và 1 vé mỗi loại, xem chỉ số rồi xác nhận. Đồ/vé đã mang vào run không hoàn trả.",
+      "Cứu Lost Adventurer cho bảo hộ hồi sinh 50% HP một lần trong cùng khu vực, ưu tiên trước vé hồi sinh."
+    ]
+  },
+  {
+    "id": "bcaef79",
+    "updatedAt": "2026-10-05T09:53:25+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "bcaef7957dbe1f07fd1c12cd300c8ff13442026f",
+    "title": "Sinh tồn: mô tả trừ HP theo Max HP",
+    "changes": [
+      "Làm rõ lời nguyền trừ HP hiện tại theo phần trăm Max HP, không phải giảm Max HP."
+    ]
+  },
+  {
+    "id": "62aca60",
+    "updatedAt": "2026-10-05T09:44:59+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "62aca60056d54fb12c86f316f9a0ba582a413a5e",
+    "title": "Sinh tồn: đồ nhận gần nhất ở đầu túi",
+    "changes": [
+      "Các món vừa nhận được đẩy lên đầu danh sách túi đồ."
+    ]
+  },
+  {
+    "id": "db27a0a",
+    "updatedAt": "2026-10-05T09:23:35+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "db27a0abbe2c5e41f47581a0b5478d8d94e95a35",
+    "title": "Cò quay Nga: bỏ mục Lượt của bạn",
+    "changes": [
+      "Bỏ nhãn lượt dư thừa khỏi giao diện Cò quay Nga."
+    ]
+  },
+  {
+    "id": "25a3b31",
+    "updatedAt": "2026-10-04T22:49:19+07:00",
+    "auditedAt": "2026-10-06T08:25:05.492Z",
+    "commit": "25a3b31a186c3b334ae3a00e6e81044e03e287ed",
+    "title": "Sinh tồn: xác nhận rút thưởng",
+    "changes": [
+      "Thêm xác nhận riêng tư, cho xem trước phần thưởng trước khi rút."
+    ]
+  }
+]

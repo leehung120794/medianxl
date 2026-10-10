@@ -1,6 +1,7 @@
 "use strict";
 // Sinh tồn 2.0.0 — generated from docs/releases/hardcore-2.0.0-spec.md.
 const passives = require("./itemPassives");
+const { RELIC_ITEMS, RELIC_RULES } = require("./itemRelics");
 const ITEMS = {
   common: [
     {
@@ -1261,6 +1262,7 @@ const TYPE_CODES = Object.freeze({
   rare: "SR",
   legendary: "SSR",
   cursed: "UR",
+  limited: "LR",
 });
 function validateItems(catalog = ITEMS) {
   const ids = new Set();
@@ -1367,8 +1369,54 @@ for (const pool of Object.values(ITEMS)) {
   Object.freeze(pool);
 }
 Object.freeze(ITEMS);
+const CONSUMABLE_ITEMS = Object.freeze({
+  survival_escape: Object.freeze({
+    id: "survival_escape",
+    name: "Vé thoát",
+    category: "consumable",
+    rarity: "cursed",
+    typeCode: "UR",
+    catalogVersion: 2,
+    randomEligible: true,
+    gachaEligible: false,
+    effects: Object.freeze({ escapeTokens: 1 }),
+    text: "Nhận 1 vé bỏ chạy RNGesus, giữ tối đa 1. Tự dùng khi bỏ chạy thất bại; không có level hoặc lời nguyền.",
+    curse: null,
+  }),
+  survival_revive: Object.freeze({
+    id: "survival_revive",
+    name: "Vé hồi sinh",
+    category: "consumable",
+    rarity: "limited",
+    typeCode: "LR",
+    catalogVersion: 2,
+    randomEligible: false,
+    gachaEligible: false,
+    effects: Object.freeze({ reviveTickets: 1 }),
+    text: "Tử trận: tự dùng 1 vé, hồi 50% Max HP. Đánh quái: ở lại đánh tiếp; RNGesus: sang tầng kế. Không có level hoặc lời nguyền.",
+    curse: null,
+  }),
+});
+// LR has no random pool. Consumables are separate from the equipment catalog.
+const ITEM_POOLS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(ITEMS).map(([rarity, items]) => [
+      rarity,
+      Object.freeze([
+        ...items,
+        ...Object.values(CONSUMABLE_ITEMS).filter(
+          (item) => item.randomEligible && item.rarity === rarity,
+        ),
+      ]),
+    ]),
+  ),
+);
 module.exports = {
   ITEMS,
+  ITEM_POOLS,
+  CONSUMABLE_ITEMS,
+  RELIC_ITEMS,
+  RELIC_RULES,
   TYPE_CODES,
   ITEM_ALIASES,
   resolveItemId,

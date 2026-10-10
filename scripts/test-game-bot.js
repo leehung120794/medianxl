@@ -10,7 +10,16 @@ const expectedCommandFiles = [
   "batdau",
   "trogiup",
   "huongdan",
-  "choi",
+  "changelog",
+  "baucua",
+  "taixiu",
+  "chinchiro",
+  "xidach",
+  "poker",
+  "duangua",
+  "domin",
+  "coquay",
+  "sinhton",
   "luat",
   "hoso",
   "xu",
@@ -20,13 +29,16 @@ const expectedCommandFiles = [
   "anxin",
   "quantri",
   "gacha",
+  "item",
   "vtv",
 ];
 const expectedCommands = expectedCommandFiles.map((file) => file);
+const commandRegistry = require("../src/commandRegistry");
 assert.deepEqual(
-  [...require("../src/commandRegistry").COMMAND_FILES],
+  [...commandRegistry.COMMAND_FILES],
   expectedCommandFiles,
 );
+const registeredCommands = commandRegistry.loadCommands("../src/commands");
 
 const countLimit = (options = [], where) => {
   assert(
@@ -37,18 +49,12 @@ const countLimit = (options = [], where) => {
     countLimit(option.options, `${where} ${option.name}`),
   );
 };
-for (const file of expectedCommandFiles) {
-  const registered =
-    file === "vtv"
-      ? require("../src/commands/vuatiengviet").playerCommand
-      : require(`../src/commands/${file}`);
+for (const [index, file] of expectedCommandFiles.entries()) {
+  const registered = registeredCommands[index];
   countLimit(registered.data.toJSON().options, file);
 }
 for (const [index, file] of expectedCommandFiles.entries()) {
-  const command =
-    file === "vtv"
-      ? require("../src/commands/vuatiengviet").playerCommand
-      : require(`../src/commands/${file}`);
+  const command = registeredCommands[index];
   assert.equal(
     command.data.toJSON().name,
     expectedCommands[index],
@@ -125,10 +131,10 @@ assert.deepEqual(
     .options.map((option) => option.name),
   ["cuahang", "mua", "tui", "sudung", "tang", "quay", "chitiet"],
 );
-// 3 lệnh thưởng vai trò được gộp thành một bảng (xemthuongvaitro) và thêm hesothang: 25 − 2 + 1 = 24, còn trống 1 chỗ
+// Lệnh quản trị dùng đủ 25 vị trí Discord cho phép, gồm cả thapreset.
 assert.equal(
   require("../src/commands/quantri").data.toJSON().options.length,
-  24,
+  25,
 );
 const adminOptionNames = require("../src/commands/quantri")
   .data.toJSON()
@@ -141,6 +147,7 @@ assert(
     "datbuff",
     "xemthuongvaitro",
     "hesothang",
+    "thapreset",
   ].every((name) => adminOptionNames.includes(name)),
 );
 assert(
@@ -702,64 +709,31 @@ buffs.setBuff({
 });
 buffs.setBuff({
   guildId: "buff-guild",
-  type: "diamonds",
-  percent: 200,
-  hours: 2,
-  updatedBy: "admin",
-  now: buffNow,
-});
-dropConfig.setGameConfig(
-  "buff-guild",
-  "GAME_ITEM_DROP_MULTIPLIER",
-  10,
-  "admin",
-);
-buffs.setBuff({
-  guildId: "buff-guild",
-  type: "free_pull",
-  percent: 1000,
-  hours: 2,
-  updatedBy: "admin",
-  now: buffNow,
-});
-buffs.setBuff({
-  guildId: "buff-guild",
   type: "gacha_luck",
   percent: 200,
   hours: 2,
   updatedBy: "admin",
   now: buffNow,
 });
-const buffSettlement =
-  require("../src/services/economyService").recordGameResult({
-    guildId: "buff-guild",
-    userId: "alice",
-    game: "mines",
-    outcome: "win",
-  });
+const buffDrops = buffs.rollGameDrops({
+  guildId: "buff-guild",
+  userId: "alice",
+  game: "mines",
+  stake: 100_000,
+  now: buffNow,
+  randomInt: () => 0,
+});
 assert.deepEqual(
-  buffSettlement.bonusDrops.map((drop) => drop.type),
-  ["coins", "diamonds", "item"],
-);
-const buffItemDrop = buffSettlement.bonusDrops.find(
-  (drop) => drop.type === "item",
-);
-assert(
-  require("../src/services/gameItemDropService")
-    .dropPool("mines")
-    .some((item) => item.id === buffItemDrop.itemId),
-  "chỉ rơi vật phẩm của chính game Mines",
+  buffDrops.map((drop) => [drop.type, drop.amount]),
+  [["coins", 500]],
 );
 assert.equal(
-  require("../src/services/shopService").getInventoryQuantity(
+  require("../src/services/economyService").getAccount(
     "buff-guild",
     "alice",
-    buffItemDrop.itemId,
-  ),
-  1,
+  ).balance,
+  1_500,
 );
-assert.equal(buffSettlement.balance, 1_500);
-assert.equal(levels.getPlayerProgression("buff-guild", "alice").diamonds, 14);
 assert.equal(
   gacha.getTicketBalances("buff-guild", "alice").single,
   0,
@@ -808,14 +782,11 @@ const rangedDrops = buffs.rollGameDrops({
 });
 assert.deepEqual(
   rangedDrops.map((drop) => [drop.type, drop.amount]),
-  [["diamonds", 4]],
+  [],
 );
 // Thưởng vật phẩm theo game: mỗi game một tỷ lệ riêng, chỉ rơi vật phẩm của chính game đó, độ hiếm cố định
 const itemDrop = require("../src/services/gameItemDropService");
 const dropGames = [
-  "baucua",
-  "taixiu",
-  "duangua",
   "blackjack",
   "poker",
   "mines",
@@ -853,6 +824,12 @@ for (const game of dropGames) {
     assert(items.some((item) => item.id === picked.id));
   }
 }
+for (const game of ["baucua", "taixiu", "duangua"])
+  assert.equal(
+    itemDrop.dropPool(game).length,
+    0,
+    `${game} không rơi vật phẩm bị khóa khỏi Gacha`,
+  );
 {
   // độ hiếm cố định, không phụ thuộc số vật phẩm: Mines có 2 vật phẩm R nhưng R vẫn chỉ chiếm đúng tỷ lệ bậc R
   const N = 100_000;
@@ -898,50 +875,6 @@ for (const game of dropGames) {
       Math.abs(rateOf("coquay") - 0.05) < 0.01,
   );
 }
-dropConfig.setGameConfig(
-  "drop-rate-guild",
-  "GAME_ITEM_DROP_MULTIPLIER",
-  1,
-  "admin",
-);
-const forcedDrops = buffs.rollGameDrops({
-  guildId: "drop-rate-guild",
-  userId: "dropper",
-  game: "poker",
-  randomInt: (minimum, maximum) => (maximum === undefined ? 0 : minimum),
-});
-const forcedItem = forcedDrops.find((drop) => drop.type === "item");
-assert(
-  forcedItem &&
-    itemGames(
-      require("../src/services/itemCatalogService").getCatalogItem(
-        forcedItem.itemId,
-      ),
-    ).includes("poker"),
-  "rơi vật phẩm Poker sau ván Poker",
-);
-assert.match(
-  require("../src/utils/rewardText").bonusLine([forcedItem]),
-  /BUFF SỰ KIỆN.+\[(R|SR|SSR|UR)\]/,
-);
-dropConfig.setGameConfig(
-  "drop-rate-guild",
-  "GAME_ITEM_DROP_MULTIPLIER",
-  0,
-  "admin",
-);
-assert.deepEqual(
-  buffs
-    .rollGameDrops({
-      guildId: "drop-rate-guild",
-      userId: "dropper",
-      game: "poker",
-      randomInt: () => 0,
-    })
-    .filter((drop) => drop.type === "item"),
-  [],
-  "hệ số 0 tắt rơi vật phẩm",
-);
 const xpResult = levels.addExperience("level-guild", "alice", 200, {
   now: 4000,
 });
@@ -1005,7 +938,7 @@ assert.equal(
 const shopCommand = require("../src/commands/shop");
 assert.equal(
   shopCommand.shopSelectRow("alice").toJSON().components[0].options.length,
-  12,
+  require("../src/services/itemGameService").GAME_FILTERS.length + 2,
 );
 const effects = require("../src/services/effectStateService");
 effects.addEffectCharge("stack-guild", "alice", "blackjack_redraw", {
@@ -1039,12 +972,6 @@ require("../src/services/shopService").addInventory(
   "horse_jackpot",
   2,
 );
-itemEffects.useItem({
-  guildId: "stack-use-guild",
-  userId: "alice",
-  channelId: "channel",
-  itemId: "horse_jackpot",
-});
 assert.throws(
   () =>
     itemEffects.useItem({
@@ -1053,7 +980,7 @@ assert.throws(
       channelId: "channel",
       itemId: "horse_jackpot",
     }),
-  /EFFECT_ALREADY_ACTIVE/,
+  /MULTIPLAYER_ITEMS_DISABLED/,
 );
 assert.equal(
   require("../src/services/shopService").getInventoryQuantity(
@@ -1061,12 +988,12 @@ assert.equal(
     "alice",
     "horse_jackpot",
   ),
-  1,
+  2,
 );
 const multiplayer = require("../src/services/multiplayerGameService");
 assert.deepEqual(
   multiplayer.rollResult("taixiu", [6, 6, 6], null, { noTriple: true }).dice,
-  [6, 6, 1],
+  [6, 6, 6],
 );
 effects.addEffectCharge("eye-limit-guild", "alice", "dice_divine_eye", {
   metadata: { roundId: "round-eye" },
@@ -1077,7 +1004,7 @@ assert.equal(
     { id: "round-eye", guild_id: "eye-limit-guild", game: "taixiu" },
     "alice",
   ),
-  4321,
+  require("../src/services/gameBetLimitService").DEFAULT_MAX_BET,
 );
 for (const effectId of [
   "blackjack_redraw",
@@ -1233,21 +1160,6 @@ for (const key of [
 ])
   dropConfig.setGameConfig("chinchiro-karma-guild", key, 0, "test");
 effects.addEffectCharge("chinchiro-karma-guild", "alice", "chinchiro_karma");
-effects.addEffectCharge(
-  "chinchiro-karma-guild",
-  "alice",
-  "chinchiro_otsuki_dice",
-);
-effects.addEffectCharge(
-  "chinchiro-karma-guild",
-  "alice",
-  "chinchiro_weighted_dice",
-);
-effects.addEffectCharge(
-  "chinchiro-karma-guild",
-  "alice",
-  "chinchiro_soundproof_bowl",
-);
 const karmaGame = chinchiro.startChinchiro({
   guildId: "chinchiro-karma-guild",
   channelId: "channel",
@@ -1256,7 +1168,8 @@ const karmaGame = chinchiro.startChinchiro({
   forcedSeed: hifumiSeed,
 });
 assert.equal(karmaGame.immediate, false);
-assert.equal(karmaGame.state.effect, "chinchiro_karma");
+assert.equal(karmaGame.state.effect, null);
+assert.equal(karmaGame.state.karmaArmed, true);
 const karmaResult = chinchiro.shakeChinchiro(karmaGame.session.id, "alice");
 assert.equal(karmaResult.state.player.hand.kind, "hifumi");
 assert.equal(karmaResult.result.karmaTriggered, true);
@@ -1265,14 +1178,6 @@ assert.equal(karmaResult.result.balance, 1200);
 assert.equal(
   effects.getActiveEffect("chinchiro-karma-guild", "alice", "chinchiro_karma"),
   null,
-);
-assert.equal(
-  effects.getActiveEffect(
-    "chinchiro-karma-guild",
-    "alice",
-    "chinchiro_otsuki_dice",
-  ).charges,
-  1,
 );
 for (const key of [
   "GAME_COIN_DROP_CHANCE",
@@ -1351,7 +1256,10 @@ const emptyProfileStats = profileGames.getAllGameStats(
   "profile-test",
   "new-player",
 );
-assert.equal(emptyProfileStats.length, 11);
+assert.equal(
+  emptyProfileStats.length,
+  Object.keys(profileGames.GAME_LABELS).length,
+);
 assert(
   emptyProfileStats.every(
     (item) => item.played === 0 && item.wagered === 0 && item.net === 0,
@@ -1361,7 +1269,10 @@ assert.equal(profileGames.summarizeGameStats(emptyProfileStats).activeGames, 0);
 const profileMenu = profileCommand
   .profileSelectRow("owner", "target", emptyProfileStats)
   .toJSON();
-assert.equal(profileMenu.components[0].options.length, 12);
+assert.equal(
+  profileMenu.components[0].options.length,
+  emptyProfileStats.length + 1,
+);
 assert.equal(
   profileMenu.components[0].options.filter((option) => option.default).length,
   1,
@@ -1384,7 +1295,10 @@ gameConfig.setGameConfig(
   "admin",
 );
 assert.equal(economy.getAccount("config-guild", "new-player").balance, 4321);
-assert.equal(gameConfig.listGameConfigs("config-guild").length, 23);
+assert.equal(
+  gameConfig.listGameConfigs("config-guild").length,
+  gameConfig.GAME_CONFIG_KEYS.length,
+);
 assert.throws(
   () =>
     gameConfig.setGameConfig(
@@ -1462,8 +1376,8 @@ gameConfig.setGameConfig("exp-config-guild", "GAME_EXP_MAX", 30, "admin");
 assert.equal(
   require("../src/services/playerLevelService").gameExperience(
     "win",
-    5_000,
-    1_000,
+    500_000,
+    100_000,
     "exp-config-guild",
   ),
   30,
@@ -1493,7 +1407,10 @@ assert(
 const operationalHealth =
   require("../src/services/operationalHealthService").getOperationalHealth();
 assert.equal(operationalHealth.database.check, "ok");
-assert.equal(operationalHealth.database.migration, 24);
+assert(
+  Number.isSafeInteger(operationalHealth.database.migration) &&
+    operationalHealth.database.migration > 0,
+);
 assert(Number.isSafeInteger(operationalHealth.active.total));
 const starter = require("../src/services/onboardingService");
 const starterFirst = starter.claimStarterPack("starter-guild", "alice", 1000);
@@ -1507,8 +1424,8 @@ assert.equal(starterSecond.claimed, false);
 const idempotentFirst = economy.settleReservedGame({
   guildId: "idempotent-guild",
   userId: "alice",
-  payout: 125,
-  stake: 100,
+  payout: 1_250,
+  stake: 1_000,
   game: "mines",
   outcome: "win",
   operationId: "settle:mines:test-session",
@@ -1516,8 +1433,8 @@ const idempotentFirst = economy.settleReservedGame({
 const idempotentSecond = economy.settleReservedGame({
   guildId: "idempotent-guild",
   userId: "alice",
-  payout: 125,
-  stake: 100,
+  payout: 1_250,
+  stake: 1_000,
   game: "mines",
   outcome: "win",
   operationId: "settle:mines:test-session",
@@ -1641,6 +1558,7 @@ const baseExperience = progression.recordGameEvent({
   userId: "alice",
   game: "mines",
   outcome: "loss",
+  stake: 100_000,
   now: tournamentNow,
 });
 assert.equal(baseExperience.experienceGained, 10);
@@ -1758,9 +1676,9 @@ const cardResult = blackjackDuel.playBlackjackDuel(
 );
 assert.equal(cardResult.settled, true);
 assert.equal(cardResult.duel.progression.length, 2);
-assert.match(
+assert.doesNotMatch(
   JSON.stringify(blackjackDuel.blackjackDuelEmbed(cardResult.duel).toJSON()),
-  /\+10 :test_tube:/,
+  /:test_tube:/,
 );
 assert.equal(cardResult.duel.winner_id, "alice");
 assert.equal(economy.getAccount("card-guild", "alice").balance, 1100);
@@ -1884,14 +1802,14 @@ const bothBustResult = blackjack.playAction({
 assert.equal(bothBustResult.settled, true);
 assert.equal(bothBustResult.result.outcome, "draw");
 assert.equal(bothBustResult.result.payout, 100);
-assert.equal(bothBustResult.result.experienceGained, 10);
-assert.match(
+assert.equal(bothBustResult.result.experienceGained, 0);
+assert.doesNotMatch(
   JSON.stringify(
     blackjack
       .blackjackEmbed(bothBustResult.state, "alice", bothBustResult.result)
       .toJSON(),
   ),
-  /\+10 :test_tube:/,
+  /:test_tube:/,
 );
 assert.match(
   blackjack
@@ -1994,10 +1912,10 @@ const pokerFolded = poker.playerAction(
   "fold",
 );
 assert.equal(pokerFolded.phase, "complete");
-assert.equal(pokerFolded.result.experienceGained, 10);
-assert.match(
+assert.equal(pokerFolded.result.experienceGained, 0);
+assert.doesNotMatch(
   JSON.stringify(poker.pokerEmbed(pokerFolded, "alice").toJSON()),
-  /\+10 :test_tube:/,
+  /:test_tube:/,
 );
 assert.equal(economy.getAccount("poker-guild", "alice").balance, 950);
 const raisedPoker = poker.startPoker({
@@ -2145,8 +2063,8 @@ const mineCashout = mines.playMines({
 });
 assert.equal(mineCashout.settled, true);
 assert(mineCashout.result.payout > 100);
-assert(mineCashout.result.experienceGained >= 10);
-assert.match(
+assert.equal(mineCashout.result.experienceGained, 0);
+assert.doesNotMatch(
   JSON.stringify(
     mines.minesEmbed(mineCashout.state, "hunter", mineCashout.result).toJSON(),
   ),

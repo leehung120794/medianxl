@@ -83,6 +83,168 @@ async function main() {
   );
   groups.push("formulas");
 
+  // Treasure replaces Blood without changing the six equally likely Shrine types.
+  assert.deepEqual(core.SHRINE_KINDS, [
+    "healing",
+    "armor",
+    "treasure",
+    "experience",
+    "corrupted",
+    "fake",
+  ]);
+  assert.deepEqual(core.SHRINE_TREASURE_WEIGHTS, {
+    common: 50,
+    rare: 30,
+    legendary: 15,
+    cursed: 5,
+  });
+  for (const [roll, rarity] of [
+    [0, "common"],
+    [0.499999, "common"],
+    [0.5, "rare"],
+    [0.799999, "rare"],
+    [0.8, "legendary"],
+    [0.949999, "legendary"],
+    [0.95, "cursed"],
+    [0.999999, "cursed"],
+  ]) {
+    const s = stats.createState("barbarian", 10);
+    s.floor = 6;
+    s.cleared = 5;
+    s.luck = 999;
+    s.pityRare = 99;
+    s.pityLegendary = 99;
+    const rolls = [0.4, 0, roll, 0.999999];
+    s.encounter = core.makeShrine(s, () => rolls.shift());
+    assert.equal(s.encounter.kind, "treasure");
+    assert.equal(s.encounter.item.rarity, rarity);
+    const locked = JSON.parse(JSON.stringify(s));
+    core.normalize(locked);
+    const reward = JSON.stringify(locked.encounter.item);
+    const detail = JSON.stringify(
+      view.privatePayload(locked, "treasure", "message", "encounter"),
+    );
+    assert(detail.includes("Treasure"));
+    assert(!detail.includes("**Blood:**"));
+    // Readonly UI must not expose the locked Shrine kind or selected item.
+    const other = structuredClone(locked);
+    other.encounter.kind = "healing";
+    assert.equal(
+      detail,
+      JSON.stringify(
+        view.privatePayload(other, "treasure", "message", "encounter"),
+      ),
+    );
+    const vitamin = locked.vit;
+    core.act(
+      locked,
+      { id: "treasure", guild_id: "v2", user_id: "treasure", channel_id: "c" },
+      "touch",
+      () => 0.999999,
+    );
+    assert.equal(locked.lastReceivedItems.length, 1);
+    assert.equal(
+      JSON.stringify(locked.lastReceivedItems[0].definition),
+      reward,
+    );
+    assert.equal(locked.lastReceivedItems[0].rarity, rarity);
+    assert.equal(locked.pityRare, 99);
+    assert.equal(locked.pityLegendary, 99);
+    assert.match(locked.lastLog, /Shrine Treasure/);
+    const log = JSON.stringify(view.embed(locked, "treasure").toJSON());
+    assert(!log.includes("undefined"));
+    assert(log.includes("Lượt vừa rồi"));
+    if (rarity === "cursed") {
+      assert.equal(locked.escapeTokens, 1);
+      assert.equal(locked.items.length, 0);
+      assert.equal(locked.vit, vitamin);
+    } else assert.equal(locked.items[0].level, 1);
+    const skipped = JSON.parse(JSON.stringify(s));
+    core.normalize(skipped);
+    core.act(
+      skipped,
+      { id: "treasure", guild_id: "v2", user_id: "treasure", channel_id: "c" },
+      "skip",
+      () => 0.999999,
+    );
+    assert.equal(skipped.items.length, 0);
+    assert.equal(skipped.escapeTokens, 0);
+    assert.equal(skipped.lastReceivedItems.length, 0);
+  }
+  const urShrines = stats.createState("barbarian", 10);
+  urShrines.floor = 6;
+  urShrines.cleared = 5;
+  for (const level of [1, 2]) {
+    const rolls = [0.4, 0, 0.95, 0];
+    urShrines.encounter = core.makeShrine(urShrines, () => rolls.shift());
+    core.act(
+      urShrines,
+      {
+        id: "treasure-ur",
+        guild_id: "v2",
+        user_id: "treasure",
+        channel_id: "c",
+      },
+      "touch",
+      () => 0.999999,
+    );
+    assert.equal(urShrines.items.length, 1);
+    assert.equal(urShrines.items[0].rarity, "cursed");
+    assert.equal(urShrines.items[0].level, level);
+    assert(urShrines.items[0].definition.curse);
+    assert.equal(urShrines.lastReceivedItems[0].levels, 1);
+  }
+  const pendingBlood = stats.createState("barbarian", 10);
+  pendingBlood.floor = 6;
+  pendingBlood.cleared = 5;
+  pendingBlood.encounter = {
+    type: "shrine",
+    name: "Shrine",
+    kind: "blood",
+    powerStat: "str",
+    armorStat: "vit",
+  };
+  const migrationCopy = structuredClone(pendingBlood);
+  const priorStats = stats.derive(pendingBlood);
+  core.normalize(pendingBlood);
+  core.normalize(migrationCopy);
+  assert.equal(pendingBlood.encounter.kind, "treasure");
+  assert.deepEqual(pendingBlood.encounter, migrationCopy.encounter);
+  assert.deepEqual(stats.derive(pendingBlood), priorStats);
+  const migrated = JSON.stringify(pendingBlood);
+  core.normalize(pendingBlood);
+  assert.equal(JSON.stringify(pendingBlood), migrated);
+  const treasureRun = start();
+  save(treasureRun, (s) => {
+    s.floor = 6;
+    s.cleared = 5;
+    const rolls = [0.4, 0, 0.5, 0];
+    s.encounter = core.makeShrine(s, () => rolls.shift());
+  });
+  const treasureSaved = repo.parseState(
+    repo.getSession(treasureRun.session.id),
+  );
+  const found = play(treasureRun, "touch");
+  assert.equal(found.state.items[0].level, 1);
+  const persistedTreasure = repo.getSession(treasureRun.session.id).state_json;
+  assert.throws(
+    () =>
+      service.playHardcore({
+        sessionId: treasureRun.session.id,
+        userId: treasureRun.session.user_id,
+        expectedTurn: treasureSaved.turn,
+        action: "touch",
+      }),
+    /STALE_ACTION/,
+  );
+  assert.equal(
+    repo.getSession(treasureRun.session.id).state_json,
+    persistedTreasure,
+  );
+  groups.push(
+    "Treasure Shrine exact rarity boundaries, fixed rewards, UR consumable, skip, pending Blood migration and stale clicks",
+  );
+
   assert.deepEqual(
     Object.values(core.ITEMS).map((pool) => pool.length),
     [10, 13, 24, 16],
@@ -150,7 +312,9 @@ async function main() {
     .privatePayload(inventory, "recent", "public", "items", 1)
     .embeds[0].toJSON();
   assert.deepEqual(
-    firstPage.fields.slice(1).map((field) => field.name),
+    firstPage.fields
+      .filter((field) => field.name.includes(" Lv."))
+      .map((field) => field.name),
     inventory.items
       .slice(0, 5)
       .map(
@@ -201,11 +365,11 @@ async function main() {
     cleansedLevels: 2,
   });
   assert(cleanLoot.defense > 0);
-  assert.equal(cleanLoot.items[0].rarity, "legendary");
+  assert.equal(cleanLoot.items[0].rarity, "cursed");
   core.receiveItem(cleanLoot, cleanLoot.items[0].definition, 1, 1);
   assert(cleanLoot.defense > 0);
   assert.equal(cleanLoot.items[0].cleansedLevels, 3);
-  assert.equal(target.rarity, "legendary");
+  assert.equal(target.rarity, "cursed");
   assert.equal(target.cleansedLevels, 2);
   assert.equal(cursed.str, power);
   core.receiveItem(cursed, item("glass_cannon"));
@@ -331,7 +495,7 @@ async function main() {
     s.floor = 11;
     s.cleared = 10;
     s.encounter = core.makeSurprise(s, rng, "blood_shop");
-    s.hp = s.encounter.offers[0].price;
+    stats.addSource(s, { maxHp: s.encounter.offers[0].price - s.maxHp });
   });
   const bloodSnapshot = repo.getSession(blood.session.id).state_json;
   assert.throws(() => play(blood, "buy_0"), /INVALID_ACTION/);
@@ -398,7 +562,7 @@ async function main() {
 
   const memory = stats.createState("barbarian", 10);
   memory.encounter = { type: "empty" };
-  for (let i = 0; i < 20; i++) core.remember(memory, "sell_chest", rng);
+  for (let i = 0; i < 20; i++) core.remember(memory, "pray_rngesus", rng);
   assert.equal(memory.debts.length, 8);
   assert(memory.debts.every((d) => d.due >= 11 && d.due <= 31));
   const savedDebts = JSON.stringify(memory.debts);
@@ -482,7 +646,7 @@ async function main() {
   const rapidState = repo.parseState(repo.getSession(rapid.session.id));
   assert.equal(rapidState.turn, 1);
   assert.equal(rapidState.cleared, 1);
-  assert.equal(replies.length, 2);
+  assert.equal(replies.length, 1);
   for (const payload of replies)
     assert(
       payload.components
@@ -540,6 +704,16 @@ async function main() {
     s.encounter.hp = 1;
     s.mana = 2;
   });
+  for (const phase of [2, 3]) {
+    const shifted = play(final, "skill");
+    assert.equal(shifted.state.encounter.boss.phase, phase);
+    assert.equal(shifted.state.cleared, 998);
+    assert.equal(shifted.state.finalBossDefeated, false);
+    save(final, (s) => {
+      s.encounter.hp = 1;
+      s.mana = 2;
+    });
+  }
   const win = play(final, "skill");
   assert.equal(win.state.phase, "summit");
   assert.equal(win.state.finalBossDefeated, true);
@@ -570,10 +744,10 @@ async function main() {
   funds.floor = 11;
   funds.cleared = 10;
   funds.paradox = { kind: "blood", from: 11, until: 15, bloodFactor: 0.5 };
-  const available = core.rawPayout(funds);
+  const available = core.payout(funds);
   funds.encounter = core.makeSurprise(funds, rng, "payout_shop");
   funds.encounter.offers[0].price = available + 1;
-  assert(core.payout(funds) > available);
+  assert(core.payout(funds) > core.rawPayout(funds));
   assert(core.actions(funds).find((a) => a.action === "buy_0").disabled);
   assert.equal(
     JSON.stringify(

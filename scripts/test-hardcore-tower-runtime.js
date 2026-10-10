@@ -211,7 +211,7 @@ async function verifyReplayRegression(reward) {
     activeJson,
     "opening from a legacy board must preserve an active chain",
   );
-  // Actual Discord IDs from failed/completed v3 boards reset to floor 1.
+  // Current-week failure retries its floor; completion starts a fresh replay.
   const failed = start("button-failed");
   play(
     failed,
@@ -356,6 +356,11 @@ async function main() {
     "floorStep",
     "flags",
     "classCharges",
+    "breakGauge",
+    "adaptiveArmor",
+    "delayedEffects",
+    "bossPhase",
+    "phaseHp",
     "paradox",
     "actionHistory",
   ])
@@ -363,6 +368,52 @@ async function main() {
   assert.equal(replay.result.attempts, 1);
   assert.ok(replay.state.turn > lost.state.turn);
   assert.throws(() => play(failed, "replay"), /INVALID_ACTION/);
+  const checkpointed = start("checkpointed");
+  const thirdFloorStart = c.floors[2].stepStart;
+  runTo(checkpointed, thirdFloorStart);
+  const checkpoint = structuredClone(state(checkpointed));
+  assert.equal(checkpoint.floor, 3);
+  let choseWrong = false;
+  while (state(checkpointed).status === "playing") {
+    const current = state(checkpointed),
+      transition = c.transitions[current.routeStep],
+      legal = engine.actions(current, c).filter((x) => !x.disabled),
+      selected =
+        (!choseWrong &&
+          legal.find((x) => x.action !== transition.expectedAction)) ||
+        legal.find((x) => x.action === transition.expectedAction) ||
+        legal[0];
+    assert.ok(selected);
+    if (selected.action !== transition.expectedAction) choseWrong = true;
+    play(checkpointed, selected.action);
+  }
+  const checkpointLoss = state(checkpointed);
+  assert.equal(choseWrong, true);
+  assert.equal(checkpointLoss.status, "failed");
+  assert.equal(checkpointLoss.floor, 3);
+  assert.equal(
+    replayButton(repo.session(checkpointed.id), c).label,
+    "Thử lại tầng 3",
+  );
+  const checkpointRetry = play(checkpointed, "replay").state;
+  for (const field of [
+    "floor",
+    "floorStep",
+    "routeStep",
+    "hp",
+    "mana",
+    "enemyHp",
+    "skillUsed",
+    "flags",
+    "classCharges",
+    "cleared",
+    "step",
+    "paradox",
+    "actionHistory",
+  ])
+    assert.deepEqual(checkpointRetry[field], checkpoint[field]);
+  assert.equal(checkpointRetry.status, "playing");
+  assert.ok(checkpointRetry.turn > checkpointLoss.turn);
   const reward = start("reward");
   runTo(reward, c.stepCount - 1);
   const pre = repo.session(reward.id).state_json,
@@ -412,6 +463,10 @@ async function main() {
     diamonds.getPlayerProgression("tower", "reward").diamonds,
     gems + 250,
   );
+  assert.equal(
+    replayButton(repo.session(reward.id), c).label,
+    "Chơi lại từ tầng 1",
+  );
   play(reward, "replay");
   runTo(reward, c.stepCount);
   assert.equal(repo.result("tower", "reward", c.challengeId).attempts, 2);
@@ -438,6 +493,12 @@ async function main() {
   );
   await verifyReplayRegression(reward);
   // Mode isolation: wrong tower actions do not change the simultaneous 999-floor run.
+  economy.creditCoins({
+    guildId: "tower",
+    userId: "isolated",
+    amount: 10,
+    reason: "test:tower-mode-isolation",
+  });
   const survival = require("../src/services/hardcoreService").startHardcore({
     guildId: "tower",
     userId: "isolated",
@@ -582,7 +643,9 @@ async function main() {
     };
     await service.handleTowerButton(nav);
     serialize(detail);
-    assert.ok(detail.embeds[0].toJSON().footer.text.includes("Lượt 2"));
+    assert.ok(
+      !detail.embeds[0].toJSON().footer.text.toLowerCase().includes("lượt"),
+    );
     const latest = repo.session(resume.id).state_json;
     await service.handleTowerButton({ ...nav, user: { id: "other" } });
     assert.equal(detail.flags, 64);
@@ -626,9 +689,19 @@ async function main() {
     throw Error("TOWER_RUNTIME_RNG");
   };
   try {
+    let sawCombatBranchContinue = false,
+      sawReusableSkill = false;
     for (let i = 0; i < 7; i++) {
       now = catalog.ANCHOR + i * catalog.WEEK_MS + 1000;
       c = catalog.ensureWeekly(now, { secret, logger: quiet });
+      assert.ok(
+        c,
+        "weekly publication failed: " +
+          JSON.stringify({
+            failure: repo.generationFailure(catalog.weekAt(now).startsAt),
+            rotation: repo.rotation(),
+          }),
+      );
       const r = start("all-class-" + i),
         s = engine.createState(c),
         result = { attempts: 0, best_floor: 1, reward_claimed_at: null };
@@ -643,23 +716,90 @@ async function main() {
           t = c.transitions[step];
         const board = serialize(view.payload(r, s, c, result, now));
         assert.ok(board.includes(c.character.name));
+        assert.ok(!board.includes(c.stepCount + " bước"));
+        assert.ok(!board.includes("Bước **"));
+        assert.ok(!board.includes("Hiệu ứng xuyên tầng"));
+        assert.ok(board.includes("⚔️ Hành động"));
+        assert.ok(board.includes("Xếp hạng"));
+        assert.ok(!board.includes("⚔️ Thử thách sinh tử"));
+        assert.ok(!board.includes("Quy luật:"));
+        assert.ok(!board.includes("Tiến trình tuần"));
+        assert.ok(!board.includes("🏆 Phần thưởng"));
+        assert.ok(!board.includes(c.challengeId));
         // Commitment belongs to the readonly rules panel after the battle UI cleanup.
-        assert.ok(
-          serialize(
-            view.privatePayload(r, s, c, "1234567890123456789", "rules"),
-          ).includes(c.seedCommitment),
+        const rulesBoard = serialize(
+          view.privatePayload(r, s, c, "1234567890123456789", "rules"),
         );
-        for (const tab of ["stats", "effects", "encounter", "rules"])
-          serialize(view.privatePayload(r, s, c, "1234567890123456789", tab));
+        assert.ok(rulesBoard.includes(c.seedCommitment));
+        assert.ok(rulesBoard.includes("Skill dùng tự do"));
+        assert.ok(!rulesBoard.includes("một lần mỗi tầng"));
+        if (t.type === "combat") {
+          assert.ok(board.includes("Giáp:"));
+          assert.ok(board.includes("Break"));
+          assert.ok(board.includes("Intent:"));
+          assert.ok(board.includes("Sau:"));
+        }
+        for (const tab of ["stats", "effects", "encounter", "rules"]) {
+          const privateBoard = serialize(
+            view.privatePayload(r, s, c, "1234567890123456789", tab),
+          );
+          assert.ok(!privateBoard.includes("giữ xuyên tầng"));
+        }
+        const skillOption = engine
+          .actions(s, c)
+          .find((x) => x.action === "skill" && !x.disabled);
+        if (
+          !sawReusableSkill &&
+          t.type === "combat" &&
+          !t.finisher &&
+          t.expectedAction === "skill" &&
+          skillOption
+        ) {
+          const branch = structuredClone(s),
+            shownDamage = engine.damage(branch, c, "skill");
+          engine.act(branch, c, "skill");
+          assert.equal(branch.lastOutcome.actionDamage, shownDamage);
+          assert.equal(branch.lastOutcome.enemyHeal, 0);
+          assert.equal(branch.enemyHp, s.enemyHp - shownDamage);
+          assert.equal(branch.skillUsed, false);
+          if (branch.status === "playing") {
+            branch.mana = c.character.maxMana;
+            assert.ok(
+              engine
+                .actions(branch, c)
+                .find((x) => x.action === "skill" && !x.disabled),
+            );
+          }
+          sawReusableSkill = true;
+        }
         for (const option of engine
           .actions(s, c)
           .filter((x) => !x.disabled && x.action !== t.expectedAction)) {
           const wrongState = structuredClone(s);
           engine.act(wrongState, c, option.action);
+          if (
+            t.type === "combat" &&
+            t.expectedAction !== "defend" &&
+            wrongState.status === "playing"
+          )
+            sawCombatBranchContinue = true;
+          let guard = 0;
+          while (wrongState.status === "playing" && guard++ < c.stepCount) {
+            const transition = c.transitions[wrongState.routeStep],
+              legal = engine.actions(wrongState, c).filter((x) => !x.disabled),
+              follow =
+                legal.find((x) => x.action === transition.expectedAction) ||
+                legal[0];
+            assert.ok(follow);
+            engine.act(wrongState, c, follow.action);
+          }
           assert.equal(wrongState.status, "failed");
-          assert.equal(wrongState.routeStep, step);
-          assert.equal(wrongState.hp, s.hp);
-          assert.equal(wrongState.mana, s.mana);
+          assert.equal(wrongState.hp, 0);
+          assert.ok(wrongState.routeStep <= c.stepCount);
+          assert.match(
+            wrongState.failure,
+            t.type === "combat" ? /chưa hạ được quái/i : /lựa chọn này/i,
+          );
           serialize(
             view.payload(r, wrongState, c, { ...result, attempts: 1 }, now),
           );
@@ -667,10 +807,24 @@ async function main() {
         }
         const predictedDamage = engine.damage(s, c, t.expectedAction),
           counter = engine.counter(s, c, t.expectedAction);
+        if (t.finisher) assert.equal(counter, 0);
         engine.act(s, c, t.expectedAction);
         assert.equal(s.routeStep, step + 1);
-        assert.equal(s.hp - before.hp, t.hpDelta);
-        assert.equal(s.mana - before.mana, t.manaDelta);
+        if (s.status === "playing" && s.floor !== before.floor) {
+          assert.equal(s.hp, c.character.maxHp);
+          assert.equal(s.mana, c.initialState.mana);
+          assert.equal(s.skillUsed, false);
+          assert.deepEqual(s.flags, []);
+          assert.deepEqual(s.classCharges, { ward: 0 });
+          assert.equal(s.breakGauge, 0);
+          assert.equal(s.adaptiveArmor, null);
+          assert.deepEqual(s.delayedEffects, []);
+          assert.equal(s.bossPhase, 0);
+          assert.equal(s.phaseHp, c.floors[s.floor - 1].phaseHps[0]);
+        } else {
+          assert.equal(s.hp - before.hp, t.hpDelta);
+          assert.equal(s.mana - before.mana, t.manaDelta);
+        }
         if (t.type === "combat") {
           assert.equal(predictedDamage, Math.abs(t.enemyHpDelta));
           assert.equal(counter, t.counterDamage);
@@ -690,6 +844,8 @@ async function main() {
       runTo(r, c.stepCount, c);
       assert.equal(state(r).status, "completed");
     }
+    assert.equal(sawCombatBranchContinue, true);
+    assert.equal(sawReusableSkill, true);
   } finally {
     Math.random = random;
   }
@@ -697,7 +853,7 @@ async function main() {
   const oldFailed = repo.byUser(
     "tower",
     "replay-after-week",
-    "tower:2026:W41:sorceress:g3",
+    "tower:2026:W41:sorceress:g4",
   );
   await pressReplay(oldFailed, catalog.get(oldFailed.challenge_id), {
     twice: true,
@@ -705,7 +861,7 @@ async function main() {
   const weekRun = repo.byUser("tower", "replay-after-week", c.challengeId);
   assert.equal(state(weekRun).routeStep, 0);
   assert.equal(state(weekRun).challengeId, c.challengeId);
-  const old = catalog.get("tower:2026:W41:sorceress:g3");
+  const old = catalog.get("tower:2026:W41:sorceress:g4");
   const oldRow = repo.byUser("tower", "owner", old.challengeId),
     oldJson = oldRow.state_json;
   assert.throws(
@@ -726,7 +882,7 @@ async function main() {
       .options.some((x) => x.name === "thap"),
   );
   console.log(
-    "Tower v3 runtime: all 7 class UIs and wrong branches, stale/duplicate/forged clicks, retries, persistence, rollback, one-time reward, v1 claim carryover, mode isolation, private tabs and rollover passed.",
+    "Tower v4 runtime: all 7 class UIs and lethal wrong branches, stale/duplicate/forged clicks, retries, persistence, rollback, one-time reward, v1 claim carryover, mode isolation, private tabs and rollover passed.",
   );
 }
 main()

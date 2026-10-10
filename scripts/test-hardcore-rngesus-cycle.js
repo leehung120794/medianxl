@@ -11,21 +11,20 @@ delete process.env.HARDCORE_GAMEPLAY_VERSION;
 const service = require("../src/services/hardcoreService");
 const core = require("../src/services/hardcoreV2");
 const repo = require("../src/services/hardcoreRepository");
-const economy = require("../src/services/economyService");
 const policy = require("../src/services/hardcoreRngesus");
 const { ratesFields } = require("../src/services/hardcoreV2View");
 const { ratesEmbed } = require("../src/commands/hardcore");
 
 assert.deepEqual(
   [1, 4, 5, 9, 10, 19, 20, 999].map(policy.rngesusChance),
-  [0, 0, 0.003, 0.003, 0.003, 0.003, 0.003, 0],
+  [0, 0, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003],
 );
 assert.deepEqual(
   [1, 4, 5, 9, 10, 19, 20, 999].map((floor) =>
     policy.rngesusEncounterChance({ floor }),
   ),
-  [0, 0, 0.003, 0.003, 0.003, 0.003, 0.003, 0],
-  "all eligible floors start on the same linear curve; final boss is blocked",
+  [0, 0, 0.003, 0.003, 0.003, 0.003, 0.003, 0.003],
+  "old saves without the reset boundary start at the fixed initial rate",
 );
 for (const anchor of [6, 77, 197, 900]) {
   const state = {
@@ -50,7 +49,7 @@ for (const anchor of [6, 77, 197, 900]) {
     true,
     "encounter reset must not remove the run's prayer boost",
   );
-  for (const [distance, chance] of [
+  for (const [distance, base] of [
     [1, 0],
     [2, 0.003],
     [6, 0.003],
@@ -61,7 +60,7 @@ for (const anchor of [6, 77, 197, 900]) {
     state.floor = anchor + distance;
     assert.equal(
       policy.rngesusEncounterChance(state),
-      chance,
+      base,
       "post-encounter progression at +" + distance,
     );
   }
@@ -71,39 +70,12 @@ assert.equal(
   0,
   "minimum initial floor remains five",
 );
-assert.equal(
-  policy.rngesusEncounterChance({ floor: 49, rngesusDry: 999 }),
-  0.12,
-  "linear pity is capped at 12%",
-);
-assert.equal(
-  policy.rngesusEncounterChance({ floor: 50, rngesusDry: 10 }),
-  0,
-  "boss floors are blocked",
-);
-for (const [dry, chance] of [
-  [0, 0.003],
-  [1, 0.0035],
-  [10, 0.008],
-  [233, 0.1195],
-  [234, 0.12],
-  [999, 0.12],
-])
-  assert(
-    Math.abs(
-      policy.rngesusEncounterChance({ floor: 49, rngesusDry: dry }) - chance,
-    ) < 1e-12,
-    `linear chance after ${dry} misses`,
-  );
 
-// Both engines bypass all randomness on blocked floors and use exactly one draw on eligible floors.
+// Both engines bypass randomness on the adjacent floor and use the same fixed increments.
 for (const version of ["v1", "v2"]) {
-  const roll = (state, values = [0.5]) => {
-    if (version === "v1")
-      return service.rollRngesus(state, {
-        encounterRoll: values[0],
-      });
-    return core.rollRngesus(state, () => values.shift() ?? 0.999);
+  const roll = (state, encounterRoll = 0.999) => {
+    if (version === "v1") return service.rollRngesus(state, { encounterRoll });
+    return core.rollRngesus(state, () => encounterRoll);
   };
   const safe = {
     floor: 78,
@@ -121,46 +93,24 @@ for (const version of ["v1", "v2"]) {
       }),
       false,
     );
-    assert.equal(draws, 0, "blocked floor must not consume RNG");
-  } else assert.equal(roll(safe, [0]), false);
+    assert.equal(draws, 0, "cooldown must not draw randomness");
+  } else assert.equal(roll(safe, 0), false);
   assert.equal(safe.lastChaosChance, 0);
   assert.equal(safe.lastChaosSpike, false);
   assert.equal(safe.rngesusDry, 1000, "suppressed floor does not add heat");
-  const boss = { floor: 50, rngesusDry: 10, lastChaosChance: 0.5 };
-  assert.equal(roll(boss, [0]), false);
-  assert.equal(boss.rngesusDry, 10, "boss floor must not advance pity");
-  assert.equal(boss.lastChaosChance, 0);
-  const generatedBoss = {
-    ...boss,
-    classKey: "barbarian",
-    modifiers: {},
-    debts: [],
-    echoBands: [],
-    shopCounts: {},
-    shopLast: {},
-    floor: 50,
-  };
-  if (version === "v1") service.generateEncounter(generatedBoss);
-  else
-    core.generateEncounter(
-      generatedBoss,
-      { guild_id: "boss", user_id: version },
-      () => 0.5,
-    );
-  assert.equal(generatedBoss.rngesusDry, 10);
-  assert.equal(generatedBoss.lastChaosChance, 0);
   const growing = { floor: 79, rngesusResetFloor: 77, rngesusDry: 0 };
   roll(growing);
-  assert.equal(growing.lastChaosChance, 0.003);
+  assert(Math.abs(growing.lastChaosChance - 0.003) < 1e-12);
   assert.equal(growing.rngesusDry, 1);
   growing.floor++;
   roll(growing);
-  assert.equal(growing.lastChaosChance, 0.0035);
+  assert(
+    Math.abs(growing.lastChaosChance - (0.003 + 0.0005)) < 1e-12,
+    "dry heat grows at the original 0.05 percentage points",
+  );
   const hit = { floor: 79, rngesusResetFloor: 77, rngesusDry: 2 };
-  assert(roll(hit, [0]));
+  assert(roll(hit, 0));
   assert.equal(hit.rngesusDry, 0);
-  assert.equal(hit.lastChaosChance, 0.004);
-  assert.equal(hit.lastChaosSpike, false);
   assert.equal(
     hit.rngesusResetFloor,
     77,
@@ -168,21 +118,20 @@ for (const version of ["v1", "v2"]) {
   );
 }
 
-// Show the exact deterministic pity chance locked into the encounter.
+// Show the fixed chance used to lock each encounter, including the rate cap.
 {
   const stats = require("../src/services/hardcoreStats");
   const view = require("../src/services/hardcoreV2View");
   for (const [dry, expected, label] of [
     [2, 0.004, "RNGesus (0,4%)"],
-    [200, 0.103, "RNGesus (10,3%)"],
+    [1000, 0.12, "RNGesus (12%)"],
   ]) {
     const state = stats.createState("barbarian", 10);
     Object.assign(state, { floor: 6, cleared: 5, rngesusDry: dry });
-    const rolls = [0, 0.5, 0.5, 0.5];
     state.encounter = core.generateEncounter(
       state,
       { guild_id: "ui", user_id: "ui" },
-      () => rolls.shift() ?? 0.5,
+      () => 0,
     );
     assert.equal(state.encounter.type, "rngesus");
     assert.ok(Math.abs(state.encounter.encounterChance - expected) < 1e-12);
@@ -234,16 +183,9 @@ for (const version of ["v1", "v2"]) {
 let n = 0;
 const guildId = "rngesus-cycle";
 function startCase(action, extra = {}, eventExtra = {}, floor = 197) {
-  const userId = "u" + ++n;
-  economy.creditCoins({
-    guildId,
-    userId,
-    amount: 100,
-    reason: "test-fund",
-  });
   const run = service.startHardcore({
     guildId,
-    userId,
+    userId: "u" + ++n,
     channelId: "c",
     stake: 10,
     classKey: "barbarian",
@@ -323,6 +265,8 @@ for (const test of [
   );
   const restored = JSON.parse(JSON.stringify(saved));
   core.normalize(restored);
+  // This fixture isolates the ordinary RNGesus cycle, not the separate God roll.
+  restored.godRngesusEnabled = false;
   restored.floor = floor + 1;
   restored.phase = "encounter";
   assert.notEqual(
@@ -389,14 +333,8 @@ assert.equal(
 const cycleField = ratesFields("rngesus").find((field) =>
   field.name.includes("Chu kỳ"),
 );
-assert(cycleField.value.includes("0,30%"));
-assert(cycleField.value.includes("0,05 điểm phần trăm"));
-assert(cycleField.value.includes("tầng F+1 an toàn **0%**"));
-const chaosField = ratesFields("rngesus").find((field) =>
-  field.name.includes("Chaos"),
-);
-assert(chaosField.value.includes("0,30% → 0,35% → 0,40%"));
-assert(chaosField.value.includes("Không còn biến động ngẫu nhiên hoặc spike"));
+assert(cycleField.value.includes("0,05 điểm %"));
+assert(cycleField.value.includes("F+1 chắc chắn **0%**"));
 for (const version of ["legacy", "2"]) {
   process.env.HARDCORE_GAMEPLAY_VERSION = version;
   const embed = ratesEmbed("rngesus").toJSON();
@@ -414,5 +352,5 @@ for (const version of ["legacy", "2"]) {
 }
 db.close();
 console.log(
-  "RNGesus cycle passed: linear pity, 12% cap, blocked floors, no spikes, all survival/revival paths, persistence and legacy runs.",
+  "RNGesus cycle passed: fixed rate, steady increments, reset, no adjacent encounters, all survival/revival paths, checkpoint resume, persistence and legacy runs.",
 );

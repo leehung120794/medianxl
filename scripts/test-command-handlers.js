@@ -78,7 +78,7 @@ async function run() {
     options: {
       getSubcommand: () => "datbuff",
       getString: (name) =>
-        ({ hanhdong: "set", loai: "diamonds" })[name] ?? null,
+        ({ hanhdong: "set", loai: "coins" })[name] ?? null,
       getNumber: (name) => ({ phantram: 250, sogio: 48 })[name] ?? null,
       getInteger: () => null,
     },
@@ -93,6 +93,13 @@ async function run() {
   const levels = require("../src/services/playerLevelService");
   const previousAdmin = process.env.ADMIN_USER_ID;
   process.env.ADMIN_USER_ID = "admin";
+  const towerResetDenied = interaction({
+    user: { id: "guild-admin" },
+    memberPermissions: { has: () => true },
+    options: { getSubcommand: () => "thapreset" },
+  });
+  await require("../src/commands/quantri").execute(towerResetDenied);
+  assert.match(towerResetDenied.replies[0].content, /quản trị bot/);
   const silentReplies = [];
   const adminMessage = (content) => ({
     id: `prefix-${content}`,
@@ -368,7 +375,7 @@ async function run() {
   assert.equal(leaderboard.data.toJSON().options?.length || 0, 0);
   assert.equal(
     leaderboard.leaderboardRow("alice").components[0].options.length,
-    11,
+    leaderboard.GAMES.length + 1,
   );
   assert(
     !leaderboard

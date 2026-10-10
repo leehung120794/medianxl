@@ -35,19 +35,19 @@ const RESOURCE = {
 };
 const DELAYED = {
   attack: [
-    "Khoản nợ từ lựa chọn trước chỉ nhận thanh toán vật lý.",
-    "Khế ước đầu run đổi màu: bóng là phép, thân là đòn thường.",
-    "Dấu đã giữ trước đó mở lõi hữu hình; phá lõi trước khi thu nợ.",
+    "Lớp giáp trì hoãn vừa mở điểm yếu vật lý.",
+    "Nhịp chậm kết thúc, thân quái trở lại trạng thái hữu hình.",
+    "Lõi phòng thủ vừa hạ xuống và để lộ điểm yếu vật lý.",
   ],
   skill: [
-    "Khế ước đã chọn chuyển khoản nợ sang lõi phép.",
-    "Hiệu lực trì hoãn mở ấn linh hồn; đòn thường sẽ vi phạm lời hứa.",
-    "Dấu đã giữ làm giáp vật lý bất biến trong nhịp này.",
+    "Lớp giáp trì hoãn chuyển sang trạng thái chỉ nhận phép.",
+    "Nhịp chậm mở lõi Arcane trong chính tầng này.",
+    "Giáp vật lý khóa lại, để lộ điểm yếu trước kỹ năng.",
   ],
   defend: [
-    "Lãi nợ đến hạn: giữ khiên, không trả bằng damage.",
-    "Khế ước buộc giữ tài nguyên qua nhịp thu nợ; đánh là phá cam kết.",
-    "Dấu cũ phản lại cả vật lý và phép trong một lượt.",
+    "Đòn trì hoãn sắp rơi xuống; giữ khiên trong lượt này.",
+    "Quái dồn lực sau nhịp chậm, ưu tiên giữ HP và MP.",
+    "Lớp phản xạ khóa cả vật lý lẫn phép trong một lượt.",
   ],
 };
 function makeClue(category, action, variant, context) {
@@ -137,24 +137,23 @@ function eventChoices(kind, nonce) {
     b = kind + "_" + nonce + "_spend";
   const choices = {
     hp_fork: [
-      { action: a, label: "Giữ khế ước: chịu 3 HP, giữ dấu nợ đến tầng 12" },
-      { action: b, label: "Hồi đầy HP, xóa khế ước" },
+      { action: a, label: "Chấp nhận mất 3 HP để mở combat tầng này" },
+      { action: b, label: "Từ chối khế ước của tầng" },
     ],
     paradox: [
       {
         action: a,
-        label:
-          "Mana Fracture: chi phí skill giảm 1 MP (tối thiểu 1); đòn thường +0 MP",
+        label: "Giữ cấu trúc MP hiện tại của tầng",
       },
-      { action: b, label: "Blood Pact: tăng damage ngay, trả HP mỗi skill" },
+      { action: b, label: "Đảo cấu trúc MP của tầng" },
     ],
     mana_fork: [
-      { action: a, label: "Giữ MP và nhịp đã ghi cho Gương tầng 14" },
-      { action: b, label: "Hồi đầy MP, đổi nhịp Gương" },
+      { action: a, label: "Giữ lượng MP hiện tại để tiếp tục tầng" },
+      { action: b, label: "Đổi lượng MP khởi đầu của combat" },
     ],
     purification: [
-      { action: a, label: "Giữ dấu nợ, chỉ thanh tẩy bẫy hiện tại" },
-      { action: b, label: "Xóa toàn bộ dấu nợ và hiệu ứng" },
+      { action: a, label: "Chỉ thanh tẩy bẫy của tầng hiện tại" },
+      { action: b, label: "Đổi cấu trúc puzzle hiện tại" },
     ],
   }[kind];
   return choices;

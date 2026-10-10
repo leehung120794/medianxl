@@ -75,6 +75,14 @@ fairness.createFairness = () => {
     commit: fairness.commitment(serverSeed),
   };
 };
+const bossExperiment = process.env.HARDCORE_SIM_BOSS_ROSTER || "current";
+if (!["current", "previous"].includes(bossExperiment))
+  throw Error("INVALID_BOSS_EXPERIMENT");
+if (bossExperiment === "previous")
+  require("../src/hardcore/bosses/mechanics").enabled = () => false;
+const checkpointExperiment = require("./hardcore-checkpoint-experiment");
+checkpointExperiment.install();
+const bossPolicy = require("./hardcore-boss-policy");
 const hardcore = require("../src/services/hardcoreService");
 const balance = require("../src/services/hardcoreBalance");
 if (process.env.HARDCORE_SIM_POWER) {
@@ -97,6 +105,11 @@ const maxTurns = Math.max(
 const selectedClass = process.argv[5] || "all";
 const rematches = Math.max(0, Math.min(1000, Number(process.argv[6]) || 0));
 const policy = process.env.HARDCORE_SIM_POLICY || "balanced";
+if (
+  checkpointExperiment.settings.variant !== "baseline" &&
+  policy !== "balanced"
+)
+  throw Error("CHECKPOINT_EXPERIMENT_REQUIRES_BALANCED_POLICY");
 const revealedChestAction = process.env.HARDCORE_SIM_REVEALED_CHEST || "sell";
 if (!["sell", "leave"].includes(revealedChestAction))
   throw new Error("INVALID_CHEST_POLICY");
@@ -363,7 +376,7 @@ function actionForV2(state, strategy) {
   const has = (action) => candidates.some((a) => a.action === action);
   if (state.phase === "upgrade") {
     const main = require("../src/services/hardcoreStats").mainStat(state);
-    return `upgrade_${state.cleared % 10 === 0 ? "vit" : main}`;
+    return `upgrade_${checkpointExperiment.ordinal(state.cleared) % 2 === 0 ? "vit" : main}`;
   }
   if (state.phase === "paradox") {
     // Fixed public-choice policy for the current pairs; legacy runs keep their choice.
@@ -393,6 +406,8 @@ function actionForV2(state, strategy) {
   }
   if (state.phase === "summit") return "retreat";
   const e = state.encounter;
+  const bossAction = bossPolicy.choose(state);
+  if (bossAction) return bossAction;
   if (e.type === "combat") {
     const preview = v2.incomingPreview(state);
     const dangerous = state.hp < Math.max(preview.high * 2, state.maxHp * 0.35);
@@ -429,6 +444,13 @@ function actionForV2(state, strategy) {
     if (e.kind === "duelist") return e.mode ? "hand_0" : "duel_stat";
     // Treasure-room colors are hidden outcomes; pick the public red reward.
     if (e.kind === "treasure_room") return "chest_red";
+    if (e.kind === "purifier" && v2.payout(state) < v2.purifierCost(state))
+      return "event_skip";
+    if (e.kind === "purifier")
+      return has("event_cleanse")
+        ? "event_cleanse"
+        : candidates.find((a) => a.action.startsWith("purifier_select_"))
+            ?.action || "event_skip";
     const choices = {
       healer: "event_heal",
       goblin: "event_catch",
@@ -450,7 +472,7 @@ function actionForV2(state, strategy) {
           const offer = e.offers[Number(a.action.slice(4))];
           return (
             e.kind !== "blood_shop" ||
-            state.hp > offer.price + state.maxHp * 0.35
+            Math.min(state.hp, state.maxHp - offer.price) > state.maxHp * 0.35
           );
         });
       return affordable[0]?.action || "event_skip";
@@ -617,6 +639,9 @@ for (const classKey of classesToRun) {
         ? "legacy-4"
         : hardcore.RELEASE.version,
     simulationSeed,
+    checkpointRule: checkpointExperiment.settings,
+    bossRoster: bossExperiment,
+    bossPolicy: "public telegraphs v" + bossPolicy.VERSION,
     stake,
     completedPercent: +(
       (100 * floors.filter((floor) => floor >= 999).length) /
@@ -639,6 +664,10 @@ for (const classKey of classesToRun) {
     passedFloor10: floors.filter((floor) => floor >= 10).length,
     passedFloor50: floors.filter((floor) => floor >= 50).length,
     passedFloor100: floors.filter((floor) => floor >= 100).length,
+    passedFloor699: floors.filter((floor) => floor >= 699).length,
+    passedFloor700: floors.filter((floor) => floor >= 700).length,
+    passedFloor800: floors.filter((floor) => floor >= 800).length,
+    passedFloor900: floors.filter((floor) => floor >= 900).length,
     reachedFinalBoss: finalStates.length,
     completed999: floors.filter((floor) => floor >= 999).length,
     runFloors: floors,

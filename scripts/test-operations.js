@@ -106,15 +106,13 @@ async function main() {
       .all()
       .some((column) => column.name === "operation_id"),
   );
+  const migrationVersions = db
+    .prepare("SELECT version FROM schema_migrations ORDER BY version")
+    .all()
+    .map((row) => row.version);
   assert.deepEqual(
-    db
-      .prepare("SELECT version FROM schema_migrations ORDER BY version")
-      .all()
-      .map((row) => row.version),
-    [
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-      22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,
-    ],
+    migrationVersions,
+    Array.from({ length: migrationVersions.at(-1) }, (_, index) => index + 1),
   );
   db.prepare(
     "INSERT INTO game_channels(guild_id,game,channel_id,updated_at) VALUES(?,?,?,?)",

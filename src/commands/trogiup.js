@@ -69,8 +69,8 @@ const PAGES = Object.freeze({
         "`/hoso` — xem hồ sơ; `/xephang` — chọn bảng xếp hạng bằng menu.",
       ],
       [
-        "🔎 Tra cứu Median XL",
-        "`/item query:<tên, base hoặc stat>` — tìm TU, SU, Runeword, Set và các item Median XL khác. Prefix: `!item [loại] <từ khóa>`.",
+        "📋 Cập nhật",
+        "`/changelog` — xem cập nhật mới nhất, chuyển trang để xem lịch sử.",
       ],
       [
         "📖 Hướng dẫn cũ",
