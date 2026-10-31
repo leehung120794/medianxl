@@ -273,12 +273,24 @@ async function main() {
       info: (data, message) => events.push(message),
       error: (data, message) => events.push(message),
     };
+  const localSnapshotsBeforeManager = fs
+    .readdirSync(process.env.DB_BACKUP_DIR)
+    .filter((name) => name.endsWith(".sqlite")).length;
   const manager = backup.startDatabaseBackups(logger),
     readyClient = transport();
+  // Let the startup snapshot attempt delivery before Discord is ready.
+  await new Promise((resolve) => setTimeout(resolve, 50));
   await manager.discordReady(readyClient);
   assert.equal(
     readyClient.calls.filter((call) => call.request.files).length,
     1,
+  );
+  assert.equal(
+    fs
+      .readdirSync(process.env.DB_BACKUP_DIR)
+      .filter((name) => name.endsWith(".sqlite")).length,
+    localSnapshotsBeforeManager,
+    "startup snapshot should be removed after delivery",
   );
   await manager.stop();
   assert.equal(
@@ -286,6 +298,14 @@ async function main() {
     2,
   );
   assert(events.includes("database backup delivered to Discord DM"));
+  assert.equal(
+    fs
+      .readdirSync(process.env.DB_BACKUP_DIR)
+      .filter((name) => name.endsWith(".sqlite")).length,
+    localSnapshotsBeforeManager,
+    "successfully delivered local snapshots should be removed",
+  );
+  assert(fs.existsSync(process.env.DB_PATH), "live database must remain intact");
   noTemporaryFiles();
   groups.push(
     "startup ready flush and final snapshot each deliver once without blocking gameplay",

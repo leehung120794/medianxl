@@ -1,3 +1,4 @@
+
 # Sinh tồn 999 — tài liệu release hiện hành
 
 > Tài liệu đầu vào do người dùng cung cấp. Các tuyên bố về mã và kiểm thử bên dưới thuộc tài liệu gốc; trạng thái triển khai thực tế của repository được ghi trong `HARDCORE-RELEASE-2.0.0.md`. Convention hiện tại đăng ký `/sinhton` độc lập thay cho `/choi sinhton` trong tài liệu này.

@@ -20,6 +20,8 @@ const COMMAND_FILES = Object.freeze([
   "xephang",
   "anxin",
   "quantri",
+  "update",
+  "backup",
   "gacha",
   "item",
   "vtv",

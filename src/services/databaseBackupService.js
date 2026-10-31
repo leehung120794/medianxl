@@ -34,11 +34,74 @@ const backupStatus = {
   lastError: null,
 };
 let activeBackup = null;
+let deletingBackups = false;
+const pendingRetryTimers = new Set();
 function backupName(now = new Date()) {
   return `game-bot-${now.toISOString().replace(/[:.]/g, "-")}-${crypto.randomBytes(4).toString("hex")}.sqlite`;
 }
 const BACKUP_FILE =
   /^game-bot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(?:-[a-f0-9]{8})?\.sqlite$/;
+const BACKUP_ARTIFACT =
+  /^game-bot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(?:-[a-f0-9]{8})?\.sqlite(?:-(?:wal|shm|journal)|\.partial(?:-(?:wal|shm|journal))?|\.discord-[a-f0-9]{16}\.gz)?$/;
+const protectedDatabaseFiles = new Set(
+  ["", "-wal", "-shm", "-journal"].map((suffix) =>
+    path.resolve(dbPath + suffix),
+  ),
+);
+function backupFilePath(destination) {
+  const resolved = path.resolve(destination);
+  const relative = path.relative(backupDir, resolved);
+  if (
+    !relative ||
+    relative.startsWith(`..${path.sep}`) ||
+    relative === ".." ||
+    path.isAbsolute(relative) ||
+    !BACKUP_FILE.test(path.basename(resolved)) ||
+    resolved === path.resolve(dbPath)
+  )
+    throw new Error("INVALID_BACKUP_PATH");
+  return resolved;
+}
+async function deleteBackupFile(destination) {
+  const resolved = backupFilePath(destination);
+  for (const suffix of ["", "-wal", "-shm", "-journal"]) {
+    await fs.promises.rm(resolved + suffix, { force: true });
+  }
+  if (backupStatus.lastDestination === resolved)
+    backupStatus.lastDestination = null;
+  return resolved;
+}
+async function deleteAllBackups() {
+  if (deletingBackups) throw new Error("BACKUP_OPERATION_IN_PROGRESS");
+  deletingBackups = true;
+  for (const timer of pendingRetryTimers) clearTimeout(timer);
+  pendingRetryTimers.clear();
+  try {
+    if (activeBackup) await activeBackup;
+    await discordBackup.waitForDiscordBackups();
+    if (backupStatus.running)
+      throw new Error("BACKUP_OPERATION_IN_PROGRESS");
+    await fs.promises.mkdir(backupDir, { recursive: true });
+    const entries = await fs.promises.readdir(backupDir, {
+      withFileTypes: true,
+    });
+    const files = entries
+      .filter(
+        (entry) =>
+          entry.isFile() &&
+          BACKUP_ARTIFACT.test(entry.name) &&
+          !protectedDatabaseFiles.has(path.resolve(backupDir, entry.name)),
+      )
+      .map((entry) => path.join(backupDir, entry.name));
+    await Promise.all(
+      files.map((file) => fs.promises.rm(file, { force: true })),
+    );
+    backupStatus.lastDestination = null;
+    return files.length;
+  } finally {
+    deletingBackups = false;
+  }
+}
 async function cleanupBackups(retention = BACKUP_RETENTION) {
   if (!Number.isSafeInteger(retention) || retention < 1)
     throw new Error("INVALID_BACKUP_RETENTION");
@@ -114,6 +177,7 @@ async function performBackup(now) {
 }
 function runDatabaseBackup(now = new Date()) {
   // Manual/scheduled requests share one snapshot, avoiding pruning unfinished files.
+  if (deletingBackups) return Promise.reject(new Error("BACKUP_CLEANUP_ACTIVE"));
   if (activeBackup) return activeBackup;
   activeBackup = performBackup(now).finally(() => {
     activeBackup = null;
@@ -130,11 +194,20 @@ function startDatabaseBackups(
     retryTimer = null;
   const deliver = async (destination) => {
     clearTimeout(retryTimer);
+    if (retryTimer) pendingRetryTimers.delete(retryTimer);
     retryTimer = null;
     try {
       const result = await discordBackup.sendDiscordBackup(destination);
+      if (result.status === "sent" || result.status === "already_sent") {
+        await deleteBackupFile(destination);
+        logger.info?.(
+          { ...result, destination },
+          "database backup delivered and local snapshot removed",
+        );
+      }
       if (result.status === "sent")
         logger.info?.(result, "database backup delivered to Discord DM");
+      return result;
     } catch (error) {
       logger.error?.(
         { code: error.code || error.name },
@@ -143,9 +216,12 @@ function startDatabaseBackups(
       if (!stopped) {
         clearTimeout(retryTimer);
         retryTimer = setTimeout(() => {
+          pendingRetryTimers.delete(retryTimer);
+          retryTimer = null;
           if (!stopped && backupStatus.lastDestination)
             void deliver(backupStatus.lastDestination);
         }, retryDelayMs);
+        pendingRetryTimers.add(retryTimer);
         retryTimer.unref?.();
       }
     }
@@ -174,7 +250,7 @@ function startDatabaseBackups(
     discordReady: async (client) => {
       discordBackup.setBackupDiscordClient(client);
       if (pending) await pending;
-      else if (backupStatus.lastDestination)
+      if (backupStatus.lastDestination)
         await deliver(backupStatus.lastDestination);
     },
     stop: ({ finalBackup = true } = {}) => {
@@ -182,6 +258,8 @@ function startDatabaseBackups(
       stopped = true;
       clearInterval(timer);
       clearTimeout(retryTimer);
+      if (retryTimer) pendingRetryTimers.delete(retryTimer);
+      retryTimer = null;
       stopPromise = (async () => {
         await pending;
         await discordBackup.waitForDiscordBackups();
@@ -210,6 +288,8 @@ module.exports = {
   backupDir,
   backupName,
   cleanupBackups,
+  deleteBackupFile,
+  deleteAllBackups,
   runDatabaseBackup,
   startDatabaseBackups,
   getBackupStatus,
