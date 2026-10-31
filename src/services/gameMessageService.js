@@ -3,7 +3,6 @@ const { getVuaSession, answerVuaSession } = require("./funGameService");
 const { rewardGame } = require("./economyService");
 const { quizAnswerAnnouncement } = require("../utils/rewardText");
 const { getGameReward } = require("./gameRewardService");
-const { addDiamonds } = require("./playerLevelService");
 
 async function handleVuaMessage(message, answer) {
   if (!getVuaSession(message.guildId)) return false;
@@ -27,15 +26,9 @@ async function handleVuaMessage(message, answer) {
     game: "vuatiengviet",
     outcome: "win",
   });
-  const diamonds = result.question.hard
-    ? addDiamonds(message.guildId, message.author.id, 10, {
-        reason: "vuatiengviet:hard-answer",
-      })
-    : null;
   const announcement = quizAnswerAnnouncement({
     userId: message.author.id,
     reward,
-    gems: diamonds ? 10 : 0,
     account,
     answer: result.question.answer,
   });

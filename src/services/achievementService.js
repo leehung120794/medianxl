@@ -1,7 +1,6 @@
 const { ringForAchievement } = require("./avatarRingCatalog");
 const { grantCosmetic } = require("./profileCosmeticService");
 const { db } = require("../db");
-const relicRecords = require("../hardcore/storage/relicRecords");
 const { getAccount, creditCoins } = require("./economyService");
 const { addDiamonds } = require("./playerLevelService");
 
@@ -1384,7 +1383,13 @@ const ACHIEVEMENTS = Object.freeze([
   ...eventAchievements,
   godAchievement,
   ...relicAchievements,
-]);
+].filter(
+  (item) =>
+    !item.id.startsWith("hardcore_") &&
+    !item.id.startsWith("hc_") &&
+    !item.id.startsWith("gacha_") &&
+    !String(item.metric || "").startsWith("chinchiro"),
+));
 
 // Nhóm bộ lọc ở /kiemtra (Discord giới hạn 25 mục chọn): các chỉ số cùng chủ đề gộp thành một mục lọc.
 const CATEGORY_GROUPS = Object.freeze({
@@ -1437,42 +1442,18 @@ const CATEGORY_GROUPS = Object.freeze({
 const achievementCategory = (item) =>
   item.metric.startsWith("hcClass_") ? "hardcoreClass" : CATEGORY_GROUPS[item.metric] || item.metric;
 
-const BETTING_GAMES = Object.freeze(["baucua","taixiu","chinchiro","blackjack","poker","duangua","mines","coquay"]);
+const BETTING_GAMES = Object.freeze(["baucua","taixiu","blackjack","poker","duangua","mines"]);
 const BETTING_SQL = BETTING_GAMES.map((game) => `'${game}'`).join(",");
 
 function metrics(guildId, userId) {
   const guild = String(guildId);
   const user = String(userId);
   const account = getAccount(guild, user);
-  const relicCounts = relicRecords.totals(guild, user);
   const gameTypes = db
     .prepare(
       "SELECT COUNT(*) count FROM game_player_stats WHERE guild_id=? AND user_id=? AND played>0",
     )
     .get(guild, user).count;
-  const hardcoreFloor =
-    db
-      .prepare(
-        "SELECT COALESCE(best_floor,0) value FROM hardcore_records WHERE guild_id=? AND user_id=?",
-      )
-      .get(guild, user)?.value || 0;
-  const hardcore =
-    db
-      .prepare(
-        "SELECT COALESCE(runs,0) runs, COALESCE(escapes,0) escapes, COALESCE(completions,0) completions FROM hardcore_records WHERE guild_id=? AND user_id=?",
-      )
-      .get(guild, user) || {};
-  const classFloors = {};
-  for (const row of db
-    .prepare(
-      "SELECT class_key, MAX(cleared) best FROM hardcore_run_archive WHERE guild_id=? AND user_id=? GROUP BY class_key",
-    )
-    .all(guild, user))
-    classFloors[`hcClass_${row.class_key}`] = row.best || 0;
-  const eventRow =
-    db
-      .prepare("SELECT events, chains, kills, boss_kills, kinds_json FROM hardcore_event_stats WHERE guild_id=? AND user_id=?")
-      .get(guild, user) || {};
   const betting = db
     .prepare(
       `SELECT COALESCE(SUM(wins),0) wins, COALESCE(SUM(CASE WHEN played>0 THEN 1 ELSE 0 END),0) games
@@ -1485,26 +1466,6 @@ function metrics(guildId, userId) {
        FROM game_history WHERE guild_id=? AND user_id=? AND game IN (${BETTING_SQL})`,
     )
     .get(guild, user);
-  const gacha = { pulls: 0, spent: 0, sr: 0, ssr: 0, ur: 0 };
-  const tierRank = { SR: 1, SSR: 2, UR: 3 };
-  for (const row of db
-    .prepare(
-      "SELECT pulls,diamond_cost,results_json FROM gacha_history WHERE guild_id=? AND user_id=?",
-    )
-    .iterate(guild, user)) {
-    gacha.pulls += row.pulls;
-    gacha.spent += row.diamond_cost;
-    let results = [];
-    try {
-      results = JSON.parse(row.results_json);
-    } catch {}
-    for (const result of results) {
-      const rank = tierRank[result?.tier] || 0;
-      if (rank >= 1) gacha.sr += 1;
-      if (rank >= 2) gacha.ssr += 1;
-      if (rank >= 3) gacha.ur += 1;
-    }
-  }
   const mines =
     db
       .prepare(
@@ -1515,18 +1476,6 @@ function metrics(guildId, userId) {
     db
       .prepare(
         "SELECT COALESCE(wins,0) wins FROM game_player_stats WHERE guild_id=? AND user_id=? AND game='mines'",
-      )
-      .get(guild, user)?.wins || 0;
-  const chinchiro =
-    db
-      .prepare(
-        "SELECT shigoro_wins,zoro_wins,pin_zoro_wins,hifumi,best_streak FROM chinchiro_records WHERE guild_id=? AND user_id=?",
-      )
-      .get(guild, user) || {};
-  const chinchiroWins =
-    db
-      .prepare(
-        "SELECT COALESCE(wins,0) wins FROM game_player_stats WHERE guild_id=? AND user_id=? AND game='chinchiro'",
       )
       .get(guild, user)?.wins || 0;
   const poker =
@@ -1588,25 +1537,11 @@ function metrics(guildId, userId) {
     pokerAllInWins: poker.allin_wins || 0,
     pokerPvpWins: poker.pvp_wins || 0,
     pokerBigPot: pokerStats.pot,
-    chinchiroWins,
-    chinchiroShigoro: chinchiro.shigoro_wins || 0,
-    chinchiroZoro: (chinchiro.zoro_wins || 0) + (chinchiro.pin_zoro_wins || 0),
-    chinchiroPinZoro: chinchiro.pin_zoro_wins || 0,
-    chinchiroHifumi: chinchiro.hifumi || 0,
-    chinchiroStreak: chinchiro.best_streak || 0,
     minesWins,
     minesClears: mines.clears || 0,
     minesHardWin: mines.max_mines_won || 0,
     minesBestMultiplier: Math.floor(mines.best_multiplier || 0),
     minesStars: mines.star_finds || 0,
-    gachaPulls: gacha.pulls,
-    gachaSpent: gacha.spent,
-    gachaSR: gacha.sr,
-    gachaSSR: gacha.ssr,
-    gachaUR: gacha.ur,
-    hardcoreRuns: hardcore.runs || 0,
-    hardcoreEscapes: hardcore.escapes || 0,
-    hardcoreCompletions: hardcore.completions || 0,
     betWins: betting.wins,
     betGames: betting.games,
     betStaked: history.staked,
@@ -1615,18 +1550,6 @@ function metrics(guildId, userId) {
     wins: account.wins,
     balance: account.balance,
     gameTypes,
-    hardcoreFloor,
-    ...classFloors,
-    hardcoreConquerorRelics: Math.max(relicCounts.conquerors_covenant, eventRow.kinds_json && JSON.parse(eventRow.kinds_json).includes("conquerors_covenant") ? 1 : 0),
-    hardcoreGildedRelics: relicCounts.gilded_soul,
-    hardcoreKingslayerRelics: relicCounts.kingslayers_testament,
-    hardcoreAstralRelics: relicCounts.astral_singularity,
-    hardcoreGodBlessings: db.prepare("SELECT blessings FROM hardcore_rngesus_favor WHERE guild_id=? AND user_id=?").get(guild, user)?.blessings || 0,
-    hardcoreEvents: eventRow.events || 0,
-    hardcoreChains: eventRow.chains || 0,
-    hardcoreKills: eventRow.kills || 0,
-    hardcoreBossKills: eventRow.boss_kills || 0,
-    hardcoreEventKinds: eventRow.kinds_json ? JSON.parse(eventRow.kinds_json).length : 0,
   };
 }
 

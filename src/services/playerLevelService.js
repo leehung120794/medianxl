@@ -127,46 +127,8 @@ function spendDiamonds(guildId, userId, amount, options = {}) {
   });
 }
 
-function addFreePulls(guildId, userId, amount = 1, now = Date.now()) {
-  const value = Math.trunc(Number(amount));
-  if (!Number.isSafeInteger(value) || value < 1)
-    throw new Error("INVALID_PULLS");
-  getPlayerProgression(guildId, userId, now);
-  withBusyRetry(() =>
-    require("./shopService").addInventory(
-      guildId,
-      userId,
-      "gacha_ticket_1",
-      value,
-      now,
-    ),
-  );
-  return getPlayerProgression(guildId, userId, now);
-}
-
-function consumeFreePull(guildId, userId, now = Date.now()) {
-  const shop = require("./shopService");
-  if (shop.getInventoryQuantity(guildId, userId, "gacha_ticket_1") < 1)
-    return false;
-  shop.consumeInventory(guildId, userId, "gacha_ticket_1");
-  return true;
-}
-
 function levelReward(level) {
-  if (level % 100 === 0)
-    return {
-      coins: 1_000_000,
-      diamonds: 1_000,
-      freePulls: 1,
-      cosmetic: "color_century",
-    };
-  if (level % 10 === 0)
-    return { coins: level * 10_000, diamonds: 150, freePulls: 1 };
-  return {
-    coins: level * 5_000,
-    diamonds: level % 5 === 0 ? 50 : 0,
-    freePulls: 0,
-  };
+  return { coins: level % 100 === 0 ? 1_000_000 : level * (level % 10 === 0 ? 10_000 : 5_000) };
 }
 
 function addExperience(
@@ -200,32 +162,6 @@ function addExperience(
           reason: `level:${level}`,
           operationId: `level:${guildId}:${userId}:${level}`,
         });
-      if (reward.diamonds)
-        changeDiamonds({
-          guildId,
-          userId,
-          amount: reward.diamonds,
-          reason: `level:${level}`,
-          operationId: `level-diamonds:${guildId}:${userId}:${level}`,
-          now,
-        });
-      if (reward.freePulls)
-        addFreePulls(guildId, userId, reward.freePulls, now);
-      if (reward.cosmetic) {
-        require("./profileCosmeticService").grantCosmetic(
-          guildId,
-          userId,
-          reward.cosmetic,
-          now,
-        );
-        require("./shopService").addInventory(
-          guildId,
-          userId,
-          reward.cosmetic,
-          1,
-          now,
-        );
-      }
     }
     db.prepare(
       "UPDATE player_currencies SET level=?,experience=?,updated_at=? WHERE guild_id=? AND user_id=?",
@@ -287,8 +223,6 @@ module.exports = {
   changeDiamonds,
   addDiamonds,
   spendDiamonds,
-  addFreePulls,
-  consumeFreePull,
   addExperience,
   gameExperience,
   levelReward,

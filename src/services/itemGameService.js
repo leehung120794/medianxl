@@ -5,9 +5,7 @@ const GAME_FILTERS = Object.freeze([
   { id: "blackjack", label: "Xì dách", emoji: "🃏" },
   { id: "poker", label: "Poker", emoji: "♠️" },
   { id: "mines", label: "Mines", emoji: "💣" },
-  { id: "coquay", label: "Cò quay Nga", emoji: "🔫" },
   { id: "vuatiengviet", label: "Vua tiếng Việt", emoji: "🧠" },
-  { id: "chinchiro", label: "Chinchiro", emoji: "🎲" },
 ]);
 
 const EFFECT_GAMES = Object.freeze({
@@ -36,14 +34,6 @@ const EFFECT_GAMES = Object.freeze({
   horse_consolation: ["duangua"],
   blackjack_bust_guard: ["blackjack"],
   poker_fold_coupon: ["poker"],
-  chinchiro_soundproof_bowl: ["chinchiro"],
-  chinchiro_weighted_dice: ["chinchiro"],
-  chinchiro_otsuki_dice: ["chinchiro"],
-  chinchiro_karma: ["chinchiro"],
-  coquay_magnifier: ["coquay"],
-  coquay_decoy: ["coquay"],
-  coquay_saw: ["coquay"],
-  coquay_cuffs: ["coquay"],
 });
 
 function itemGames(item) {

@@ -8,8 +8,6 @@ function forfeitActiveGames({ guildId, userId, adminId }) {
   const admin = String(adminId);
   const blackjack = require("./blackjackService");
   const mines = require("./minesService");
-  const chinchiro = require("./chinchiroService");
-  const hardcore = require("./hardcoreService");
   const poker = require("./pokerService");
   const blackjackDuel = require("./blackjackDuelService");
   const options = { label: "admin-clear", forfeit: true, forfeitUserId: user };
@@ -19,9 +17,6 @@ function forfeitActiveGames({ guildId, userId, adminId }) {
     const solo = [
       ["blackjack_sessions", blackjack.forceEndBlackjackSession],
       ["mines_sessions", mines.forceEndMinesSession],
-      ["coquay_sessions", require("./coquayService").forceEndCoquaySession],
-      ["chinchiro_sessions", chinchiro.forceEndChinchiroSession],
-      ["hardcore_sessions", hardcore.forceEndHardcoreSession],
     ];
     for (const [table, forceEnd] of solo) {
       for (const row of db

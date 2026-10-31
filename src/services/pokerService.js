@@ -37,13 +37,9 @@ const {
 } = require("./pokerEngine");
 const { createFairness, fairInt } = require("./fairnessService");
 const { getGameConfig } = require("./gameConfigService");
-const {
-  consumeActiveEffect,
-  getActiveEffect,
-} = require("./effectStateService");
 const pokerMultiplayerService = require("./pokerMultiplayerService");
 const pokerBotBrain = require("./pokerBotBrain");
-const { resultBlock, coins } = require("../utils/rewardText");
+const { resultBlock } = require("../utils/rewardText");
 
 const configuredAnte = Number(process.env.POKER_ANTE);
 const POKER_ANTE =
@@ -137,6 +133,8 @@ function getUserSession(guildId, userId) {
 }
 function parseState(session) {
   const state = JSON.parse(session.state_json);
+  delete state.pokerInsurance;
+  delete state.foldCoupon;
   if (state.mode !== "multiplayer")
     for (const bot of state.players?.slice(1) || [])
       bot.revealedCard ||= bot.hole?.[0];
@@ -276,10 +274,6 @@ function startPoker({
       result: null,
       fair,
       fairCounter: 0,
-      pokerInsurance: consumeActiveEffect(guildId, userId, "poker_insurance"),
-      foldCoupon: Boolean(
-        getActiveEffect(guildId, userId, "poker_fold_coupon"),
-      ),
     };
     for (const player of players) player.streetBet = 0;
     const now = Date.now();
@@ -512,30 +506,6 @@ function settle(session, state, reason = "showdown") {
     player.stack += awarded.awards[player.id] || 0;
   const human = state.players[0];
   let payout = awarded.awards[human.id] || 0;
-  let insurance = 0;
-  let insurancePercent = 0;
-  if (state.pokerInsurance && reason === "showdown" && payout === 0) {
-    insurancePercent = state.fair?.serverSeed
-      ? fairInt(state.fair.serverSeed, "poker-insurance", 0, 26) + 25
-      : crypto.randomInt(25, 51);
-    insurance = Math.max(
-      1,
-      Math.floor((human.committed * insurancePercent) / 100),
-    );
-    payout += insurance;
-  }
-  let foldRefund = 0;
-  if (
-    reason === "fold" &&
-    state.foldCoupon &&
-    state.street === "flop" &&
-    human.committed === state.ante &&
-    payout === 0 &&
-    consumeActiveEffect(session.guild_id, session.user_id, "poker_fold_coupon")
-  ) {
-    foldRefund = Math.floor(state.ante * 0.5);
-    payout += foldRefund;
-  }
   const outcome =
     payout > human.committed
       ? "win"
@@ -568,9 +538,6 @@ function settle(session, state, reason = "showdown") {
     refunds: awarded.refunds,
     payout,
     outcome,
-    insurance,
-    insurancePercent,
-    foldRefund,
     balance: account.balance,
     achievements: account.unlockedAchievements,
     experienceGained: account.experienceGained,
@@ -836,14 +803,7 @@ function pokerEmbed(state, userId, sessionId = null) {
           stake: human.committed,
           payout: state.result.payout,
           result: state.result,
-          extra: [
-            state.result.insurance
-              ? `🛡️ Bảo hiểm Poker hoàn **${state.result.insurancePercent}%** = +${coins(state.result.insurance)}`
-              : "",
-            state.result.foldRefund
-              ? `🏳️ Phiếu Bỏ Bài hoàn **50% Ante** = +${coins(state.result.foldRefund)}`
-              : "",
-          ],
+          extra: [],
         }),
       },
     );

@@ -3,41 +3,34 @@ const {
   EmbedBuilder,
   MessageFlags,
 } = require("discord.js");
-const { claimStarterPack } = require("../services/onboardingService");
-const { formatCoins } = require("../utils/economy");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("batdau")
-    .setDescription("Bắt đầu chơi và nhận gói chào mừng một lần"),
+    .setDescription("Xem hướng dẫn bắt đầu chơi"),
   async execute(interaction) {
     if (!interaction.guildId)
       return interaction.reply({
         content: "Lệnh này chỉ dùng trong server.",
         flags: MessageFlags.Ephemeral,
       });
-    const starter = claimStarterPack(interaction.guildId, interaction.user.id);
-    const reward = starter.claimed
-      ? `\n\n🎁 **Gói chào mừng:** ${formatCoins(starter.coins)} :coin: và màu hồ sơ **${starter.cosmetic}**.`
-      : "\n\n✅ Bạn đã nhận gói chào mừng trước đây; hướng dẫn vẫn luôn dùng được.";
     const embed = new EmbedBuilder()
       .setColor(0x38bdf8)
       .setTitle("👋 CHÀO MỪNG ĐẾN GAME HUB")
-      .setDescription(`Bắt đầu nhanh trong ba bước:${reward}`)
+      .setDescription("Bắt đầu nhanh trong ba bước:")
       .addFields(
         {
-          name: "1 · Nhận thưởng hoạt động",
-          value:
-            "Dùng `/nhiemvu diemdanh` mỗi ngày, `/nhiemvu nhan` để gom mọi thưởng (kể cả thưởng vai trò hằng tuần) và `/nhiemvu tanthu` để nhận quà tân thủ.",
+          name: "1 · Kiểm tra xu",
+          value: "Dùng `/xu` để xem số dư và lịch sử giao dịch.",
         },
         {
           name: "2 · Chọn trò chơi",
           value:
-            "Dùng lệnh riêng như `/xidach` hoặc `/sinhton batdau` để bắt đầu. Người mới nên thử Vua tiếng Việt hoặc Tài xỉu.",
+            "Dùng `/baucua`, `/taixiu`, `/xidach`, `/poker`, `/duangua`, `/domin` hoặc `/vtv` để chơi.",
         },
         {
-          name: "3 · Theo dõi tiến độ",
-          value: "Dùng `/nhiemvu kiemtra`, `/xephang` và `/hoso`.",
+          name: "3 · Hồ sơ và xếp hạng",
+          value: "Dùng `/hoso` và `/xephang`.",
         },
         {
           name: "Chơi có trách nhiệm",
@@ -45,7 +38,7 @@ module.exports = {
             "Đặt cược nhỏ khi làm quen. Xem 10 ván gần nhất bằng `/xu vanchoi`.",
         },
       )
-      .setFooter({ text: "Gói chào mừng chỉ nhận một lần trong mỗi server" });
+      .setFooter({ text: "Chúc bạn chơi vui vẻ." });
     return interaction.reply({
       embeds: [embed],
       flags: MessageFlags.Ephemeral,

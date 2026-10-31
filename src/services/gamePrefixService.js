@@ -2,16 +2,12 @@ const { normalizeSearch } = require("../utils/text");
 const { handleSlashPrefix, messageInteraction } = require("./slashPrefixService");
 const baucua = require("../commands/baucua");
 const taixiu = require("../commands/taixiu");
-const chinchiro = require("../commands/chinchiro");
 const blackjack = require("../commands/blackjack");
 const poker = require("../commands/poker");
 const duangua = require("../commands/duangua");
 const mines = require("../commands/mines");
-const coquay = require("../commands/coquay");
-const hardcore = require("../commands/hardcore");
 const vuatiengviet = require("../commands/vuatiengviet");
 const trochoi = require("../commands/trochoi");
-const use = require("../commands/use");
 const { PermissionFlagsBits } = require("discord.js");
 const {
   REWARD_GAMES,
@@ -28,16 +24,12 @@ const {
 const COMMANDS = {
   baucua,
   taixiu,
-  chinchiro,
   blackjack,
   poker,
   duangua,
   mines,
-  coquay,
-  hardcore,
   vuatiengviet,
   trochoi,
-  use,
 };
 const NAME_ALIASES = {
   vua: "vuatiengviet",
@@ -45,16 +37,10 @@ const NAME_ALIASES = {
   vutiengviet: "vuatiengviet",
   xidach: "blackjack",
   xi_dach: "blackjack",
-  hc: "hardcore",
-  sinhton: "hardcore",
   domin: "mines",
   huongdan: "trochoi",
   games: "trochoi",
   gamehelp: "trochoi",
-  sudung: "use",
-  xucxacngam: "chinchiro",
-  coquaynga: "coquay",
-  cqn: "coquay",
   datthuong: "setreward",
   xemthuong: "rewards",
   datgioihan: "setmaxbet",
@@ -72,13 +58,10 @@ const REWARD_LABELS = { vuatiengviet: "Vua tiếng Việt" };
 const BET_LABELS = {
   baucua: "Bầu cua",
   taixiu: "Tài xỉu",
-  chinchiro: "Chinchiro",
   blackjack: "Xì dách",
   poker: "Poker",
   duangua: "Đua ngựa",
   mines: "Mines",
-  coquay: "Cò quay Nga",
-  hardcore: "Sinh tồn",
 };
 
 function isAdmin(message) {
@@ -97,13 +80,8 @@ function help(prefix, command) {
     return `Cách dùng: \`${prefix}xidach <số xu> [bot|nguoichoi]\` — mặc định chơi với nhà cái bot; \`nguoichoi\` mở bàn làm nhà cái cho tối đa 3 người`;
   if (command === "poker")
     return `Cách dùng: \`${prefix}poker <texas|sixplus|pineapple|omaha> [bot|banbe]\``;
-  if (command === "chinchiro")
-    return `Cách dùng: \`${prefix}chinchiro <số xu>\``;
-  if (command === "coquay") return `Cách dùng: \`${prefix}coquay <số xu>\``;
   if (command === "mines")
     return `Cách dùng: \`${prefix}domin <số xu> <số mìn 2–7>\``;
-  if (command === "hardcore")
-    return `Cách dùng: \`${prefix}sinhton batdau\` để chọn nhân vật và nhập xu trên UI; hoặc \`${prefix}sinhton <thap|cuahang|tuido|hoso|xephang|tyle|tieptuc>\``;
   if (command === "vuatiengviet")
     return `Cách dùng: \`${prefix}vtv <batdau|boqua|ketthuc>\``;
   return `Cách dùng: \`${prefix}${command}\``;
@@ -220,16 +198,6 @@ async function handleGamePrefix(message) {
       integers: { ante },
       strings: { chedochoi: mode === "bot" ? "bot" : "nguoichoi" },
     };
-  } else if (name === "chinchiro") {
-    const amount = Number(parts[0]);
-    if (!Number.isSafeInteger(amount)) {
-      await message.reply({
-        content: help(prefix, name),
-        allowedMentions: { repliedUser: false },
-      });
-      return true;
-    }
-    options = { integers: { xu: amount } };
   } else if (name === "poker") {
     const variant = normalizeSearch(parts[0] || "").replace("+", "plus");
     const mode = normalizeSearch(parts[1] || "bot");
@@ -249,16 +217,6 @@ async function handleGamePrefix(message) {
         chedochoi: mode === "bot" ? "bot" : "nguoichoi",
       },
     };
-  } else if (name === "coquay") {
-    const amount = Number(parts[0]);
-    if (!Number.isSafeInteger(amount)) {
-      await message.reply({
-        content: help(prefix, name),
-        allowedMentions: { repliedUser: false },
-      });
-      return true;
-    }
-    options = { integers: { cuoc: amount } };
   } else if (name === "mines") {
     const amount = Number(parts[0]);
     const mineCount = Number(parts[1]);
@@ -270,52 +228,6 @@ async function handleGamePrefix(message) {
       return true;
     }
     options = { integers: { xu: amount, min: mineCount } };
-  } else if (name === "hardcore") {
-    const first = normalizeSearch(parts[0] || "");
-    if (!first || ["batdau", "start"].includes(first)) {
-      options = { subcommand: "batdau" };
-    } else if (
-      [
-        "hoso",
-        "profile",
-        "top",
-        "xephang",
-        "rates",
-        "tyle",
-        "tieptuc",
-        "cuahang",
-        "tuido",
-        "thap",
-      ].includes(first)
-    ) {
-      const subcommand =
-        first === "profile"
-          ? "hoso"
-          : first === "tyle"
-            ? "rates"
-            : first === "xephang"
-              ? "top"
-              : first;
-      options = { subcommand };
-    } else {
-      const amount = Number(parts[0]);
-      const classKey = normalizeSearch(parts[1] || "");
-      if (
-        !Number.isSafeInteger(amount) ||
-        !Object.hasOwn(require("./hardcoreService").CLASSES, classKey)
-      ) {
-        await message.reply({
-          content: help(prefix, name),
-          allowedMentions: { repliedUser: false },
-        });
-        return true;
-      }
-      options = {
-        subcommand: "batdau",
-        integers: { xu: amount },
-        strings: { class: classKey },
-      };
-    }
   } else if (name === "vuatiengviet") {
     const rawSubcommand = normalizeSearch(parts[0] || "batdau").replace(
       /\s/g,

@@ -20,7 +20,6 @@ const {
   xpForNextLevel,
   levelReward,
 } = require("../services/playerLevelService");
-const { getTicketBalances } = require("../services/gachaService");
 
 function number(value) {
   return Number(value).toLocaleString("vi-VN");
@@ -44,9 +43,6 @@ function rewardSummary(level) {
   const reward = levelReward(level);
   return [
     reward.coins ? `${number(reward.coins)} :coin:` : null,
-    reward.diamonds ? `${number(reward.diamonds)} :gem:` : null,
-    reward.freePulls ? `${reward.freePulls} vé Gacha ×1 SSR` : null,
-    reward.cosmetic ? "màu hồ sơ độc quyền" : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -55,26 +51,11 @@ function overviewField(summary) {
   return {
     name: "📊 Tổng quan toàn bộ game",
     inline: false,
-    value: `Đã chơi **${summary.activeGames}/9 game**${summary.favorite ? ` · Chơi nhiều nhất: **${summary.favorite.label.replace(/^\S+\s/, "")}** (${number(summary.favorite.played)} ván)` : ""}\nTổng cược **${number(summary.wagered)} :coin:** · Tổng nhận **${number(summary.payout)} :coin:** · Dòng xu ròng **${signed(summary.net)} xu**`,
-  };
-}
-function survivalField(appearance) {
-  return {
-    name: "🏔️ Sinh tồn",
-    value:
-      `Tầng cao nhất đã vượt: **${number(appearance.bestFloor || 0)}**\n${appearance.frame ? `🖼️ **${appearance.frame.name}** · Đã mở vĩnh viễn` : "Khung hồ sơ: Bạc 333 · Vàng 666 · Kim cương 999"}` +
-      (appearance.avatarRing
-        ? "\n" +
-          appearance.avatarRing.emoji +
-          " **" +
-          appearance.avatarRing.name +
-          "** · Vòng avatar thành tựu tầng 500"
-        : "\nVòng avatar: vượt tầng 500 bằng từng class để mở"),
-    inline: false,
+    value: `Đã chơi **${summary.activeGames}/7 game**${summary.favorite ? ` · Chơi nhiều nhất: **${summary.favorite.label.replace(/^\S+\s/, "")}** (${number(summary.favorite.played)} ván)` : ""}\nTổng cược **${number(summary.wagered)} :coin:** · Tổng nhận **${number(summary.payout)} :coin:** · Dòng xu ròng **${signed(summary.net)} xu**`,
   };
 }
 function levelField(
-  progress = { level: 1, experience: 0, diamonds: 0, free_gacha_pulls: 0 },
+  progress = { level: 1, experience: 0 },
   guildId = null,
 ) {
   const target = xpForNextLevel(progress.level, guildId);
@@ -83,14 +64,10 @@ function levelField(
     0,
     Math.min(100, Math.floor((progress.experience / target) * 100)),
   );
-  const tickets =
-    guildId && progress.user_id
-      ? getTicketBalances(guildId, progress.user_id)
-      : { single: 0, ten: 0 };
   return {
     name: ":test_tube: Cấp độ & EXP",
     inline: false,
-    value: `Cấp **${progress.level}** · :test_tube: **${number(progress.experience)}/${number(target)}**\n${expBar(progress.experience, target)} **${percent}%**\n🎁 Lên cấp **${nextLevel}**: ${rewardSummary(nextLevel)}\n:gem: **${number(progress.diamonds)}** kim cương · 🎟️ Vé ×1 **${tickets.single}** · Vé ×10 **${tickets.ten}**`,
+    value: `Cấp **${progress.level}** · :test_tube: **${number(progress.experience)}/${number(target)}**\n${expBar(progress.experience, target)} **${percent}%**\n🎁 Lên cấp **${nextLevel}**: ${rewardSummary(nextLevel)}`,
   };
 }
 function profileSelectRow(ownerId, targetId, stats, selected = "overview") {
@@ -156,7 +133,6 @@ function overviewEmbed(
         inline: true,
       },
       levelField(progress, guildId),
-      survivalField(appearance),
       overviewField(summarizeGameStats(stats)),
     )
     .setFooter({ text: "Chọn một game trong menu để xem chi tiết" });
@@ -288,7 +264,6 @@ function fallbackEmbed(
     )
     .addFields(
       levelField(progress, guildId),
-      survivalField(appearance),
       overviewField(summarizeGameStats(stats)),
     )
     .setFooter({ text: "Đang dùng giao diện hồ sơ dự phòng" });
@@ -354,7 +329,6 @@ module.exports = {
         )
         .addFields(
           levelField(levelProgress, interaction.guildId),
-          survivalField(appearance),
           overviewField(gameSummary),
         )
         .setImage(`attachment://profile-${user.id}.png`)

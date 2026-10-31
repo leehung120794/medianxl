@@ -14,7 +14,6 @@ const {
 } = require("./economyService");
 const { formatCoins } = require("../utils/economy");
 const { getGameBetLimit } = require("./gameBetLimitService");
-const { consumeActiveEffect } = require("./effectStateService");
 const { createFairness, fairShuffle, fairInt } = require("./fairnessService");
 const { resultBlock, coins } = require("../utils/rewardText");
 
@@ -146,6 +145,8 @@ function getMinesByUser(guildId, userId) {
 }
 function parseState(session) {
   const state = JSON.parse(session.state_json);
+  delete state.blastShield;
+  delete state.shieldUsed;
   if (!Number.isInteger(state.specialCell))
     state.specialCell = createSpecialPosition(state.mines);
   state.specialFound = Boolean(state.specialFound);
@@ -228,8 +229,6 @@ const startTx = db.transaction(
       opened: [],
       status: "playing",
       fair,
-      blastShield: consumeActiveEffect(guildId, userId, "mines_blast_shield"),
-      shieldUsed: false,
     };
     const now = Date.now();
     const session = {
@@ -342,21 +341,6 @@ const playTx = db.transaction(({ sessionId, userId, action, cell = null }) => {
   )
     throw new Error("INVALID_CELL");
   if (state.mines.includes(cell)) {
-    if (state.blastShield && !state.shieldUsed) {
-      state.mines = state.mines.filter((index) => index !== cell);
-      state.opened.push(cell);
-      state.opened.sort((a, b) => a - b);
-      state.shieldUsed = true;
-      state.lastSignal = `🛡️ Giáp Chống Nổ đã vô hiệu hóa mìn ở ô ${cell + 1}; ván tiếp tục.`;
-      saveState(session, state);
-      return {
-        settled: false,
-        session,
-        state,
-        shieldSaved: cell,
-        result: null,
-      };
-    }
     return {
       settled: true,
       session,
@@ -478,15 +462,6 @@ function minesEmbed(state, userId, result = null, sessionId = null) {
           ? `**Đã tìm thấy · bonus x${SPECIAL_MULTIPLIER_BONUS.toFixed(2)}**`
           : "**Đang ẩn trong bàn**",
       },
-      ...(state.blastShield
-        ? [
-            {
-              name: "🛡️ GIÁP CHỐNG NỔ",
-              value: state.shieldUsed ? "**Đã kích hoạt**" : "**Sẵn sàng**",
-              inline: true,
-            },
-          ]
-        : []),
     );
   if (!result && state.lastSignal)
     embed.addFields({

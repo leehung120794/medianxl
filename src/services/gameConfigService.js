@@ -156,6 +156,7 @@ const GAME_CONFIG_SPECS = Object.freeze({
     max: 100,
     fallback: 50,
     note: "Trọng số bậc, tự chuẩn hóa về 100% cùng các bậc khác. Vật phẩm trong bậc được chọn ngẫu nhiên đều.",
+    retired: true,
   }),
   GACHA_RATE_R: Object.freeze({
     label: "Tỷ lệ Gacha · bậc R",
@@ -164,6 +165,7 @@ const GAME_CONFIG_SPECS = Object.freeze({
     max: 100,
     fallback: 22,
     note: "Trọng số bậc, tự chuẩn hóa về 100% cùng các bậc khác. Số vật phẩm trong bậc không ảnh hưởng tỷ lệ bậc.",
+    retired: true,
   }),
   GACHA_RATE_SR: Object.freeze({
     label: "Tỷ lệ Gacha · bậc SR",
@@ -172,6 +174,7 @@ const GAME_CONFIG_SPECS = Object.freeze({
     max: 100,
     fallback: 14,
     note: "Trọng số bậc, tự chuẩn hóa về 100%. Tối thiểu 0.1 để bảo hiểm SR luôn hoạt động.",
+    retired: true,
   }),
   GACHA_RATE_SSR: Object.freeze({
     label: "Tỷ lệ Gacha · bậc SSR",
@@ -180,6 +183,7 @@ const GAME_CONFIG_SPECS = Object.freeze({
     max: 100,
     fallback: 10,
     note: "Trọng số bậc, tự chuẩn hóa về 100%. Tối thiểu 0.1 để bảo hiểm SSR luôn hoạt động.",
+    retired: true,
   }),
   GACHA_RATE_UR: Object.freeze({
     label: "Tỷ lệ Gacha · bậc UR",
@@ -188,6 +192,7 @@ const GAME_CONFIG_SPECS = Object.freeze({
     max: 100,
     fallback: 4,
     note: "Trọng số bậc, tự chuẩn hóa về 100%. Tối thiểu 0.1 để bảo hiểm UR luôn hoạt động.",
+    retired: true,
   }),
   DIVINE_EYE_MAX_BET: Object.freeze({
     label: "Giới hạn cược khi dùng Mắt Thần",

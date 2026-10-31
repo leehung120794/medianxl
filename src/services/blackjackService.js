@@ -23,10 +23,6 @@ const {
 } = require("./economyService");
 const { formatCoins } = require("../utils/economy");
 const { getGameBetLimit } = require("./gameBetLimitService");
-const {
-  consumeHighestEffect,
-  consumeActiveEffect,
-} = require("./effectStateService");
 const { createFairness, fairShuffle } = require("./fairnessService");
 const { resultBlock, coins } = require("../utils/rewardText");
 const {
@@ -149,7 +145,14 @@ function getActiveSession(id, guildId) {
   );
 }
 function parseState(session) {
-  return JSON.parse(session.state_json);
+  const state = JSON.parse(session.state_json);
+  delete state.itemEffect;
+  delete state.itemEffectUsed;
+  delete state.firstAce;
+  delete state.bustGuardUsed;
+  for (const hand of state.hands || [])
+    if (hand.status === "redraw") hand.status = "bust";
+  return state;
 }
 
 function saveState(session, state) {
@@ -237,12 +240,6 @@ const startTx = db.transaction(
       reason: "blackjack:reserve",
     });
     const fair = createFairness();
-    const handEffect = consumeHighestEffect(guildId, userId, [
-      "blackjack_first_ace",
-      "blackjack_swap",
-      "blackjack_redraw",
-    ]);
-    const firstAce = handEffect?.effect_id === "blackjack_first_ace";
     const state = {
       cardBack: createCardBack(),
       deck: forcedDeck ? [...forcedDeck] : createShoe(6, fair.serverSeed),
@@ -252,12 +249,8 @@ const startTx = db.transaction(
       split: false,
       maxBet,
       fair,
-      itemEffect: firstAce ? null : handEffect?.effect_id || null,
-      itemEffectUsed: false,
-      firstAce,
       winMultiplier: getWinMultiplier(guildId, "blackjack"),
     };
-    if (firstAce) putAceOnTop(state.deck);
     state.hands[0].cards.push(draw(state));
     state.dealer.push(draw(state));
     state.hands[0].cards.push(draw(state));
@@ -390,21 +383,6 @@ function settleState(session, state, reason = null) {
       state.winMultiplier ?? getWinMultiplier(session.guild_id, "blackjack"),
     );
     let { label, payout: handPayout } = evaluated;
-    if (
-      evaluated.type === "bust" &&
-      evaluated.score === 22 &&
-      evaluated.payout === 0 &&
-      !state.bustGuardUsed &&
-      consumeActiveEffect(
-        session.guild_id,
-        session.user_id,
-        "blackjack_bust_guard",
-      )
-    ) {
-      state.bustGuardUsed = true;
-      handPayout = Math.floor(hand.bet * 0.25);
-      label = "Quắc 22 · Hoàn 25% cược";
-    }
     payout += handPayout;
     return { score: evaluated.score, payout: handPayout, label };
   });
@@ -469,43 +447,10 @@ const actionTx = db.transaction(
         state,
         result: settleState(session, state, "forfeit"),
       };
-    if (action === "redraw") {
-      if (
-        state.itemEffect !== "blackjack_redraw" ||
-        state.itemEffectUsed ||
-        hand.status !== "redraw"
-      )
-        throw new Error("ITEM_EFFECT_UNAVAILABLE");
-      hand.cards.pop();
+    if (action === "hit") {
       hand.cards.push(draw(state));
-      state.itemEffectUsed = true;
-      const score = handScore(hand.cards).total;
-      hand.status = score > 21 ? "bust" : score === 21 ? "stand" : "playing";
-    } else if (action === "swap") {
-      const index = Number(cardIndex);
-      if (
-        state.itemEffect !== "blackjack_swap" ||
-        state.itemEffectUsed ||
-        hand.status !== "playing" ||
-        !Number.isInteger(index) ||
-        index < 0 ||
-        index >= hand.cards.length
-      )
-        throw new Error("ITEM_EFFECT_UNAVAILABLE");
-      hand.cards.splice(index, 1, draw(state));
-      state.itemEffectUsed = true;
       const score = handScore(hand.cards).total;
       if (score >= 21) hand.status = score > 21 ? "bust" : "stand";
-    } else if (action === "hit") {
-      hand.cards.push(draw(state));
-      const score = handScore(hand.cards).total;
-      if (
-        score > 21 &&
-        state.itemEffect === "blackjack_redraw" &&
-        !state.itemEffectUsed
-      )
-        hand.status = "redraw";
-      else if (score >= 21) hand.status = score > 21 ? "bust" : "stand";
     } else if (action === "stand") {
       if (!canStand(hand.cards)) throw new Error("MUST_HIT");
       hand.status = "stand";
@@ -670,35 +615,6 @@ function actionRows(sessionId, state, disabled = false) {
         .setDisabled(disabled || busted),
     ),
   ];
-  if (!disabled && hand?.status === "redraw")
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`blackjack:${sessionId}:redraw`)
-          .setLabel("Bỏ lá vừa rút và rút lại")
-          .setEmoji("🔄")
-          .setStyle(ButtonStyle.Success),
-      ),
-    );
-  if (
-    !disabled &&
-    hand?.status === "playing" &&
-    state.itemEffect === "blackjack_swap" &&
-    !state.itemEffectUsed
-  ) {
-    for (let start = 0; start < hand.cards.length; start += 5)
-      rows.push(
-        new ActionRowBuilder().addComponents(
-          ...hand.cards.slice(start, start + 5).map((card, offset) =>
-            new ButtonBuilder()
-              .setCustomId(`blackjack:${sessionId}:swap:${start + offset}`)
-              .setLabel(`Đổi lá ${start + offset + 1}`)
-              .setEmoji(cardButtonEmoji(card))
-              .setStyle(ButtonStyle.Secondary),
-          ),
-        ),
-      );
-  }
   return rows;
 }
 
@@ -748,9 +664,7 @@ async function handleBlackjackButton(interaction) {
             ? `Bạn cần ít nhất **${PLAYER_MIN_STAND} điểm** mới được dừng; hãy rút thêm bài.`
             : error.message === "CANNOT_SPLIT"
               ? "Chỉ được tách một lần khi hai lá đầu cùng hạng."
-              : error.message === "ITEM_EFFECT_UNAVAILABLE"
-                ? "Hiệu ứng vật phẩm không còn khả dụng trong ván này."
-                : "Không thể thực hiện thao tác này.";
+              : "Không thể thực hiện thao tác này.";
     return interaction.reply({ content, flags: MessageFlags.Ephemeral });
   }
 }
@@ -854,10 +768,7 @@ function hasOtherWagerSession(guildId, userId) {
   const user = String(userId);
   const checks = [
     ["blackjack_sessions", "user_id"],
-    ["chinchiro_sessions", "user_id"],
     ["mines_sessions", "user_id"],
-    ["coquay_sessions", "user_id"],
-    ["hardcore_sessions", "user_id"],
     ["poker_sessions", "user_id"],
   ];
   if (

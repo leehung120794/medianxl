@@ -19,10 +19,6 @@ const { formatCoins } = require("../utils/economy");
 const { requireGameChannel } = require("../utils/gameChannel");
 const { channelHasGame } = require("../services/gameChannelService");
 const { getGameReward } = require("../services/gameRewardService");
-const { getInventory } = require("../services/shopService");
-const { itemGames } = require("../services/itemGameService");
-const { useItem } = require("../services/itemEffectService");
-const { itemIcon } = require("../utils/rarity");
 
 function isAdmin(interaction) {
   const ids = String(process.env.ADMIN_USER_ID || "")
@@ -104,79 +100,7 @@ function controlRows(question) {
         .setEmoji("⏭️")
         .setStyle(ButtonStyle.Secondary),
     );
-  buttons.push(
-    new ButtonBuilder()
-      .setCustomId("vuatiengviet:items")
-      .setLabel("Vật phẩm")
-      .setEmoji("🎒")
-      .setStyle(ButtonStyle.Primary),
-  );
-  return [new ActionRowBuilder().addComponents(buttons)];
-}
-
-const QUICK_LABELS = Object.freeze({
-  quiz_living_dictionary: "Từ điển",
-  quiz_first_word: "Mở đầu",
-  quiz_syllable_lengths: "Đếm âm tiết",
-  quiz_letter_position: "Kính soi chữ",
-  quiz_extra_time: "Gia hạn",
-});
-
-function privateItemPanel(guildId, userId, status = null) {
-  const items = getInventory(guildId, userId)
-    .filter(
-      (row) =>
-        row.quantity > 0 && itemGames(row.item)?.includes("vuatiengviet"),
-    )
-    .slice(0, 25);
-  const rarityLabels = {
-    R: "R",
-    SR: "SR",
-    SSR: "SSR",
-    UR: "UR",
-    common: "Thường",
-    rare: "Hiếm",
-    epic: "Epic",
-    legendary: "Huyền thoại",
-    mythic: "Mythic",
-  };
-  const lines = items.map(({ item, quantity }) => {
-    const rarity = rarityLabels[item.rarity] || item.rarity || "Vật phẩm";
-    return `${itemIcon(item)} **${item.name}** [${rarity}] · Sở hữu: **×${quantity}**\n${item.description}`;
-  });
-  const description =
-    [status, ...lines].filter(Boolean).join("\n\n") ||
-    "Bạn chưa có vật phẩm dùng trong Vua Tiếng Việt.";
-  const rows = [];
-  for (let index = 0; index < items.length; index += 5) {
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        items.slice(index, index + 5).map((row) =>
-          new ButtonBuilder()
-            .setCustomId(`vuatiengviet:item:${userId}:${row.item.id}`)
-            .setLabel(
-              `${QUICK_LABELS[row.item.effect] || row.item.name} (${row.quantity})`.slice(
-                0,
-                80,
-              ),
-            )
-            .setStyle(ButtonStyle.Secondary),
-        ),
-      ),
-    );
-  }
-  return {
-    embeds: [
-      new EmbedBuilder()
-        .setColor(0x5865f2)
-        .setTitle("📚 VẬT PHẨM · VUA TIẾNG VIỆT")
-        .setDescription(description.slice(0, 4000))
-        .setFooter({
-          text: "Số lượng trong kho của bạn · Bảng riêng tư · Chọn nút bên dưới để dùng nhanh",
-        }),
-    ],
-    components: rows,
-  };
+  return buttons.length ? [new ActionRowBuilder().addComponents(buttons)] : [];
 }
 
 async function updateQuestionMessage(guildId, channel, notice = null) {
@@ -320,7 +244,7 @@ const command = {
         content: "Các nút này chỉ dùng trong channel Vua tiếng Việt.",
         flags: MessageFlags.Ephemeral,
       });
-    const [, action, ownerId, itemId] = interaction.customId.split(":");
+    const [, action] = interaction.customId.split(":");
     const session = getVuaSession(interaction.guildId);
     if (!session)
       return interaction.reply({
@@ -328,7 +252,6 @@ const command = {
         flags: MessageFlags.Ephemeral,
       });
     if (
-      action !== "item" &&
       session.uiMessageId &&
       interaction.message?.id !== session.uiMessageId
     )
@@ -337,75 +260,6 @@ const command = {
           "UI câu hỏi này đã cũ. Hãy dùng các nút trên tin câu hỏi mới nhất.",
         flags: MessageFlags.Ephemeral,
       });
-    if (action === "items")
-      return interaction.reply({
-        ...privateItemPanel(interaction.guildId, interaction.user.id),
-        flags: MessageFlags.Ephemeral,
-      });
-    if (action === "item") {
-      if (ownerId !== interaction.user.id)
-        return interaction.reply({
-          content: "Bảng vật phẩm này thuộc về người chơi khác.",
-          flags: MessageFlags.Ephemeral,
-        });
-      try {
-        const result = useItem({
-          guildId: interaction.guildId,
-          userId: interaction.user.id,
-          channelId: interaction.channelId,
-          itemId,
-        });
-        if (result.item.effect === "quiz_living_dictionary") {
-          // Như một câu trả lời đúng bình thường: thông báo công khai rồi đăng câu hỏi mới; bảng riêng chỉ xác nhận ngắn, không lặp lại nội dung.
-          await interaction.channel
-            .send({
-              content: result.message,
-              allowedMentions: { users: [interaction.user.id] },
-            })
-            .catch(() => null);
-          await postNextQuestionMessage(
-            interaction.guildId,
-            interaction.channel,
-          ).catch(() => null);
-          return interaction.update(
-            privateItemPanel(
-              interaction.guildId,
-              interaction.user.id,
-              `✅ Đã dùng **${result.item.name}**; kết quả đã được thông báo trong kênh.`,
-            ),
-          );
-        }
-        if (result.item.effect === "quiz_extra_time")
-          await updateQuestionMessage(
-            interaction.guildId,
-            interaction.channel,
-            result.message,
-          ).catch(() => null);
-        return interaction.update(
-          privateItemPanel(
-            interaction.guildId,
-            interaction.user.id,
-            `✅ **${result.item.name}**: ${result.message}`,
-          ),
-        );
-      } catch (error) {
-        const text =
-          error.message === "HARD_QUESTION_REQUIRED"
-            ? "Vật phẩm này chỉ dùng được ở câu khó; vật phẩm chưa bị trừ."
-            : error.message === "QUESTION_EXPIRED"
-              ? "Câu khó đã hết hạn; vật phẩm chưa bị trừ."
-              : error.message === "ITEM_NOT_OWNED"
-                ? "Bạn đã hết vật phẩm này."
-                : "Không thể dùng vật phẩm lúc này; vật phẩm chưa bị trừ.";
-        return interaction.update(
-          privateItemPanel(
-            interaction.guildId,
-            interaction.user.id,
-            `⚠️ ${text}`,
-          ),
-        );
-      }
-    }
     if (action !== "skip")
       return interaction.reply({
         content: "Thao tác không hợp lệ.",
@@ -453,7 +307,6 @@ const command = {
   isAdmin,
   updateQuestionMessage,
   postNextQuestionMessage,
-  privateItemPanel,
 };
 
 const playerCommand = {

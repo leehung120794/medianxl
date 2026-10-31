@@ -2,9 +2,6 @@ const { EmbedBuilder } = require("discord.js");
 const { db } = require("../db");
 const { forceEndBlackjackSession } = require("./blackjackService");
 const { forceEndMinesSession } = require("./minesService");
-const { forceEndCoquaySession } = require("./coquayService");
-const { forceEndChinchiroSession } = require("./chinchiroService");
-const { forceEndHardcoreSession } = require("./hardcoreService");
 
 const ttlValue = Number(process.env.SOLO_SESSION_TTL_MINUTES);
 const SOLO_SESSION_TTL_MS =
@@ -19,22 +16,6 @@ const SOLO_GAMES = Object.freeze([
     forceEnd: forceEndBlackjackSession,
   },
   { table: "mines_sessions", name: "DÒ MÌN", forceEnd: forceEndMinesSession },
-  {
-    table: "coquay_sessions",
-    name: "CÒ QUAY NGA",
-    forceEnd: forceEndCoquaySession,
-  },
-  {
-    table: "chinchiro_sessions",
-    name: "CHINCHIRO",
-    forceEnd: forceEndChinchiroSession,
-  },
-  {
-    table: "hardcore_sessions",
-    name: "SINH TỒN",
-    forceEnd: forceEndHardcoreSession,
-    ttl: 7 * 24 * 60 * 60_000,
-  },
 ]);
 
 function expireStaleSoloSessionsSync(now = Date.now()) {

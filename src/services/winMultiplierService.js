@@ -8,10 +8,6 @@ const MAX_WIN_MULTIPLIER = 3;
 const WIN_MULTIPLIER_GAMES = Object.freeze([
   { game: "blackjack", emoji: "🃏", label: "Xì dách (với bot)", fallback: 2,
     note: "Thắng thường và Ngũ linh; Xì dách/Xì bàng tự nhiên = hệ số + 0,5" },
-  { game: "chinchiro", emoji: "🎲", label: "Chinchiro", fallback: 1.8,
-    note: "Thắng khi điểm cao hơn nhà cái; Shigoro, Bão, Pin-Zoro giữ nguyên" },
-  { game: "coquay", emoji: "🔫", label: "Cò quay Nga", fallback: 2,
-    note: "Hạ Bot về 0 máu" },
   { game: "taixiu", emoji: "🎯", label: "Tài xỉu · Tài/Xỉu/Chẵn/Lẻ", fallback: 2,
     note: "Ra bộ ba vẫn thua; Bộ ba và Tổng cụ thể giữ nguyên" },
 ]);

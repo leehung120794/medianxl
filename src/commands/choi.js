@@ -8,13 +8,10 @@ const {
 const games = {
   baucua: require("./baucua"),
   taixiu: require("./taixiu"),
-  chinchiro: require("./chinchiro"),
   xidach: require("./blackjack"),
   poker: require("./poker"),
   duangua: require("./duangua"),
   domin: require("./mines"),
-  coquay: require("./coquay"),
-  sinhton: require("./hardcore"),
   vuatiengviet: require("./vuatiengviet"),
 };
 
@@ -25,7 +22,6 @@ const GAME_ALIASES = {
 const MAINTENANCE_KEYS = {
   xidach: "blackjack",
   domin: "mines",
-  sinhton: "hardcore",
   vuatiengviet: "vuatiengviet",
 };
 
@@ -70,7 +66,6 @@ function gameGroup(
 const options = [
   simpleGame("baucua", games.baucua, "Mở bàn Bầu cua nhiều người"),
   simpleGame("taixiu", games.taixiu, "Mở bàn Tài xỉu nhiều người"),
-  simpleGame("chinchiro", games.chinchiro, "Chơi Xúc Xắc Ngầm với Nhà cái"),
   simpleGame(
     "xidach",
     games.xidach,
@@ -85,14 +80,6 @@ const options = [
   simpleGame("domin", games.domin, "Dò mìn và săn hệ số thưởng", {
     min: "somin",
   }),
-  simpleGame("coquay", games.coquay, "Cò quay Nga: đấu súng 3 máu với Bot"),
-  gameGroup(
-    "sinhton",
-    games.sinhton,
-    "Chơi Sinh tồn vượt tầng",
-    { top: "xephang", rates: "tyle" },
-    { class: "nhanvat", user: "nguoidung" },
-  ),
   simpleGame("vtv", games.vuatiengviet, "Admin: bắt đầu phiên Vua tiếng Việt"),
 ];
 
@@ -111,14 +98,6 @@ function delegated(interaction) {
       subcommand: null,
       optionNames: { min: "somin" },
     };
-  if (key === "sinhton") {
-    const visible = interaction.options.getSubcommand();
-    return {
-      command: games.sinhton,
-      subcommand: { xephang: "top", tyle: "rates" }[visible] || visible,
-      optionNames: { class: "nhanvat", user: "nguoidung" },
-    };
-  }
   return { command: games[key] };
 }
 
@@ -130,18 +109,8 @@ const standaloneCommands = Object.fromEntries(
       const gameKey = MAINTENANCE_KEYS[key] || key;
       const command = games[key];
       const route = (interaction) => ({
-        subcommand:
-          key === "sinhton"
-            ? { xephang: "top", tyle: "rates" }[
-                interaction.options.getSubcommand()
-              ] || interaction.options.getSubcommand()
-            : undefined,
-        optionNames:
-          key === "sinhton"
-            ? { class: "nhanvat", user: "nguoidung" }
-            : key === "domin"
-              ? { min: "somin" }
-              : {},
+        subcommand: undefined,
+        optionNames: key === "domin" ? { min: "somin" } : {},
       });
       return [
         key,

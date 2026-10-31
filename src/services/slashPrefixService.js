@@ -5,25 +5,19 @@ const ALIASES = {
   blackjack: "xidach",
   xi_dach: "xidach",
   mines: "domin",
-  hardcore: "sinhton",
-  hc: "sinhton",
   vuatiengviet: "vtv",
   vua: "vtv",
   vutiengviet: "vtv",
   trochoi: "huongdan",
   games: "huongdan",
   gamehelp: "huongdan",
-  xucxacngam: "chinchiro",
-  coquaynga: "coquay",
-  cqn: "coquay",
   items: "item",
   timitem: "item",
 };
 const SUB_ALIASES = {
-  sinhton: { start: "batdau", profile: "hoso", top: "xephang", rates: "tyle" },
   vtv: { start: "batdau", skip: "boqua", end: "ketthuc" },
 };
-const DEFAULT_SUBCOMMANDS = { sinhton: "batdau", vtv: "batdau" };
+const DEFAULT_SUBCOMMANDS = { vtv: "batdau" };
 const normalize = (value) => normalizeSearch(String(value)).replace(/\s/g, "");
 let registeredCommands;
 
@@ -379,12 +373,6 @@ async function handleSlashPrefix(message) {
   const name = ALIASES[normalize(first)] || normalize(first);
   const command = commandMap(message).get(name);
   if (!command) return false;
-  // Retain the historical !sinhton <xu> <class> shortcut handled by gamePrefixService.
-  if (
-    name === "sinhton" &&
-    /^\s*[+-]?\d+(?:\s|$)/.test(body.slice(first.length))
-  )
-    return false;
   const schema = command.data.toJSON();
   let route = { path: [name], definitions: schema.options || [] };
   let parsed;

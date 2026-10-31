@@ -19,14 +19,13 @@ const {
   resetServerPlayerData,
 } = require("../services/adminDataService");
 const game = require("./game");
-const { roleRewardPanel, winMultiplierPanel } = require("./quantriPanels");
+const { winMultiplierPanel } = require("./quantriPanels");
 const {
   GAMES,
   GAME_LABELS,
   isGameMaintenance,
   setGameMaintenance,
 } = require("../services/gameChannelService");
-const shop = require("./shop");
 const {
   forceEndBlackjackSession,
   forceEndBlackjackTable,
@@ -37,9 +36,6 @@ const { forceEndBlackjackDuel } = require("../services/blackjackDuelService");
 const { forceEndSharedRound } = require("../services/roundAdminService");
 const { pokerTableEmbed } = require("../services/pokerMultiplayerService");
 const { forceEndMinesSession } = require("../services/minesService");
-const { forceEndCoquaySession } = require("../services/coquayService");
-const { forceEndChinchiroSession } = require("../services/chinchiroService");
-const { forceEndHardcoreSession } = require("../services/hardcoreService");
 
 const GAME_NAMES = {
   setup: "datkenh",
@@ -51,18 +47,6 @@ const GAME_NAMES = {
   health: "trangthai",
   configs: "xemcauhinh",
   configreset: "khoiphuc",
-  gachaadd: "themgacha",
-  gachatoggle: "batgacha",
-  gachapool: "xemgacha",
-  buffset: "datbuff",
-};
-const SHOP_NAMES = {
-  add: "themvatpham",
-  edit: "suavatpham",
-  remove: "xoavatpham",
-  rotate: "xoaycuahang",
-  stock: "tonkho",
-  discount: "giamgia",
 };
 const OPTION_NAMES = {
   channel: "kenh",
@@ -87,7 +71,7 @@ const OPTION_NAMES = {
   amount: "soluong",
 };
 const reverse = Object.fromEntries(
-  [...Object.entries(GAME_NAMES), ...Object.entries(SHOP_NAMES)].map(
+  Object.entries(GAME_NAMES).map(
     ([oldName, newName]) => [newName, oldName],
   ),
 );
@@ -116,14 +100,6 @@ function isAdmin(interaction) {
   );
 }
 
-function isBotAdmin(interaction) {
-  return String(process.env.ADMIN_USER_ID || "")
-    .split(/[,;\n]/)
-    .map((id) => id.trim())
-    .filter(Boolean)
-    .includes(interaction.user.id);
-}
-
 function adminOptions(command, names, excluded = []) {
   return command.data
     .toJSON()
@@ -135,7 +111,14 @@ function adminOptions(command, names, excluded = []) {
     }));
 }
 const options = [
-  ...adminOptions(game, GAME_NAMES, ["config", "reward"]),
+  ...adminOptions(game, GAME_NAMES, [
+    "config",
+    "reward",
+    "gachaadd",
+    "gachatoggle",
+    "gachapool",
+    "buffset",
+  ]),
   {
     type: ApplicationCommandOptionType.Subcommand,
     name: "baotri",
@@ -143,16 +126,9 @@ const options = [
   },
   {
     type: ApplicationCommandOptionType.Subcommand,
-    name: "xemthuongvaitro",
-    description:
-      "Xem và quản lý thưởng vai trò hàng tuần (thêm, sửa, xóa bằng nút)",
-  },
-  {
-    type: ApplicationCommandOptionType.Subcommand,
     name: "hesothang",
     description: "Xem và chỉnh hệ số thắng cược 1-1 với nhà cái của từng game",
   },
-  ...adminOptions(shop, SHOP_NAMES, ["xem"]),
   {
     type: ApplicationCommandOptionType.Subcommand,
     name: "xoadulieu",
@@ -187,11 +163,6 @@ const options = [
         max_length: 32,
       },
     ],
-  },
-  {
-    type: ApplicationCommandOptionType.Subcommand,
-    name: "thapreset",
-    description: "Xoay Tháp Định Mệnh ngay; lịch tự động vẫn là thứ Hai",
   },
 ];
 
@@ -252,7 +223,7 @@ function route(interaction) {
   const visible = interaction.options.getSubcommand();
   const oldName = reverse[visible];
   return {
-    command: Object.hasOwn(GAME_NAMES, oldName) ? game : shop,
+    command: game,
     subcommand: oldName,
     optionNames: OPTION_NAMES,
   };
@@ -260,36 +231,10 @@ function route(interaction) {
 module.exports = {
   data: commandData(
     "quantri",
-    "Thiết lập game, kinh tế và cửa hàng dành cho admin",
+    "Thiết lập game và kinh tế dành cho admin",
     options,
   ),
   async execute(interaction) {
-    if (interaction.options.getSubcommand() === "thapreset") {
-      if (!interaction.guildId || !isBotAdmin(interaction))
-        return interaction.reply({
-          content: "Chỉ quản trị bot mới được xoay Tháp Định Mệnh.",
-          flags: MessageFlags.Ephemeral,
-        });
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      try {
-        const tower =
-          require("../hardcore/tower/challengeCatalog").resetCurrent(
-            Date.now(),
-          );
-        return interaction.editReply({
-          content: `🗼 Đã xoay Tháp Định Mệnh sang **${tower.character.name}**. Tháp này hoạt động đến <t:${Math.floor(new Date(tower.endsAt).getTime() / 1000)}:F>; rotation tự động kế tiếp vẫn bắt đầu lúc 00:00 thứ Hai.`,
-          allowedMentions: { parse: [] },
-        });
-      } catch (error) {
-        console.error("tower manual reset failed", error);
-        return interaction.editReply({
-          content:
-            error.message === "NO_ACTIVE_TOWER"
-              ? "Hiện không có Tháp Định Mệnh đang hoạt động để reset."
-              : "Không thể xoay Tháp Định Mệnh. Rotation hiện tại được giữ nguyên.",
-        });
-      }
-    }
     if (interaction.options.getSubcommand() === "baotri") {
       if (!interaction.guildId || !isAdmin(interaction))
         return interaction.reply({
@@ -301,26 +246,16 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
-    if (
-      ["xemthuongvaitro", "hesothang"].includes(
-        interaction.options.getSubcommand(),
-      )
-    ) {
+    if (interaction.options.getSubcommand() === "hesothang") {
       const name = interaction.options.getSubcommand();
       if (!interaction.guildId || !isAdmin(interaction))
         return interaction.reply({
           content:
-            name === "hesothang"
-              ? "Chỉ admin mới được chỉnh hệ số thắng."
-              : "Chỉ admin mới được quản lý thưởng vai trò.",
+          "Chỉ admin mới được chỉnh hệ số thắng.",
           flags: MessageFlags.Ephemeral,
         });
       return interaction.reply({
-        ...(name === "hesothang"
-          ? winMultiplierPanel(interaction.guildId, interaction.user.id)
-          : roleRewardPanel(interaction.guildId, interaction.user.id, {
-              interaction,
-            })),
+        ...winMultiplierPanel(interaction.guildId, interaction.user.id),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -341,9 +276,6 @@ module.exports = {
         forceEndBlackjackSession,
         forceEndPokerSession,
         forceEndMinesSession,
-        forceEndCoquaySession,
-        forceEndChinchiroSession,
-        forceEndHardcoreSession,
         forceEndBlackjackDuel,
         forceEndSharedRound,
       ];
@@ -443,7 +375,7 @@ module.exports = {
         );
         if (scope === "server")
           return interaction.reply({
-            content: `🚨 Bạn sắp **RESET SERVER**: xóa toàn bộ dữ liệu của **${count.toLocaleString("vi-VN")} người chơi** (xu, kim cương, cấp/EXP, túi đồ, hiệu ứng, Gacha, nhiệm vụ, thành tựu, thống kê, lịch sử, xếp hạng, ván đang chơi).\n\n**Được giữ nguyên:** channel game, phần thưởng, giới hạn cược, cấu hình cân bằng, cửa hàng, pool Gacha, buff sự kiện, thưởng theo role.\n\nKhông thể hoàn tác. Nhấn **XÁC NHẬN RESET SERVER** để tiếp tục.`,
+            content: `🚨 Bạn sắp **RESET SERVER**: xóa dữ liệu người chơi của **${count.toLocaleString("vi-VN")} người** (xu, kim cương cũ, cấp/EXP, thành tựu, thống kê, lịch sử, xếp hạng và ván đang chơi).\n\n**Được giữ nguyên:** kênh game, phần thưởng, giới hạn cược và cấu hình cân bằng.\n\nKhông thể hoàn tác. Nhấn **XÁC NHẬN RESET SERVER** để tiếp tục.`,
             components: [row],
             flags: MessageFlags.Ephemeral,
           });

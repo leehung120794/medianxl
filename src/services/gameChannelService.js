@@ -3,26 +3,20 @@ const { db } = require("../db");
 const GAMES = Object.freeze([
   "baucua",
   "taixiu",
-  "chinchiro",
   "blackjack",
   "poker",
   "duangua",
   "mines",
-  "coquay",
-  "hardcore",
   "vuatiengviet",
 ]);
 
 const GAME_LABELS = Object.freeze({
   baucua: "Bầu cua",
   taixiu: "Tài xỉu",
-  chinchiro: "Chinchiro",
   blackjack: "Xì dách",
   poker: "Poker",
   duangua: "Đua ngựa",
   mines: "Dò mìn",
-  coquay: "Cò quay Nga",
-  hardcore: "Sinh tồn",
   vuatiengviet: "Vua tiếng Việt",
 });
 

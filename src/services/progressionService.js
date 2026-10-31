@@ -173,24 +173,6 @@ function recordGameEvent({
 }) {
   if (!guildId || !userId || !["win", "loss", "draw"].includes(outcome))
     return null;
-  const progress = ensureProgress(guildId, userId, now);
-  const quizWin = outcome === "win" && String(game) === "vuatiengviet";
-  for (const counters of [progress.daily, progress.weekly]) {
-    counters.games += 1;
-    if (outcome === "win") counters.wins += 1;
-    if (quizWin) counters.quizWins += 1;
-    counters.wagered += Math.max(0, Math.floor(Number(stake) || 0));
-  }
-  db.prepare(
-    "UPDATE player_progress SET daily_json=?,weekly_json=?,updated_at=? WHERE guild_id=? AND user_id=?",
-  ).run(
-    JSON.stringify(progress.daily),
-    JSON.stringify(progress.weekly),
-    now,
-    String(guildId),
-    String(userId),
-  );
-
   db.prepare(
     "INSERT INTO game_history(guild_id,user_id,game,outcome,stake,payout,created_at) VALUES(?,?,?,?,?,?,?)",
   ).run(
@@ -242,7 +224,6 @@ function recordGameEvent({
     experience,
     { now, reason: `game:${game}:${outcome}` },
   );
-  const updatedProgress = getProgress(guildId, userId, now);
   const unlocked = require("./achievementService").detectAchievementUnlocks(
     guildId,
     userId,
@@ -256,7 +237,6 @@ function recordGameEvent({
     now,
   });
   return {
-    ...updatedProgress,
     unlocked,
     experienceGained: experience,
     levelUps: levelProgress.levelUps,

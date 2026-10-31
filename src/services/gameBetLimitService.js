@@ -5,13 +5,10 @@ const MIN_MAX_BET = 10;
 const BET_GAMES = Object.freeze([
   "baucua",
   "taixiu",
-  "chinchiro",
   "blackjack",
   "poker",
   "duangua",
   "mines",
-  "coquay",
-  "hardcore",
 ]);
 
 function validate(game, maxBet = DEFAULT_MAX_BET) {

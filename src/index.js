@@ -31,12 +31,10 @@ const {
   startTimedChallengeMaintenance,
 } = require("./services/timedChallengeService");
 const {
-  startCommerceMaintenance,
-} = require("./services/commerceMaintenanceService");
-const {
   startStaleSessionMaintenance,
 } = require("./services/staleSessionService");
 const { startDatabaseBackups } = require("./services/databaseBackupService");
+const { closeRetiredGameSessions } = require("./services/removedGameCleanupService");
 const { createRateLimiter } = require("./services/rateLimitService");
 const { routeComponentInteraction } = require("./componentRouter");
 const { loadApplicationEmojis } = require("./utils/appEmoji");
@@ -57,6 +55,7 @@ const logger = pino(
     },
   ]),
 );
+closeRetiredGameSessions(logger);
 const maintenanceTimers = [startEconomyMaintenance(logger)];
 const rateLimiter = createRateLimiter();
 let backupManager = null;
@@ -168,14 +167,10 @@ client.once(Events.ClientReady, async () => {
   const resumedRounds = resumeOpenRounds(client, logger);
   const resumedHorseRaces = resumeHorseRaces(client, logger);
   maintenanceTimers.push(startTimedChallengeMaintenance(client, logger));
-  maintenanceTimers.push(startCommerceMaintenance(client, logger));
   maintenanceTimers.push(startBlackjackDuelMaintenance(client, logger));
   maintenanceTimers.push(startBlackjackTableMaintenance(client));
   maintenanceTimers.push(startPokerMaintenance(client, logger));
   maintenanceTimers.push(startStaleSessionMaintenance(client, logger));
-  maintenanceTimers.push(
-    require("./hardcore/tower/challengeCatalog").startWeeklyMaintenance(logger),
-  );
   logger.info(
     {
       user: client.user.tag,

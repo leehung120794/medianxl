@@ -3,13 +3,10 @@ const { db } = require("../db");
 const GAME_LABELS = Object.freeze({
   baucua: "🎲 Bầu cua",
   taixiu: "🎯 Tài xỉu",
-  chinchiro: "🎲 Chinchiro",
   blackjack: "🃏 Xì dách",
   poker: "♠️ Poker",
   duangua: "🏇 Đua ngựa",
   mines: "💣 Mines",
-  coquay: "🔫 Cò quay Nga",
-  hardcore: "⚔️ Sinh tồn",
   vuatiengviet: "🇻🇳 Vua tiếng Việt",
 });
 
