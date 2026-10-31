@@ -49,6 +49,8 @@ function getDiscordBackupStatus() {
   };
 }
 function errorText(error) {
+  if (error.code === 50278 || error.rawError?.code === 50278)
+    return "Không tạo được DM: tài khoản nhận backup và bot không có server chung. Hãy thêm tài khoản nhận vào server có bot, hoặc đổi sang gửi backup vào một channel riêng.";
   if (error.code === 50007 || error.code === 50003)
     return "Không gửi được DM: hãy bật tin nhắn riêng và bỏ chặn bot.";
   if (error.code === 40005 || error.status === 413)
@@ -56,6 +58,22 @@ function errorText(error) {
   if (error.name === "AbortError")
     return "Gửi backup Discord quá thời gian chờ.";
   return "Gửi backup Discord thất bại; kiểm tra kết nối và log mã lỗi.";
+}
+function isRetryableDeliveryError(error) {
+  const code = Number(error?.code ?? error?.rawError?.code);
+  const statusCode = Number(error?.status);
+  if ([40005, 50003, 50007, 50278].includes(code)) return false;
+  if (
+    [
+      "INVALID_DISCORD_BACKUP_RECIPIENT",
+      "DISCORD_BACKUP_RECIPIENT_IS_BOT",
+      "DISCORD_BACKUP_TOO_MANY_PARTS",
+    ].includes(error?.message)
+  )
+    return false;
+  if (statusCode >= 400 && statusCode < 500 && statusCode !== 429)
+    return false;
+  return true;
 }
 function digestStream(hash) {
   return new Transform({
@@ -247,4 +265,5 @@ module.exports = {
   setBackupDiscordClient,
   getDiscordBackupStatus,
   sendDiscordBackup,
+  isRetryableDeliveryError,
 };

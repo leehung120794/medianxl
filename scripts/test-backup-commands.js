@@ -96,7 +96,10 @@ async function main() {
     loaded: true,
     exports: {
       syncAll: async () => ({
-        totals: 123,
+        totals: [
+          { type_code: "TU", count: 100 },
+          { type_code: "SU", count: 23 },
+        ],
         report: [
           { slug: "sets", ok: true },
           { slug: "relics", ok: false, error: "Validation failed" },
@@ -109,7 +112,8 @@ async function main() {
   await updateCommand.execute(updateInteraction);
   assert.equal(updateCommand.data.toJSON().name, "update");
   assert.match(updateInteraction.replies[0].content, /1\/2\*\* nguồn/);
-  assert.match(updateInteraction.replies[0].content, /123\*\* bản ghi/);
+  assert.match(updateInteraction.replies[0].content, /123 item/);
+  assert.doesNotMatch(updateInteraction.replies[0].content, /\[object Object\]/);
   assert.match(updateInteraction.replies[0].content, /relics/);
   if (originalSyncModule) require.cache[syncServicePath] = originalSyncModule;
   else delete require.cache[syncServicePath];

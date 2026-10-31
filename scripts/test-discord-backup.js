@@ -148,6 +148,24 @@ async function main() {
     "blocked DM keeps local backup and prior success; failed delivery can retry",
   );
 
+  const noMutualSnapshot = await create();
+  const noMutual = transport(async () => {
+    const error = new Error("Cannot send messages to this user");
+    error.code = 50278;
+    error.status = 403;
+    error.rawError = { code: 50278 };
+    throw error;
+  });
+  delivery.setBackupDiscordClient(noMutual);
+  await assert.rejects(
+    delivery.sendDiscordBackup(noMutualSnapshot.destination),
+    /Cannot send messages to this user/,
+  );
+  assert.match(delivery.getDiscordBackupStatus().lastError, /server chung/);
+  assert.equal(delivery.isRetryableDeliveryError({ code: 50278 }), false);
+  assert(fs.existsSync(noMutualSnapshot.destination));
+  groups.push("no-mutual-guild DM error is explained and classified as permanent");
+
   const largeSnapshot = await create(),
     split = transport();
   delivery.setBackupDiscordClient(split);
@@ -322,6 +340,29 @@ async function main() {
   assert(health.discord.lastError);
   assert(fs.existsSync(health.lastDestination));
   groups.push("local and DM health statuses remain independent");
+
+  const noRetryClient = transport(async () => {
+    const error = new Error("Cannot send messages to this user");
+    error.code = 50278;
+    error.status = 403;
+    error.rawError = { code: 50278 };
+    throw error;
+  });
+  delivery.setBackupDiscordClient(noRetryClient);
+  const noRetryManager = backup.startDatabaseBackups(logger, {
+    retryDelayMs: 10,
+  });
+  await noRetryManager.discordReady(noRetryClient);
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  await noRetryManager.stop({ finalBackup: false });
+  assert.equal(
+    noRetryClient.calls.filter((call) => call.route === "/users/@me/channels")
+      .length,
+    1,
+    "permanent no-mutual-guild errors must not retry",
+  );
+  groups.push("permanent DM configuration errors are not retried repeatedly");
+
   let once = true;
   const transient = transport(async () => {
     if (once) {

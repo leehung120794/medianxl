@@ -20,13 +20,16 @@ module.exports = {
       const { report, totals } = await syncAll(console);
       const succeeded = report.filter((entry) => entry.ok).length;
       const failed = report.filter((entry) => !entry.ok);
+      const totalCount = Array.isArray(totals)
+        ? totals.reduce((sum, row) => sum + (Number(row.count) || 0), 0)
+        : Number(totals) || 0;
       const details = failed.length
         ? `\n\n**Nguồn chưa cập nhật:**\n${failed
             .map((entry) => `• \`${entry.slug}\`: ${entry.error}`)
             .join("\n")}`
         : "";
       return interaction.editReply({
-        content: `📚 Đã cập nhật **${succeeded}/${report.length}** nguồn database item. Hiện có **${totals}** bản ghi.${details}`.slice(
+        content: `📚 Đã cập nhật **${succeeded}/${report.length}** nguồn database item. Database hiện có **${new Intl.NumberFormat("vi-VN").format(totalCount)} item**.${details}`.slice(
           0,
           1900,
         ),

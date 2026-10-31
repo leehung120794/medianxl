@@ -191,13 +191,15 @@ function startDatabaseBackups(
   let stopped = false,
     pending = null,
     stopPromise = null,
-    retryTimer = null;
+    retryTimer = null,
+    lastDeliveryAttempt = null;
   const deliver = async (destination) => {
     clearTimeout(retryTimer);
     if (retryTimer) pendingRetryTimers.delete(retryTimer);
     retryTimer = null;
     try {
       const result = await discordBackup.sendDiscordBackup(destination);
+      lastDeliveryAttempt = { destination, status: result.status };
       if (result.status === "sent" || result.status === "already_sent") {
         await deleteBackupFile(destination);
         logger.info?.(
@@ -209,11 +211,19 @@ function startDatabaseBackups(
         logger.info?.(result, "database backup delivered to Discord DM");
       return result;
     } catch (error) {
+      lastDeliveryAttempt = {
+        destination,
+        status: "failed",
+        code: error.code || error.rawError?.code || error.name,
+      };
       logger.error?.(
-        { code: error.code || error.name },
+        {
+          code: error.code || error.rawError?.code || error.name,
+          retryable: discordBackup.isRetryableDeliveryError(error),
+        },
         "database backup Discord delivery failed",
       );
-      if (!stopped) {
+      if (!stopped && discordBackup.isRetryableDeliveryError(error)) {
         clearTimeout(retryTimer);
         retryTimer = setTimeout(() => {
           pendingRetryTimers.delete(retryTimer);
@@ -250,7 +260,13 @@ function startDatabaseBackups(
     discordReady: async (client) => {
       discordBackup.setBackupDiscordClient(client);
       if (pending) await pending;
-      if (backupStatus.lastDestination)
+      if (
+        backupStatus.lastDestination &&
+        lastDeliveryAttempt?.destination === backupStatus.lastDestination &&
+        lastDeliveryAttempt.status === "waiting"
+      )
+        await deliver(backupStatus.lastDestination);
+      else if (!pending && backupStatus.lastDestination && !lastDeliveryAttempt)
         await deliver(backupStatus.lastDestination);
     },
     stop: ({ finalBackup = true } = {}) => {
