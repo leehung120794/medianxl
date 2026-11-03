@@ -5,6 +5,7 @@ Bot giữ nguyên tra cứu item Median XL và bổ sung một mode idle RPG tu 
 ## Lệnh Median XL
 
 - `/item query:<từ khóa> type:<loại>` — tìm theo tên, base hoặc stat và xem chi tiết.
+- `!item <từ khóa>` — tìm nhanh trong kênh chat; nếu có nhiều kết quả, chọn item trong danh sách.
 - `/update` — admin đồng bộ database item.
 - `/backup gui` — tạo/gửi backup; `/backup xoa xacnhan:true` dọn snapshot cũ trên VPS.
 
@@ -26,7 +27,7 @@ Tu vi từ hoạt động, nhiệm vụ và phiên tu luyện được nhân the
 3. Chạy `npm run register` để đăng ký slash command cho guild.
 4. Chạy `npm start`.
 
-Sau khi cập nhật server, chạy lại `npm run register`, sau đó restart bot. Bot chỉ cần Discord Guilds intent; không cần Message Content Intent.
+Sau khi cập nhật server, chạy lại `npm run register`, sau đó restart bot. Để dùng `!item`, bật **Message Content Intent** trong Discord Developer Portal và cấp cho bot các intents `Guilds`, `Guild Messages` và `Message Content`. Slash commands không phụ thuộc Message Content Intent.
 
 ## Database và backup
 

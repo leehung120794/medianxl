@@ -119,4 +119,54 @@ module.exports = {
         await message.edit({ components: [] }).catch(() => {});
     });
   },
+  async executePrefix(message, query) {
+    const keyword = String(query || "").trim().slice(0, 100);
+    if (!keyword)
+      return message.reply({
+        content: "Cách dùng: `!item <từ khóa>` — ví dụ: `!item eagle`.",
+        allowedMentions: { parse: [] },
+      });
+
+    const results = searchItems({ query: keyword, type: "ALL", limit: 100 });
+    if (!results.length)
+      return message.reply({
+        content: `Không tìm thấy item cho **${keyword}**.`,
+        allowedMentions: { parse: [] },
+      });
+    if (results.length === 1)
+      return message.reply({
+        embeds: detailEmbeds(results[0]),
+        allowedMentions: { parse: [] },
+      });
+
+    let page = 0;
+    const response = suggestionResponse(results, keyword, message.author.id, page);
+    const sent = await message.reply({ ...response, allowedMentions: { parse: [] } });
+    const collector = sent.createMessageComponentCollector({
+      time: 120_000,
+      filter: (component) =>
+        component.user.id === message.author.id &&
+        (component.customId === `item-pick:${message.author.id}` ||
+          component.customId.startsWith(`item-page:${message.author.id}:`) ||
+          component.customId === `item-close:${message.author.id}`),
+    });
+    collector.on("collect", async (component) => {
+      if (component.customId === `item-close:${message.author.id}`) {
+        collector.stop("closed");
+        return component.update({ content: "Đã đóng danh sách kết quả.", embeds: [], components: [] });
+      }
+      if (component.customId.startsWith(`item-page:${message.author.id}:`)) {
+        page = Number(component.customId.split(":").at(-1));
+        return component.update(suggestionResponse(results, keyword, message.author.id, page));
+      }
+      const item = getItemById(Number(component.values[0]));
+      if (!item)
+        return component.update({ content: "Item không còn trong database.", embeds: [], components: [] });
+      collector.stop("selected");
+      return component.update({ content: null, embeds: detailEmbeds(item), components: [] });
+    });
+    collector.on("end", async (_, reason) => {
+      if (reason === "time") await sent.edit({ components: [] }).catch(() => {});
+    });
+  },
 };

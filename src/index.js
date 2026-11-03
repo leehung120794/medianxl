@@ -41,7 +41,13 @@ const rateLimiter = createRateLimiter();
 let backupManager = null;
 let shuttingDown = false;
 let activeInteractions = 0;
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+});
 client.rest.on(RESTEvents.RateLimited, (limit) => {
   // Never log the request URL: interaction webhook URLs contain private tokens.
   logger.warn(
@@ -183,6 +189,33 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.deferred || interaction.replied)
       await interaction.followUp(payload).catch(() => {});
     else await interaction.reply(payload).catch(() => {});
+  } finally {
+    activeInteractions--;
+  }
+});
+client.on(Events.MessageCreate, async (message) => {
+  if (shuttingDown || message.author.bot || !message.guild) return;
+  const match = message.content.match(/^!item(?:@\S+)?(?:\s+|$)/i);
+  if (!match) return;
+
+  // Ignore repeated prefix searches instead of posting rate-limit warnings.
+  const rate = rateLimiter.consume(
+    `prefix:item:${message.guild.id}:${message.author.id}`,
+    4,
+    5_000,
+  );
+  if (!rate.allowed) return;
+
+  activeInteractions++;
+  try {
+    const itemCommand = client.commands.get("item");
+    await itemCommand.executePrefix(message, message.content.slice(match[0].length));
+  } catch (error) {
+    logger.error(
+      { err: error, guildId: message.guild.id, userId: message.author.id },
+      "prefix item command failed",
+    );
+    await message.reply("Có lỗi khi tìm item. Hãy thử lại sau.").catch(() => {});
   } finally {
     activeInteractions--;
   }
