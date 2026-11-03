@@ -1455,6 +1455,150 @@ runMigration(43, "allow manual tower rotations inside a weekly window", () => {
  `);
 });
 
+runMigration(44, "add peaceful cultivation game", () => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chu_characters (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      dharma_name TEXT NOT NULL,
+      realm_order INTEGER NOT NULL DEFAULT 1 CHECK(realm_order BETWEEN 1 AND 12),
+      realm_stage INTEGER NOT NULL DEFAULT 1 CHECK(realm_stage BETWEEN 1 AND 9),
+      cultivation INTEGER NOT NULL DEFAULT 0 CHECK(cultivation >= 0),
+      spirit_stone INTEGER NOT NULL DEFAULT 500 CHECK(spirit_stone >= 0),
+      merit INTEGER NOT NULL DEFAULT 0 CHECK(merit >= 0),
+      dao_heart INTEGER NOT NULL DEFAULT 0 CHECK(dao_heart >= 0),
+      spiritual_root_id TEXT NOT NULL,
+      root_changed_count INTEGER NOT NULL DEFAULT 0 CHECK(root_changed_count >= 0),
+      total_breakthroughs INTEGER NOT NULL DEFAULT 0 CHECK(total_breakthroughs >= 0),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE(guild_id,user_id)
+    );
+    CREATE TABLE IF NOT EXISTS chu_items (
+      id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL,item_type TEXT NOT NULL,
+      price_spirit_stone INTEGER NOT NULL CHECK(price_spirit_stone >= 0),enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1))
+    );
+
+    CREATE TABLE IF NOT EXISTS chu_cultivation_sessions (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      session_type TEXT NOT NULL CHECK(session_type IN ('normal','retreat')),
+      started_at INTEGER NOT NULL,
+      ends_at INTEGER NOT NULL,
+      duration_seconds INTEGER NOT NULL CHECK(duration_seconds > 0),
+      base_reward INTEGER NOT NULL CHECK(base_reward >= 0),
+      status TEXT NOT NULL DEFAULT 'running' CHECK(status IN ('running','claimed','cancelled')),
+      claimed_at INTEGER,
+      created_at INTEGER NOT NULL
+    );
+    CREATE UNIQUE INDEX idx_chu_one_running_session ON chu_cultivation_sessions(character_id) WHERE status='running';
+    CREATE INDEX idx_chu_session_end ON chu_cultivation_sessions(status,ends_at);
+
+    CREATE TABLE IF NOT EXISTS chu_activity_logs (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      activity_id TEXT NOT NULL,
+      base_cultivation INTEGER NOT NULL,
+      actual_cultivation INTEGER NOT NULL,
+      merit_reward INTEGER NOT NULL DEFAULT 0,
+      dao_heart_reward INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX idx_chu_activity_daily ON chu_activity_logs(character_id,activity_id,created_at);
+
+    CREATE TABLE IF NOT EXISTS chu_daily_quest_progress (
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      quest_id TEXT NOT NULL,
+      period_key TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0 CHECK(progress >= 0),
+      claimed INTEGER NOT NULL DEFAULT 0 CHECK(claimed IN (0,1)),
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY(character_id,quest_id,period_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS chu_daily_checkins (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      checkin_date TEXT NOT NULL,
+      streak INTEGER NOT NULL DEFAULT 1 CHECK(streak >= 1),
+      claimed_at INTEGER NOT NULL,
+      UNIQUE(character_id,checkin_date)
+    );
+    CREATE INDEX idx_chu_checkins_latest ON chu_daily_checkins(character_id,checkin_date DESC);
+
+    CREATE TABLE IF NOT EXISTS chu_inventory (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      item_id TEXT NOT NULL REFERENCES chu_items(id),
+      quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity >= 0),
+      updated_at INTEGER NOT NULL,
+      UNIQUE(character_id,item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS chu_root_change_logs (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      old_root_id TEXT NOT NULL,
+      new_root_id TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS chu_breakthrough_logs (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      from_realm INTEGER NOT NULL,
+      from_stage INTEGER NOT NULL,
+      to_realm INTEGER NOT NULL,
+      to_stage INTEGER NOT NULL,
+      success INTEGER NOT NULL CHECK(success IN (0,1)),
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS chu_transactions (
+      id TEXT PRIMARY KEY,
+      guild_id TEXT NOT NULL,
+      character_id TEXT NOT NULL REFERENCES chu_characters(id) ON DELETE CASCADE,
+      resource_type TEXT NOT NULL CHECK(resource_type IN ('cultivation','spirit_stone','merit','dao_heart')),
+      amount INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      reference_type TEXT,
+      reference_id TEXT,
+      created_at INTEGER NOT NULL
+    );
+  `);
+  const columns = new Set(db.prepare("PRAGMA table_info(chu_characters)").all().map((column) => column.name));
+  if (!columns.has("realm_order")) {
+    db.exec("ALTER TABLE chu_characters ADD COLUMN realm_order INTEGER NOT NULL DEFAULT 1");
+    if (columns.has("realm_id"))
+      db.exec(`UPDATE chu_characters SET realm_order=CASE lower(realm_id)
+        WHEN 'mortal' THEN 1 WHEN 'pham_nhan' THEN 1 WHEN 'luyen_khi' THEN 2
+        WHEN 'truc_co' THEN 3 WHEN 'kim_dan' THEN 4 WHEN 'nguyen_anh' THEN 5
+        WHEN 'hoa_than' THEN 6 WHEN 'luyen_hu' THEN 7 WHEN 'hop_the' THEN 8
+        WHEN 'dai_thua' THEN 9 WHEN 'do_kiep' THEN 10 WHEN 'chan_tien' THEN 11
+        WHEN 'tien_de' THEN 12 ELSE 1 END`);
+  }
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_chu_characters_rank ON chu_characters(guild_id,realm_order DESC,realm_stage DESC,cultivation DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_chu_one_running_session ON chu_cultivation_sessions(character_id) WHERE status='running';
+    CREATE INDEX IF NOT EXISTS idx_chu_session_end ON chu_cultivation_sessions(status,ends_at);
+    CREATE INDEX IF NOT EXISTS idx_chu_activity_daily ON chu_activity_logs(character_id,activity_id,created_at);
+    CREATE INDEX IF NOT EXISTS idx_chu_checkins_latest ON chu_daily_checkins(character_id,checkin_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_chu_transactions_character ON chu_transactions(character_id,created_at DESC);`);
+  db.prepare(`INSERT OR IGNORE INTO chu_items(id,name,description,item_type,price_spirit_stone,enabled)
+    VALUES(?,?,?,?,?,1)`).run(
+    "dan_nghich_thien", "Đan Dược Nghịch Thiên",
+    "Random lại căn cốt; kết quả mới có thể yếu hơn căn cốt hiện tại.",
+    "consumable", 10000,
+  );
+});
+
 const insertMedianItem = db.prepare(`INSERT INTO items (
   source_slug,source_type,type_code,name,base_type,group_name,tier_or_variant,
   requirements_json,stats_json,socket_count,limit_per_item,apply_text,image_url,

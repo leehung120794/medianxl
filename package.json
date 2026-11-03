@@ -2,7 +2,7 @@
   "name": "vietnamese-discord-game-bot",
   "version": "2.0.0",
   "private": true,
-  "description": "Discord bot for Median XL item search, database updates and backups",
+  "description": "Discord bot for Median XL item search and a Vietnamese idle cultivation RPG",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

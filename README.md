@@ -1,42 +1,39 @@
-# Median XL Item Bot
+# Median XL + Tu Tiên Nhàn Nhã Discord Bot
 
-Discord bot chỉ phục vụ tra cứu dữ liệu item Median XL và quản lý database item.
+Bot giữ nguyên tra cứu item Median XL và bổ sung một mode idle RPG tu tiên không có chiến đấu.
 
-## Lệnh
+## Lệnh Median XL
 
-- `/item query:<từ khóa> type:<loại>` — tìm item theo tên, base hoặc stat; chọn kết quả để xem chi tiết.
-- `/update` — admin đồng bộ lại database item từ các nguồn đã cấu hình.
-- `/backup gui` — tạo backup SQLite và gửi lên Discord.
-- `/backup xoa xacnhan:true` — xóa các file backup cũ trên VPS; không xóa database đang chạy.
+- `/item query:<từ khóa> type:<loại>` — tìm theo tên, base hoặc stat và xem chi tiết.
+- `/update` — admin đồng bộ database item.
+- `/backup gui` — tạo/gửi backup; `/backup xoa xacnhan:true` dọn snapshot cũ trên VPS.
+
+## Lệnh tu tiên
+
+- `/batdau`, `/nhanvat`, `/cancot` — tạo và xem nhân vật/căn cốt.
+- `/chua`, `/nhiemvu`, `/diemdanh` — hoạt động chùa, nhiệm vụ ngày, điểm danh.
+- `/tuluyen`, `/bequan`, `/nhantuvi` — bắt đầu và nhận thưởng phiên theo thời gian.
+- `/dotpha` — xem trước điều kiện, chi phí và tỷ lệ rồi xác nhận thử.
+- `/cuahang`, `/tuido`, `/sudung` — mua và dùng Đan Dược Nghịch Thiên.
+- `/bicanh`, `/trogiuptu` — xem địa điểm và hướng dẫn.
+
+Tu vi từ hoạt động, nhiệm vụ và phiên tu luyện được nhân theo căn cốt. Linh thạch, công đức và đạo tâm không bị nhân theo căn cốt. Hoạt động, điểm danh, mua/bán, dùng vật phẩm và đột phá được ghi bằng transaction; mỗi nhân vật chỉ có một phiên tu luyện đang chạy.
 
 ## Cài đặt và cập nhật
 
 1. Cài Node.js 18.17 trở lên và chạy `npm install`.
-2. Cấu hình `.env`, tối thiểu `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID` và `ADMIN_USER_ID`.
-3. Đăng ký danh sách command hiện tại bằng `npm run register`.
-4. Khởi động bot bằng `npm start`.
+2. Cấu hình `.env` với `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`, `ADMIN_USER_ID`.
+3. Chạy `npm run register` để đăng ký slash command cho guild.
+4. Chạy `npm start`.
 
-Khi cập nhật server, pull các file đã đổi, chạy lại `npm run register`, rồi restart bot. Đăng ký lại command sẽ gỡ các slash command game/profile cũ khỏi guild.
-
-Không cần bật Message Content Intent. Bot chỉ cần Discord Guilds intent.
+Sau khi cập nhật server, chạy lại `npm run register`, sau đó restart bot. Bot chỉ cần Discord Guilds intent; không cần Message Content Intent.
 
 ## Database và backup
 
-SQLite mặc định nằm ở `data/game-bot.sqlite`. `/update` chỉ thay đổi bảng dữ liệu item; các bảng và dữ liệu cũ của game được giữ lại trong SQLite nhưng không còn được nạp vào command/router/runtime.
-
-Bot tạo backup định kỳ tại `data/backups` và có thể gửi snapshot tới `DB_BACKUP_DISCORD_USER_ID`. Khi gửi thành công, snapshot local được xóa; nếu gửi lỗi, file vẫn được giữ để thử lại.
-
-Các thiết lập backup tùy chọn:
-
-```dotenv
-DB_BACKUP_INTERVAL_MINUTES=1440
-DB_BACKUP_RETENTION=14
-# DB_BACKUP_DIR=/duong-dan-luu-backup
-# DB_BACKUP_DISCORD_USER_ID=DiscordUserId
-```
+SQLite mặc định ở `data/game-bot.sqlite`; bot tự tạo backup định kỳ trong `data/backups`. Có thể cấu hình `DB_BACKUP_INTERVAL_MINUTES`, `DB_BACKUP_RETENTION`, `DB_BACKUP_DIR` và `DB_BACKUP_DISCORD_USER_ID`. `/backup` chỉ dành cho admin. Backup gửi Discord thành công sẽ được xóa khỏi VPS; khi gửi lỗi, snapshot được giữ lại để thử lại.
 
 Dùng `npm run db:backup` để tạo snapshot nhất quán từ terminal. Không copy riêng file SQLite khi bot đang chạy vì giao dịch mới có thể còn trong WAL.
 
-## Database item
+## Dữ liệu Median XL
 
-`/item` hỗ trợ các loại TU, SU, RW, SET, UMO, CYCLE, RELIC và TROPHY. Dữ liệu được đồng bộ bằng `/update` hoặc `npm run update`.
+`/update` đồng bộ bảng item hiện có. Không thay đổi cấu trúc hay dữ liệu item khi cài phần tu tiên.

@@ -5,7 +5,9 @@ const COMMAND_FILES = Object.freeze([
 ]);
 
 function loadCommands(base = "./commands") {
-  return COMMAND_FILES.map((name) => require(`${base}/${name}`));
+  const core = COMMAND_FILES.map((name) => require(`${base}/${name}`));
+  const cultivation = require(`${base}/tuTien`).commands;
+  return [...core, ...cultivation];
 }
 
 module.exports = { COMMAND_FILES, loadCommands };

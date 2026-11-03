@@ -1,4 +1,5 @@
 const { MessageFlags } = require("discord.js");
+const tuTienCommands = require("./commands/tuTien");
 
 function interactionKind(interaction) {
   if (interaction.isButton?.()) return "button";
@@ -15,6 +16,9 @@ async function routeComponentInteraction(interaction) {
   // Median XL search owns these collectors directly. Let its collector handle them.
   if (/^item-(?:pick|page|close):/.test(interaction.customId || ""))
     return false;
+
+  if (String(interaction.customId || "").startsWith("chu:"))
+    return tuTienCommands.handleComponent(interaction);
 
   await interaction.reply({
     content: "Chức năng này đã được gỡ khỏi bot.",
