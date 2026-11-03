@@ -14,30 +14,9 @@ const { db } = require("./db");
 
 const { loadCommands } = require("./commandRegistry");
 const monitoring = require("./services/monitoringService");
-const { startEconomyMaintenance } = require("./services/economyService");
-const { handlePrefixMessage } = require("./services/prefixCommandService");
-const { handleGameMessage } = require("./services/gameMessageService");
-const { handleGamePrefix } = require("./services/gamePrefixService");
-const { resumeOpenRounds } = require("./services/multiplayerGameService");
-const {
-  startBlackjackDuelMaintenance,
-} = require("./services/blackjackDuelService");
-const {
-  startBlackjackTableMaintenance,
-} = require("./services/blackjackService");
-const { startPokerMaintenance } = require("./services/pokerService");
-const { resumeHorseRaces } = require("./services/horseRaceService");
-const {
-  startTimedChallengeMaintenance,
-} = require("./services/timedChallengeService");
-const {
-  startStaleSessionMaintenance,
-} = require("./services/staleSessionService");
 const { startDatabaseBackups } = require("./services/databaseBackupService");
 const { closeRetiredGameSessions } = require("./services/removedGameCleanupService");
 const { createRateLimiter } = require("./services/rateLimitService");
-const { routeComponentInteraction } = require("./componentRouter");
-const { loadApplicationEmojis } = require("./utils/appEmoji");
 
 if (!process.env.DISCORD_TOKEN)
   throw new Error("Missing DISCORD_TOKEN in .env");
@@ -55,25 +34,13 @@ const logger = pino(
     },
   ]),
 );
+// Đóng các ván từ phiên bản cũ và hoàn cược đang giữ trước khi ngừng game vĩnh viễn.
 closeRetiredGameSessions(logger);
-const maintenanceTimers = [startEconomyMaintenance(logger)];
 const rateLimiter = createRateLimiter();
 let backupManager = null;
 let shuttingDown = false;
 let activeInteractions = 0;
-const activeMessageTasks = new Set();
-const messageCommandsEnabled = /^(1|true|yes)$/i.test(
-  process.env.ENABLE_MESSAGE_COMMANDS ||
-    process.env.ENABLE_PREFIX_COMMANDS ||
-    "false",
-);
-const intents = [GatewayIntentBits.Guilds];
-if (messageCommandsEnabled)
-  intents.push(
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  );
-const client = new Client({ intents });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 client.rest.on(RESTEvents.RateLimited, (limit) => {
   // Never log the request URL: interaction webhook URLs contain private tokens.
   logger.warn(
@@ -99,19 +66,18 @@ backupManager = startDatabaseBackups(logger);
 async function shutdown(signal, exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
-  logger.info({ signal }, "game bot shutting down");
-  for (const timer of maintenanceTimers) clearInterval(timer);
+  logger.info({ signal }, "Median XL item bot shutting down");
   rateLimiter.stop();
   // Reject new work and give ongoing handlers a bounded chance to persist their action.
   const drainDeadline = Date.now() + 10_000;
   while (
-    (activeInteractions || activeMessageTasks.size) &&
+    activeInteractions &&
     Date.now() < drainDeadline
   )
     await new Promise((resolve) => setTimeout(resolve, 50));
-  if (activeInteractions || activeMessageTasks.size)
+  if (activeInteractions)
     logger.warn(
-      { activeInteractions, messageTasks: activeMessageTasks.size },
+      { activeInteractions },
       "shutdown drain timed out; backing up committed state",
     );
   await backupManager
@@ -153,7 +119,7 @@ process.on("uncaughtException", (error) => {
 });
 client.once(Events.ClientReady, async () => {
   if (shuttingDown) return;
-  // DM delivery runs in the background; gameplay does not wait for backup uploads.
+  // Database backup delivery runs independently from item commands.
   backupManager
     .discordReady(client)
     .catch((error) =>
@@ -162,47 +128,11 @@ client.once(Events.ClientReady, async () => {
         "could not start Discord backup delivery",
       ),
     );
-  await loadApplicationEmojis(client, logger);
-  if (shuttingDown) return;
-  const resumedRounds = resumeOpenRounds(client, logger);
-  const resumedHorseRaces = resumeHorseRaces(client, logger);
-  maintenanceTimers.push(startTimedChallengeMaintenance(client, logger));
-  maintenanceTimers.push(startBlackjackDuelMaintenance(client, logger));
-  maintenanceTimers.push(startBlackjackTableMaintenance(client));
-  maintenanceTimers.push(startPokerMaintenance(client, logger));
-  maintenanceTimers.push(startStaleSessionMaintenance(client, logger));
   logger.info(
-    {
-      user: client.user.tag,
-      resumedRounds,
-      resumedHorseRaces,
-    },
-    "game bot ready",
+    { user: client.user.tag, commands: [...client.commands.keys()] },
+    "Median XL item bot ready",
   );
 });
-if (messageCommandsEnabled)
-  client.on(Events.MessageCreate, (message) => {
-    if (shuttingDown) return;
-    const rate = rateLimiter.consume(
-      `message:${message.guildId}:${message.author.id}`,
-      8,
-      5_000,
-    );
-    if (!rate.allowed) return;
-    const task = (async () => {
-      if (await handlePrefixMessage(message, logger)) return;
-      if (await handleGamePrefix(message)) return;
-      await handleGameMessage(message);
-    })().catch((error) => {
-      logger.error({ err: error }, "message command failed");
-      monitoring.recordRuntimeError(error, { source: "message" });
-    });
-    activeMessageTasks.add(task);
-    task.then(
-      () => activeMessageTasks.delete(task),
-      () => activeMessageTasks.delete(task),
-    );
-  });
 client.on(Events.InteractionCreate, async (interaction) => {
   if (shuttingDown) return;
   activeInteractions++;
@@ -217,16 +147,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       1,
       5 * 60_000,
     );
-    if (!delivery.allowed) return;
-    const kind = interaction.isChatInputCommand()
-      ? "command"
-      : interaction.isModalSubmit()
-        ? "modal"
-        : "component";
-    const limit = kind === "component" ? 12 : 6;
+    if (!delivery.allowed || !interaction.isChatInputCommand()) return;
     const rate = rateLimiter.consume(
-      `${kind}:${interaction.guildId}:${interaction.user.id}`,
-      limit,
+      `command:${interaction.guildId}:${interaction.user.id}`,
+      6,
       5_000,
     );
     if (!rate.allowed) {
@@ -235,12 +159,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
         flags: MessageFlags.Ephemeral,
       });
     }
-    if (await routeComponentInteraction(interaction, logger)) return;
-    if (!interaction.isChatInputCommand()) return;
     const command = client.commands.get(interaction.commandName);
     if (!command)
       return interaction.reply({
-        content: "Lệnh này không có trong phiên bản game bot.",
+        content: "Phiên bản này không có lệnh đó.",
         flags: MessageFlags.Ephemeral,
       });
     await command.execute(interaction);
