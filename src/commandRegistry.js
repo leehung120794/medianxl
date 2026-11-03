@@ -2,17 +2,6 @@ const COMMAND_FILES = Object.freeze([
   "item",
   "update",
   "backup",
-  "chuBatdau",
-  "chuNhanvat",
-  "chuTuluyen",
-  "chuNhanTuvi",
-  "chuDotpha",
-  "chuChua",
-  "chuDiemdanh",
-  "chuCuahang",
-  "chuTuido",
-  "chuBequan",
-  "chuNhiemvu",
 ]);
 
 function loadCommands(base = "./commands") {
