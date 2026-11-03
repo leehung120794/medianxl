@@ -24,6 +24,7 @@ const {
 const { handleMinesButton } = require("./services/minesService");
 const { handleCoinRequestButton } = require("./services/coinRequestService");
 const { handleReplayButton } = require("./services/replayService");
+const { handleChuButton } = require("./services/chuOnlineService");
 const profileCommand = require("./commands/hoso");
 const leaderboardCommand = require("./commands/xephang");
 const rulesCommand = require("./commands/luat");
@@ -124,6 +125,21 @@ const ROUTES = Object.freeze([
     prefix: "game-config-modal:",
     handle: (interaction) => gameCommand.handleConfigModal(interaction),
   },
+  {
+    kind: "button",
+    prefix: "chu:",
+    handle: (interaction, logger) => handleChuButton(interaction, logger),
+  },
+  {
+    kind: "select",
+    prefix: "chu:",
+    handle: (interaction, logger) => handleChuButton(interaction, logger),
+  },
+  {
+    kind: "modal",
+    prefix: "chu:",
+    handle: (interaction, logger) => handleChuButton(interaction, logger),
+  },
 ]);
 
 function interactionKind(interaction) {
@@ -138,6 +154,19 @@ function interactionKind(interaction) {
 async function routeComponentInteraction(interaction, logger) {
   const kind = interactionKind(interaction);
   if (!kind) return false;
+
+  // Handle Chu Online components first
+  if (interaction.customId.startsWith("chu:")) {
+    const route = ROUTES.find(
+      (item) =>
+        item.kind === kind && interaction.customId.startsWith(item.prefix),
+    );
+    if (route) {
+      await route.handle(interaction, logger);
+      return true;
+    }
+  }
+
   if (
     /^(chinchiro:|coquay:|hardcore(?::|-)|gacha(?:-history)?:|shop:|use(?:-page|-filter)?:|iteminfo-(?:page|filter):)/.test(
       interaction.customId,

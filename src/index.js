@@ -17,6 +17,7 @@ const monitoring = require("./services/monitoringService");
 const { startDatabaseBackups } = require("./services/databaseBackupService");
 const { closeRetiredGameSessions } = require("./services/removedGameCleanupService");
 const { createRateLimiter } = require("./services/rateLimitService");
+const { routeComponentInteraction } = require("./componentRouter");
 
 if (!process.env.DISCORD_TOKEN)
   throw new Error("Missing DISCORD_TOKEN in .env");
@@ -137,6 +138,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (shuttingDown) return;
   activeInteractions++;
   try {
+    // Handle component interactions (buttons, select menus, modals)
+    if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
+      const handled = await routeComponentInteraction(interaction, logger);
+      if (handled) return;
+    }
+
     if (interaction.isAutocomplete()) {
       const command = client.commands.get(interaction.commandName);
       if (command?.autocomplete) await command.autocomplete(interaction);
